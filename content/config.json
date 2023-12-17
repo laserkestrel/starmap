@@ -5,7 +5,7 @@
     "height": 900
   },
   "sleepTimeMillis": 0,
-  "simulationIterations": 325,
+  "simulationIterations": 117,
   "worldSeed": 1234,
   "font": {
     "file": "./content/Oxygen-Light.ttf",

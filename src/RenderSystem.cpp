@@ -38,7 +38,7 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star>& stars) {
 	for (const Star& star : stars)
 	{
 		// Create a base circle slightly larger and darker
-		sf::CircleShape baseShape(2.5f);
+		sf::CircleShape baseShape(2.0f);
 		baseShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
 		sf::Color darkerColor = star.getColour();
 		darkerColor.r = std::max(0, darkerColor.r - 50);
@@ -48,7 +48,7 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star>& stars) {
 		renderTexture.draw(baseShape);
 
 		// Create a core circle with the star's color
-		sf::CircleShape coreShape(2.0f);
+		sf::CircleShape coreShape(1.5f);
 		coreShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
 		coreShape.setFillColor(star.getColour());
 		renderTexture.draw(coreShape);
