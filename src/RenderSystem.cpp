@@ -1,15 +1,13 @@
-//Rendersystem.cpp
+// Rendersystem.cpp
 #include "RenderSystem.h"
 #include "Probe.h"
 #include <iostream>
 
-RenderSystem::RenderSystem(sf::RenderWindow& window) :
-	renderWindow(window),
-	showTextLabels(false), // Initially set to true to display labels
-	showProbeTrails(false) // Initially set to true to display labels
+RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
+													   showTextLabels(false),
+													   showProbeTrails(false)
 {
 	// Initialize RenderSystem, if needed
-	// Load font during initialization
 	// TODO - load this from the config object somehow.
 	if (!font.loadFromFile("./content/Oxygen-Light.ttf"))
 	{
@@ -28,14 +26,15 @@ void RenderSystem::toggleProbeTrails()
 }
 
 // Initialization - Render stars onto a texture
-void RenderSystem::initializeStarsTexture(const std::vector<Star>& stars) {
-    // Create an off-screen render texture
-    sf::RenderTexture renderTexture;
-    renderTexture.create(renderWindow.getSize().x, renderWindow.getSize().y);
-    renderTexture.clear(sf::Color::Transparent);
+void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
+{
+	// Create an off-screen render texture
+	sf::RenderTexture renderTexture;
+	renderTexture.create(renderWindow.getSize().x, renderWindow.getSize().y);
+	renderTexture.clear(sf::Color::Transparent);
 
-    // Render stars onto the texture
-	for (const Star& star : stars)
+	// Render stars onto the texture
+	for (const Star &star : stars)
 	{
 		// Create a base circle slightly larger and darker
 		sf::CircleShape baseShape(2.0f);
@@ -70,53 +69,44 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star>& stars) {
 			labelText.setPosition((star.getX()) - 10, (star.getY()) - 10);
 			renderTexture.draw(labelText);
 		}
-	
-    }
+	}
 
-    renderTexture.display(); // Display the content on the render texture
-    starsTexture = renderTexture.getTexture(); // Save the rendered texture
-// Assuming 'starsTexture' is an instance of sf::Texture
-//sf::Image starsImage = starsTexture.copyToImage();
-//starsImage.saveToFile("./stars_texture.png");
-
-
+	renderTexture.display();				   // Display the content on the render texture
+	starsTexture = renderTexture.getTexture(); // Save the rendered texture
 }
 
-
-void RenderSystem::renderStars(const std::vector<Star>& stars)
+void RenderSystem::renderStars(const std::vector<Star> &stars)
 {
-sf::Sprite starsSprite(starsTexture); // Create a sprite from the pre-rendered texture
-    renderWindow.draw(starsSprite); // Draw the sprite onto the window
-	
+	sf::Sprite starsSprite(starsTexture); // Create a sprite from the pre-rendered texture
+	renderWindow.draw(starsSprite);		  // Draw the sprite onto the window
 }
 
-void RenderSystem::renderProbe(const Probe& probe)
+void RenderSystem::renderProbe(const Probe &probe)
 {
-		if (showProbeTrails)
+	if (showProbeTrails)
+	{
+		const std::vector<VisitedStarSystem> &probeVisitedStarSystems = probe.getVisitedStarSystems();
+		sf::Color pathColor = probe.getTrailColor(); // Assuming you have a getter for the trail color in Probe
+
+		if (probeVisitedStarSystems.size() >= 1)
 		{
-			const std::vector<VisitedStarSystem>& probeVisitedStarSystems = probe.getVisitedStarSystems();
-			sf::Color pathColor = probe.getTrailColor(); // Assuming you have a getter for the trail color in Probe
-
-			if (probeVisitedStarSystems.size() >= 1)
+			for (size_t i = 1; i < probeVisitedStarSystems.size(); ++i)
 			{
-				for (size_t i = 1; i < probeVisitedStarSystems.size(); ++i)
+				const VisitedStarSystem &currentSystem = probeVisitedStarSystems[i];
+				const VisitedStarSystem &prevSystem = probeVisitedStarSystems[i - 1];
+
+				if (currentSystem.visitedByProbe && prevSystem.visitedByProbe)
 				{
-					const VisitedStarSystem& currentSystem = probeVisitedStarSystems[i];
-					const VisitedStarSystem& prevSystem = probeVisitedStarSystems[i - 1];
-
-					if (currentSystem.visitedByProbe && prevSystem.visitedByProbe)
-					{
-						// Render a line segment between the current and previous star systems
-						sf::Vertex line[] = {
+					// Render a line segment between the current and previous star systems
+					sf::Vertex line[] = {
 						sf::Vertex(prevSystem.coordinates, pathColor),
-						sf::Vertex(currentSystem.coordinates, pathColor)
-					};
+						sf::Vertex(currentSystem.coordinates, pathColor)};
 
-				renderWindow.draw(line, 2, sf::Lines);
+					renderWindow.draw(line, 2, sf::Lines);
+				}
 			}
 		}
 	}
-		}
 
 	// Render the probe at its current position outside the loop
 	sf::CircleShape probeShape(0.5f); // Adjust the radius as needed
@@ -132,7 +122,7 @@ void RenderSystem::renderProbe(const Probe& probe)
 	}
 }
 
-void RenderSystem::renderSummaryText(const std::string& summary)
+void RenderSystem::renderSummaryText(const std::string &summary)
 {
 	summaryText.setString(summary);
 	// Set the position, formatting, and other properties of the summary text
