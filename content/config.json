@@ -1,0 +1,14 @@
+{
+  "scaleFactor": 20,
+  "window": {
+    "width": 2000,
+    "height": 900
+  },
+  "sleepTimeMillis": 8000,
+  "simulationIterations": 20000,
+  "worldSeed": 1234,
+  "font": {
+    "file": "./content/Oxygen-Light.ttf",
+    "size": 12
+  }
+}

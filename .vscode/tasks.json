@@ -1,0 +1,48 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compile C++",
+            "type": "shell",
+            "command": "g++",
+            "args": ["-g", "-o", "starmap3", "./src/Main.cpp"],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "CMake Build",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--build", "${workspaceFolder}/build"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Copy Resources",
+            "type": "shell",
+            "command": "cp",
+            "args": [
+                "-r",
+                "${workspaceFolder}/content",
+                "${workspaceFolder}/build/bin/"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "CMake Build And Copy Resources",
+            "dependsOn": ["CMake Build", "Copy Resources"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+        
+    ]
+}
