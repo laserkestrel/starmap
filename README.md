@@ -35,7 +35,7 @@ The template starts out very basic, but might receive additional features over t
 
     Using CMake from the command line is straightforward as well.
 
-    For a single-configuration generator (typically the case on Linux and macOS):
+    For a single-configuration generator (typically the case on Linux and macOS, the first line pre-configures the folder, the second is for regular building..):
     ```
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
     cmake --build build

@@ -32,15 +32,16 @@
             ],
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": false
             }
         },
         {
             "label": "CMake Build And Copy Resources",
+            "dependsOrder": "sequence",
             "dependsOn": ["CMake Build", "Copy Resources"],
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": false
             }
         }
         
