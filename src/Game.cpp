@@ -55,7 +55,7 @@ void Game::run()
 
 		handleEvents();
 		updateGameState();
-		// render();
+		render();
 		++iteration;
 
 		sf::Time sleepTime = sf::milliseconds(sleepTimeMillis); // Convert sleepTimeMillis to sf::Time
