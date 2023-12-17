@@ -97,14 +97,16 @@ void Game::handleEvents()
 				generateSummary();
 				window.close();
 			}
-			else if (event.key.code == sf::Keyboard::F2)
-			{
-				// Toggle text labels visibility
-				renderSystem.toggleTextLabels();
-			}
+            } else if (event.key.code == sf::Keyboard::F2) {
+                // Toggle text labels visibility
+                renderSystem.toggleTextLabels();
+            } else if (event.key.code == sf::Keyboard::F3) {
+                // Toggle probe trails visibility
+                renderSystem.toggleProbeTrails();
+            }
 		}
 	}
-}
+
 
 void Game::updateGameState()
 {

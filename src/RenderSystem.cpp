@@ -5,7 +5,8 @@
 
 RenderSystem::RenderSystem(sf::RenderWindow& window) :
 	renderWindow(window),
-	showTextLabels(true) // Initially set to true to display labels
+	showTextLabels(false), // Initially set to true to display labels
+	showProbeTrails(false) // Initially set to true to display labels
 {
 	// Initialize RenderSystem, if needed
 	// Load font during initialization
@@ -21,6 +22,14 @@ void RenderSystem::toggleTextLabels()
 	showTextLabels = !showTextLabels; // Toggle the flag
 									  // You might add additional logic here depending on how text labels are handled
 }
+
+void RenderSystem::toggleProbeTrails()
+{
+	showProbeTrails = !showProbeTrails; // Toggle the flag
+									  // You might add additional logic here depending on how trails are handled
+}
+
+
 
 void RenderSystem::renderStars(const std::vector<Star>& stars)
 {
@@ -65,7 +74,9 @@ void RenderSystem::renderStars(const std::vector<Star>& stars)
 
 void RenderSystem::renderProbe(const Probe& probe)
 {
-	const std::vector<VisitedStarSystem>& probeVisitedStarSystems = probe.getVisitedStarSystems();
+		if (showProbeTrails)
+		{
+const std::vector<VisitedStarSystem>& probeVisitedStarSystems = probe.getVisitedStarSystems();
 	sf::Color pathColor = probe.getTrailColor(); // Assuming you have a getter for the trail color in Probe
 
 	if (probeVisitedStarSystems.size() >= 1)
@@ -87,6 +98,11 @@ void RenderSystem::renderProbe(const Probe& probe)
 			}
 		}
 	}
+
+
+		}
+
+	
 
 	// Render the probe at its current position outside the loop
 	sf::CircleShape probeShape(1.5f); // Adjust the radius as needed

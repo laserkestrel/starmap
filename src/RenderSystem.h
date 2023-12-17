@@ -16,12 +16,14 @@ public:
 	//void renderProbePath(const Probe& probe);
 	void renderSummaryText(const std::string& summary);
 	void toggleTextLabels(); // Method to toggle text labels visibility
+	void toggleProbeTrails(); // Method to toggle probe trails visibility
 
 private:
 	sf::RenderWindow& renderWindow;
 	sf::Text summaryText; // Text object to display the summary
 	sf::Font font;
 	bool showTextLabels; // Flag to control visibility of text labels
+	bool showProbeTrails; // Flag to control visibility of text labels
 };
 
 #endif // RENDERSYSTEM_H
