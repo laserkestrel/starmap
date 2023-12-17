@@ -9,11 +9,11 @@
 #include <chrono>
 #include <iostream>
 
-Game::Game(const LoadConfig& config) :
+Game::Game(const LoadConfig &config) :
 
-	window(sf::VideoMode(config.getWindowWidth(), config.getWindowHeight()), "Star Map"),
-	renderSystem(window),
-	config(config)
+									   window(sf::VideoMode(config.getWindowWidth(), config.getWindowHeight()), "Star Map"),
+									   renderSystem(window),
+									   config(config)
 {
 	// Load star systems from JSON file into GalaxyVector
 	LoadData dataLoader;
@@ -55,7 +55,7 @@ void Game::run()
 
 		handleEvents();
 		updateGameState();
-		render();
+		// render();
 		++iteration;
 
 		sf::Time sleepTime = sf::milliseconds(sleepTimeMillis); // Convert sleepTimeMillis to sf::Time
@@ -100,16 +100,19 @@ void Game::handleEvents()
 				generateSummary();
 				window.close();
 			}
-            } else if (event.key.code == sf::Keyboard::F2) {
-                // Toggle text labels visibility
-                renderSystem.toggleTextLabels();
-            } else if (event.key.code == sf::Keyboard::F3) {
-                // Toggle probe trails visibility
-                renderSystem.toggleProbeTrails();
-            }
+		}
+		else if (event.key.code == sf::Keyboard::F2)
+		{
+			// Toggle text labels visibility
+			renderSystem.toggleTextLabels();
+		}
+		else if (event.key.code == sf::Keyboard::F3)
+		{
+			// Toggle probe trails visibility
+			renderSystem.toggleProbeTrails();
 		}
 	}
-
+}
 
 void Game::updateGameState()
 {
@@ -132,33 +135,33 @@ void Game::updateGameState()
 
 	// COMMENT HERE TO AVOID REPLICATION
 	// Create new probes based on probesToReplicate
-	for (const auto& index : probesToReplicate)
+	for (const auto &index : probesToReplicate)
 	{
-		// Run specific logic when the mode is "Replicate"
-		#if defined(_DEBUG)
+// Run specific logic when the mode is "Replicate"
+#if defined(_DEBUG)
 		std::cout << "Probe is in Replicate mode from the Game loop, and is spawning a new probe instance now\n";
-		#endif
-		const Probe& probe = probeVector[index];
+#endif
+		const Probe &probe = probeVector[index];
 
 		// Create a new replicated probe
 		std::string newName = Utilities::probeNamer((probe.getProbeName()), probe.getTargetStar());
 		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), galaxyVector);
-		//std::cout << "Replicating probe [" << probe.getProbeName() << "] targetstar or child birthplace is ..." << probe.getTargetStar() << '\n';
+		// std::cout << "Replicating probe [" << probe.getProbeName() << "] targetstar or child birthplace is ..." << probe.getTargetStar() << '\n';
 		replicatedProbe.setRandomTrailColor();
 
 		// Iterate through visited star systems of the original probe and add to replicated probe
-		//IS THIS IN THE CONTEXT OF THE CHILD PROBE, NOT THE PARENT!? -doesnt seem to be.
-		const std::vector<VisitedStarSystem>& visitedSystems = probe.getVisitedStarSystems();
+		// IS THIS IN THE CONTEXT OF THE CHILD PROBE, NOT THE PARENT!? -doesnt seem to be.
+		const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
 		// BUG issue #18 - missing logic to populate the birthplace system first.
 		// how do we set this, shouldnt this birthplace be in the visited system of the parent yet? Take the child, add the parents current location to its properties.
 		// am I making this hard, cant I just add the parents current location to visitedStarSystem BEFORE replication?
 		// so when does visitedSystem get populated?
 		// replicatedProbe.addVisitedStarSystem((probe.getTargetStar()),(probe.getX()),true);
-		for (const auto& visitedSystem : visitedSystems)
+		for (const auto &visitedSystem : visitedSystems)
 		{
-			#if defined(_DEBUG)
+#if defined(_DEBUG)
 			std::cout << "Adding this system to child probe - [" << visitedSystem.systemName << "]" << '\n';
-			#endif
+#endif
 			// Set the visitedByProbe to false for this one as the child probe hasn't visited by itself.
 			replicatedProbe.addVisitedStarSystem(visitedSystem.systemName, visitedSystem.coordinates, false);
 		}
@@ -170,13 +173,13 @@ void Game::updateGameState()
 	// UNCOMMENT HERE TO AVOID REPLICATION
 
 	// Add new probes created during replication mode to the main probe vector
-	for (const auto& newProbe : newProbes)
+	for (const auto &newProbe : newProbes)
 	{
 		probeVector.push_back(newProbe);
 	}
 
 	// Move all probes after handling replication
-	for (auto& probe : probeVector)
+	for (auto &probe : probeVector)
 	{
 		probe.move(); // Execute the movement logic for each probe
 	}
@@ -187,16 +190,16 @@ void Game::updateGameState()
 void Game::render()
 {
 	window.clear();
-    // Draw the pre-rendered stars texture
-    sf::Sprite starsSprite(renderSystem.getStarsTexture());
-    window.draw(starsSprite);
-	//render any probes that may exist in probeVector
-	for (const auto& probe : probeVector)
+	// Draw the pre-rendered stars texture
+	sf::Sprite starsSprite(renderSystem.getStarsTexture());
+	window.draw(starsSprite);
+	// render any probes that may exist in probeVector
+	for (const auto &probe : probeVector)
 	{
 		renderSystem.renderProbe(probe);
 	}
 	window.display();
-	//printProbeVectorContents(); //print some debug stuff
+	// printProbeVectorContents(); //print some debug stuff
 }
 void Game::generateSummary() const
 {
@@ -205,14 +208,14 @@ void Game::generateSummary() const
 			  << "Begin Summary: " << '\n'
 			  << "-----------------" << '\n';
 
-	for (const auto& probe : probeVector)
+	for (const auto &probe : probeVector)
 	{
 		if (probe.getTotalDistanceTraveled() > 0 && probe.getReplicationCount() > 0)
 		{
 			std::cout << "- Probe Name: [" << probe.getProbeName() << "] Traveled [" << probe.getTotalDistanceTraveled() << "], replicated [" << probe.getReplicationCount() << "] times, visiting ";
 
-			const std::vector<VisitedStarSystem>& visitedSystems = probe.getVisitedStarSystems();
-			for (const auto& visitedSystem : visitedSystems)
+			const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
+			for (const auto &visitedSystem : visitedSystems)
 			{
 				if (visitedSystem.visitedByProbe)
 				{
@@ -230,7 +233,7 @@ void Game::generateSummary() const
 
 	size_t totalStarsVisitedByProbes = 0;
 
-	for (const auto& star : galaxyVector)
+	for (const auto &star : galaxyVector)
 	{
 		if (star.getIsExplored())
 		{

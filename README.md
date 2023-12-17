@@ -98,6 +98,17 @@ Here are some useful resources if you want to learn more about CMake:
 - [How to Use CMake Without the Agonizing Pain - Part 2](https://alexreinking.com/blog/how-to-use-cmake-without-the-agonizing-pain-part-2.html)
 - [Better CMake YouTube series by Jefferon Amstutz](https://www.youtube.com/playlist?list=PL8i3OhJb4FNV10aIZ8oF0AA46HgA2ed8g)
 
+## Useful commands
+
+How to check if binary contains debug symbols
+nm -C starmap3 | grep ' [BD] '
+
+Generate a memory profile for the binary. (needs debug symbols)
+valgrind --tool=callgrind ./starmap3 --fn-skip="0x*" --fn-skip="llvm*"
+
+View the output of valgrind
+kcachegrind callgrind.out.<PID>
+
 ## License
 
 The source code is dual licensed under Public Domain and MIT -- choose whichever you prefer.

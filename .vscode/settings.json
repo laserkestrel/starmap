@@ -93,5 +93,7 @@
 		"typeinfo": "cpp",
 		"valarray": "cpp",
 		"variant": "cpp"
-	}
+	},
+	"makefile.makefilePath": "./CMakeLists.txt",
+	"makefile.buildLog": "./buildlog.txt"
 }
