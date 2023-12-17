@@ -20,20 +20,21 @@ RenderSystem::RenderSystem(sf::RenderWindow& window) :
 void RenderSystem::toggleTextLabels()
 {
 	showTextLabels = !showTextLabels; // Toggle the flag
-									  // You might add additional logic here depending on how text labels are handled
 }
 
 void RenderSystem::toggleProbeTrails()
 {
 	showProbeTrails = !showProbeTrails; // Toggle the flag
-									  // You might add additional logic here depending on how trails are handled
 }
 
+// Initialization - Render stars onto a texture
+void RenderSystem::initializeStarsTexture(const std::vector<Star>& stars) {
+    // Create an off-screen render texture
+    sf::RenderTexture renderTexture;
+    renderTexture.create(renderWindow.getSize().x, renderWindow.getSize().y);
+    renderTexture.clear(sf::Color::Transparent);
 
-
-void RenderSystem::renderStars(const std::vector<Star>& stars)
-{
-
+    // Render stars onto the texture
 	for (const Star& star : stars)
 	{
 		// Create a base circle slightly larger and darker
@@ -44,13 +45,13 @@ void RenderSystem::renderStars(const std::vector<Star>& stars)
 		darkerColor.g = std::max(0, darkerColor.g - 50);
 		darkerColor.b = std::max(0, darkerColor.b - 50);
 		baseShape.setFillColor(darkerColor);
-		renderWindow.draw(baseShape);
+		renderTexture.draw(baseShape);
 
 		// Create a core circle with the star's color
 		sf::CircleShape coreShape(2.0f);
 		coreShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
 		coreShape.setFillColor(star.getColour());
-		renderWindow.draw(coreShape);
+		renderTexture.draw(coreShape);
 
 		// Create a smaller circle in the center with a slightly lighter shade
 		sf::CircleShape centerShape(1.0f);
@@ -60,52 +61,65 @@ void RenderSystem::renderStars(const std::vector<Star>& stars)
 		lighterColor.g = std::min(255, lighterColor.g + 50);
 		lighterColor.b = std::min(255, lighterColor.b + 50);
 		centerShape.setFillColor(lighterColor);
-		renderWindow.draw(centerShape);
+		renderTexture.draw(centerShape);
 
 		if (showTextLabels)
 		{
 			// Render text labels if the flag is true
 			sf::Text labelText(star.getName(), font, 12);
 			labelText.setPosition((star.getX()) - 10, (star.getY()) - 10);
-			renderWindow.draw(labelText);
+			renderTexture.draw(labelText);
 		}
-	}
+	
+    }
+
+    renderTexture.display(); // Display the content on the render texture
+    starsTexture = renderTexture.getTexture(); // Save the rendered texture
+// Assuming 'starsTexture' is an instance of sf::Texture
+//sf::Image starsImage = starsTexture.copyToImage();
+//starsImage.saveToFile("./stars_texture.png");
+
+
+}
+
+
+void RenderSystem::renderStars(const std::vector<Star>& stars)
+{
+sf::Sprite starsSprite(starsTexture); // Create a sprite from the pre-rendered texture
+    renderWindow.draw(starsSprite); // Draw the sprite onto the window
+	
 }
 
 void RenderSystem::renderProbe(const Probe& probe)
 {
 		if (showProbeTrails)
 		{
-const std::vector<VisitedStarSystem>& probeVisitedStarSystems = probe.getVisitedStarSystems();
-	sf::Color pathColor = probe.getTrailColor(); // Assuming you have a getter for the trail color in Probe
+			const std::vector<VisitedStarSystem>& probeVisitedStarSystems = probe.getVisitedStarSystems();
+			sf::Color pathColor = probe.getTrailColor(); // Assuming you have a getter for the trail color in Probe
 
-	if (probeVisitedStarSystems.size() >= 1)
-	{
-		for (size_t i = 1; i < probeVisitedStarSystems.size(); ++i)
-		{
-			const VisitedStarSystem& currentSystem = probeVisitedStarSystems[i];
-			const VisitedStarSystem& prevSystem = probeVisitedStarSystems[i - 1];
-
-			if (currentSystem.visitedByProbe && prevSystem.visitedByProbe)
+			if (probeVisitedStarSystems.size() >= 1)
 			{
-				// Render a line segment between the current and previous star systems
-				sf::Vertex line[] = {
-					sf::Vertex(prevSystem.coordinates, pathColor),
-					sf::Vertex(currentSystem.coordinates, pathColor)
-				};
+				for (size_t i = 1; i < probeVisitedStarSystems.size(); ++i)
+				{
+					const VisitedStarSystem& currentSystem = probeVisitedStarSystems[i];
+					const VisitedStarSystem& prevSystem = probeVisitedStarSystems[i - 1];
+
+					if (currentSystem.visitedByProbe && prevSystem.visitedByProbe)
+					{
+						// Render a line segment between the current and previous star systems
+						sf::Vertex line[] = {
+						sf::Vertex(prevSystem.coordinates, pathColor),
+						sf::Vertex(currentSystem.coordinates, pathColor)
+					};
 
 				renderWindow.draw(line, 2, sf::Lines);
 			}
 		}
 	}
-
-
 		}
 
-	
-
 	// Render the probe at its current position outside the loop
-	sf::CircleShape probeShape(1.5f); // Adjust the radius as needed
+	sf::CircleShape probeShape(0.5f); // Adjust the radius as needed
 	probeShape.setPosition(probe.getX(), probe.getY());
 	probeShape.setFillColor(sf::Color(173, 216, 230));
 	renderWindow.draw(probeShape);

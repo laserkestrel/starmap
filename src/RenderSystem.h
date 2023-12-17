@@ -17,11 +17,16 @@ public:
 	void renderSummaryText(const std::string& summary);
 	void toggleTextLabels(); // Method to toggle text labels visibility
 	void toggleProbeTrails(); // Method to toggle probe trails visibility
+	void initializeStarsTexture(const std::vector<Star>& stars); //Draw stars on a texture, then render that
+	const sf::Texture& getStarsTexture() const {
+        return starsTexture;
+    }
 
 private:
 	sf::RenderWindow& renderWindow;
 	sf::Text summaryText; // Text object to display the summary
 	sf::Font font;
+	sf::Texture starsTexture;
 	bool showTextLabels; // Flag to control visibility of text labels
 	bool showProbeTrails; // Flag to control visibility of text labels
 };

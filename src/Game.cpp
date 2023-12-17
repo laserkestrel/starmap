@@ -20,6 +20,9 @@ Game::Game(const LoadConfig& config) :
 	galaxyVector = dataLoader.loadStarsFromJson("./content/star_data.json", window, config);
 	sf::Vector2u windowSize = window.getSize();
 
+	// build a texture of all the stars which can be reused each frame
+	renderSystem.initializeStarsTexture(galaxyVector);
+
 	// Calculate the center coordinates
 	int centerX = windowSize.x / 2;
 	int centerY = windowSize.y / 2;
@@ -184,8 +187,9 @@ void Game::updateGameState()
 void Game::render()
 {
 	window.clear();
-	//render the stars!
-	renderSystem.renderStars(galaxyVector);
+    // Draw the pre-rendered stars texture
+    sf::Sprite starsSprite(renderSystem.getStarsTexture());
+    window.draw(starsSprite);
 	//render any probes that may exist in probeVector
 	for (const auto& probe : probeVector)
 	{
