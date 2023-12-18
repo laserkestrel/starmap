@@ -7,13 +7,13 @@
 #include "Probe.h"
 #include "RenderSystem.h"
 #include <SFML/Graphics.hpp>
+#include "GalaxyQuadTree.h"
 
 class Game
 {
 public:
-	Game(const LoadConfig& config);
+	Game(const LoadConfig &config);
 	void printProbeVectorContents() const; // Function declaration for printing probeVector contents
-
 	void run();
 
 private:
@@ -27,8 +27,9 @@ private:
 	void render();			// will render the star objects from galaxyVector
 	void renderProbes();	// will render the probe positions on screen with SFML
 	void generateSummary() const;
-	const LoadConfig& config; // Member variable to hold the LoadConfig object
+	const LoadConfig &config; // Member variable to hold the LoadConfig object
 	double simulationTimeInSeconds;
+	GalaxyQuadTree theQuadTreeInstance;
 };
 
 #endif // GAME_H

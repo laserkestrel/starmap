@@ -14,7 +14,8 @@ Game::Game(const LoadConfig &config) :
 
 									   window(sf::VideoMode(config.getWindowWidth(), config.getWindowHeight()), "Star Map"),
 									   renderSystem(window),
-									   config(config)
+									   config(config),
+									   theQuadTreeInstance(sf::FloatRect(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight()), config.getQuadTreeSearchSize())
 {
 	// Load star systems from JSON file into GalaxyVector
 	LoadData dataLoader;
@@ -29,12 +30,12 @@ Game::Game(const LoadConfig &config) :
 	sf::FloatRect gameBounds(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight());
 	int QuadTreeCapacity = config.getQuadTreeSearchSize();
 	// Initialize the GalaxyQuadTree with the game boundaries and a suitable capacity
-	GalaxyQuadTree quadTree(gameBounds, QuadTreeCapacity);
+	GalaxyQuadTree theQuadTreeInstance(gameBounds, QuadTreeCapacity);
 
 	// Example population of the quadtree in Game.cpp
 	for (const auto &star : galaxyVector)
 	{
-		quadTree.insert(star); // Use 'quadTree' instance to call the insert method
+		theQuadTreeInstance.insert(star); // Use 'quadTree' instance to call the insert method
 	}
 
 	// Calculate the center coordinates
@@ -209,6 +210,8 @@ void Game::render()
 	// Draw the pre-rendered stars texture
 	sf::Sprite starsSprite(renderSystem.getStarsTexture());
 	window.draw(starsSprite);
+	// requires getRootNode method.
+	renderSystem.renderQuadtree(window, theQuadTreeInstance.getRootNode());
 
 	// render any probes that may exist in probeVector
 	for (const auto &probe : probeVector)

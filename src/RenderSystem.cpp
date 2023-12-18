@@ -1,6 +1,7 @@
 // Rendersystem.cpp
 #include "RenderSystem.h"
 #include "Probe.h"
+#include "GalaxyQuadTreeNode.h"
 #include <iostream>
 
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
@@ -151,5 +152,33 @@ void RenderSystem::calculateAndDisplayFPS()
 
 		// Draw FPS counter text
 		renderWindow.draw(fpsCounter);
+	}
+}
+
+// void RenderSystem::renderQuadtree(GalaxyQuadTree &quadTree)
+//{
+// }
+
+void RenderSystem::renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *node)
+{
+	if (node == nullptr)
+	{
+		return;
+	}
+
+	sf::RectangleShape nodeRect;
+	nodeRect.setSize(sf::Vector2f(node->boundary.width, node->boundary.height));
+	nodeRect.setPosition(sf::Vector2f(node->boundary.left, node->boundary.top));
+	nodeRect.setFillColor(sf::Color::Transparent);
+	nodeRect.setOutlineThickness(-1.0f);
+	nodeRect.setOutlineColor(sf::Color::White);
+	window.draw(nodeRect);
+
+	if (!node->isLeaf)
+	{
+		for (int i = 0; i < 4; ++i)
+		{
+			renderQuadtree(window, node->getChild(i));
+		}
 	}
 }

@@ -6,6 +6,8 @@
 #include "Star.h" // Assuming Star class is used for rendering
 #include <SFML/Graphics.hpp>
 #include <sstream>
+#include "GalaxyQuadTree.h"
+#include "GalaxyQuadTreeNode.h"
 
 class RenderSystem
 {
@@ -14,7 +16,6 @@ public:
 
 	void renderStars(const std::vector<Star> &stars);
 	void renderProbe(const Probe &probe); // Declaration for renderProbe
-	// void renderProbePath(const Probe& probe);
 	void renderSummaryText(const std::string &summary);
 	void toggleTextLabels();									 // Method to toggle text labels visibility
 	void toggleProbeTrails();									 // Method to toggle probe trails visibility
@@ -24,6 +25,7 @@ public:
 		return starsTexture;
 	}
 	void calculateAndDisplayFPS();
+	void renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *node);
 
 private:
 	sf::RenderWindow &renderWindow;
@@ -32,6 +34,7 @@ private:
 	sf::Texture starsTexture;
 	sf::Text fpsCounter;
 	sf::Clock fpsClock;
+	// void renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *node);
 	bool showTextLabels;  // Flag to control visibility of text labels
 	bool showProbeTrails; // Flag to control visibility of text labels
 };

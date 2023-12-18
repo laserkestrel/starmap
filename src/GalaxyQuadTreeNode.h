@@ -20,6 +20,15 @@ struct GalaxyQuadTreeNode
 		}
 	}
 
+	GalaxyQuadTreeNode *getChild(int index) const
+	{
+		if (index >= 0 && index < 4)
+		{
+			return children[index];
+		}
+		return nullptr;
+	}
+
 	bool insert(const Star &star)
 	{
 		if (!boundary.contains(star.getX(), star.getY()))

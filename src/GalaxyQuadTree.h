@@ -7,9 +7,13 @@
 class GalaxyQuadTree
 {
 public:
-	GalaxyQuadTree(const sf::FloatRect &boundary, int capacity);	  // Constructor
-	void insert(const Star &star);									  // Insert a star into the quadtree
-	std::vector<Star> query(const sf::Vector2f &point, float radius); // Query stars within a radius around a point
+	GalaxyQuadTree(const sf::FloatRect &boundary, int capacity); // Constructor
+	void insert(const Star &star);								 // Insert a star into the quadtree
+	std::vector<Star> query(const sf::Vector2f &point, float radius);
+	GalaxyQuadTreeNode *getRootNode() const
+	{
+		return root;
+	} // Query stars within a radius around a point
 
 private:
 	GalaxyQuadTreeNode *root; // Pointer to the root node of the quadtree
