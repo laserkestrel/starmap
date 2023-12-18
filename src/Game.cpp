@@ -70,6 +70,7 @@ void Game::run()
 		handleEvents();
 		updateGameState();
 		render();
+
 		++iteration;
 
 		sf::Time sleepTime = sf::milliseconds(sleepTimeMillis); // Convert sleepTimeMillis to sf::Time
@@ -111,7 +112,7 @@ void Game::handleEvents()
 		{
 			if (event.key.code == sf::Keyboard::Escape)
 			{
-				generateSummary();
+				// generateSummary();
 				window.close();
 			}
 		}
@@ -208,11 +209,13 @@ void Game::render()
 	// Draw the pre-rendered stars texture
 	sf::Sprite starsSprite(renderSystem.getStarsTexture());
 	window.draw(starsSprite);
+
 	// render any probes that may exist in probeVector
 	for (const auto &probe : probeVector)
 	{
 		renderSystem.renderProbe(probe);
 	}
+	renderSystem.calculateAndDisplayFPS();
 	window.display();
 	// printProbeVectorContents(); //print some debug stuff
 }

@@ -25,6 +25,14 @@ jobs:
       if: runner.os == 'Linux'
       run: sudo apt-get update && sudo apt-get install libxrandr-dev libxcursor-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev nlohmann-json3-dev
 
+    - name: Install Windows Dependencies
+      if: runner.os == 'Windows'
+      run: nuget nlohmann-json
+
+    - name: Install Mac OS Dependencies
+      if: runner.os == 'macOS'
+      run: brew install nlohmann-json
+
     - name: Checkout
       uses: actions/checkout@v3
 

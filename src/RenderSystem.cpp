@@ -13,6 +13,11 @@ RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 	{
 		std::cerr << "Error loading font file.\n";
 	}
+	// Configure FPS counter text
+	fpsCounter.setFont(font);
+	fpsCounter.setCharacterSize(20);
+	fpsCounter.setFillColor(sf::Color::White);
+	fpsCounter.setPosition(10.f, 10.f); // Adjust position as needed
 }
 
 void RenderSystem::toggleTextLabels()
@@ -129,4 +134,19 @@ void RenderSystem::renderSummaryText(const std::string &summary)
 	// Example:
 	summaryText.setPosition(10, 10); // Set the position of the text within the window
 	renderWindow.draw(summaryText);	 // Draw the summary text within the game loop
+}
+
+void RenderSystem::calculateAndDisplayFPS()
+{
+	// Calculate FPS
+	sf::Time elapsed = fpsClock.restart();
+	float fps = 1.0f / elapsed.asSeconds();
+
+	// Update text to display FPS
+	std::ostringstream ss;
+	ss << "FPS: " << static_cast<int>(fps);
+	fpsCounter.setString(ss.str());
+
+	// Draw FPS counter text
+	renderWindow.draw(fpsCounter);
 }

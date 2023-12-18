@@ -4,6 +4,12 @@ project(starmap3 LANGUAGES CXX)
 # Set the build type to Release/Debug
 set(CMAKE_BUILD_TYPE Debug)
 
+# Add debug symbols for Debug build type, and enable debug console msgs
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options("-g")
+    add_definitions(-D_DEBUG)
+endif()
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
@@ -13,10 +19,6 @@ FetchContent_Declare(SFML
     GIT_TAG 2.6.x)
 FetchContent_MakeAvailable(SFML)
 
-# Add debug symbols for Debug build type
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options("-g")
-endif()
 
 add_executable(starmap3 src/Main.cpp src/Game.cpp src/LoadConfig.cpp src/LoadData.cpp src/Probe.cpp src/RenderSystem.cpp src/Star.cpp src/Utilities.cpp)
 target_link_libraries(starmap3 PRIVATE sfml-graphics)
