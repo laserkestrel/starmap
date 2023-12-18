@@ -4,6 +4,7 @@
 #include "Probe.h"
 #include "RenderSystem.h"
 #include "Utilities.h"
+#include "GalaxyQuadTree.h"
 #include <SFML/System/Clock.hpp>
 #include <SFML/System/Time.hpp>
 #include <chrono>
@@ -17,11 +18,24 @@ Game::Game(const LoadConfig &config) :
 {
 	// Load star systems from JSON file into GalaxyVector
 	LoadData dataLoader;
-	galaxyVector = dataLoader.loadStarsFromJson("./content/star_data.json", window, config);
+	galaxyVector = dataLoader.loadStarsFromJson("./content/star_data.json", window, config); // todo - load this from config file
 	sf::Vector2u windowSize = window.getSize();
 
 	// build a texture of all the stars which can be reused each frame
 	renderSystem.initializeStarsTexture(galaxyVector);
+
+	// Example initialization in Game.cpp
+	// Assume gameBounds represent the entire playable area, and pull quadtree depth from config;
+	sf::FloatRect gameBounds(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight());
+	int QuadTreeCapacity = config.getQuadTreeSearchSize();
+	// Initialize the GalaxyQuadTree with the game boundaries and a suitable capacity
+	// GalaxyQuadTree quadTree(gameBounds, QuadTreeCapacity);
+
+	// Example population of the quadtree in Game.cpp
+	for (const auto &star : galaxyVector)
+	{
+		// GalaxyQuadTree.insert(star);
+	}
 
 	// Calculate the center coordinates
 	int centerX = windowSize.x / 2;
@@ -157,6 +171,7 @@ void Game::updateGameState()
 		// am I making this hard, cant I just add the parents current location to visitedStarSystem BEFORE replication?
 		// so when does visitedSystem get populated?
 		// replicatedProbe.addVisitedStarSystem((probe.getTargetStar()),(probe.getX()),true);
+		// are these null visited sytems where the probe tries to get nearestStarSystem by radius and there isnt one? - no because they visit somewhere else after.
 		for (const auto &visitedSystem : visitedSystems)
 		{
 #if defined(_DEBUG)
@@ -201,6 +216,7 @@ void Game::render()
 	window.display();
 	// printProbeVectorContents(); //print some debug stuff
 }
+
 void Game::generateSummary() const
 {
 	// Collect and display header summary statistics here
@@ -208,21 +224,24 @@ void Game::generateSummary() const
 			  << "Begin Summary: " << '\n'
 			  << "-----------------" << '\n';
 
-	for (const auto &probe : probeVector)
+	if (config.getSummaryShowPerProbe())
 	{
-		if (probe.getTotalDistanceTraveled() > 0 && probe.getReplicationCount() > 0)
+		for (const auto &probe : probeVector)
 		{
-			std::cout << "- Probe Name: [" << probe.getProbeName() << "] Traveled [" << probe.getTotalDistanceTraveled() << "], replicated [" << probe.getReplicationCount() << "] times, visiting ";
-
-			const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
-			for (const auto &visitedSystem : visitedSystems)
+			if (probe.getTotalDistanceTraveled() > 0 && probe.getReplicationCount() > 0)
 			{
-				if (visitedSystem.visitedByProbe)
+				std::cout << "- Probe Name: [" << probe.getProbeName() << "] Traveled [" << probe.getTotalDistanceTraveled() << "], replicated [" << probe.getReplicationCount() << "] times, visiting ";
+
+				const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
+				for (const auto &visitedSystem : visitedSystems)
 				{
-					std::cout << "[" << visitedSystem.systemName << "];";
+					if (visitedSystem.visitedByProbe)
+					{
+						std::cout << "[" << visitedSystem.systemName << "];";
+					}
 				}
+				std::cout << '\n';
 			}
-			std::cout << '\n';
 		}
 	}
 	// Footer statistics if needed (total distance, total replications, etc.)
@@ -244,13 +263,17 @@ void Game::generateSummary() const
 	double efficiencyScore = totalStarsVisitedByProbes / (simulationTimeInSeconds * probeCount);
 	double efficiencyPercentage = (efficiencyScore / maxPossibleEfficiencyScore) * 100.0;
 
-	std::cout << "Simulation Summary:" << '\n'
-			  << "World Seed is [" << summarySeed << "] and Simulation limited to [" << summaryIterations << "] epochs" << '\n'
-			  << "Total number of stars: " << galaxyVector.size() << '\n'
-			  << "Total number of probes: " << probeCount << '\n'
-			  << "Total Simulation Time: " << simulationTimeInSeconds << " seconds." << '\n'
-			  // need to work out what a perfect score is on this. aparantly min number for 7 stars is 3 probes.
-			  << "Efficiency Ratio: " << efficiencyScore << '\n'
-			  << "Efficiency Percent: " << efficiencyPercentage << '\n'
-			  << "-----------------" << std::endl;
+	if (config.getSummaryShowFooter())
+	{
+		// show summary footer is true
+		std::cout << "Simulation Summary:" << '\n'
+				  << "World Seed is [" << summarySeed << "] and Simulation limited to [" << summaryIterations << "] epochs" << '\n'
+				  << "Total number of stars: " << galaxyVector.size() << '\n'
+				  << "Total number of probes: " << probeCount << '\n'
+				  << "Total Simulation Time: " << simulationTimeInSeconds << " seconds." << '\n'
+				  // need to work out what a perfect score is on this. aparantly min number for 7 stars is 3 probes.
+				  << "Efficiency Ratio: " << efficiencyScore << '\n'
+				  << "Efficiency Percent: " << efficiencyPercentage << '\n'
+				  << "-----------------" << std::endl;
+	}
 }

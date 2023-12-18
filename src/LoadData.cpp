@@ -7,7 +7,7 @@
 
 using json = nlohmann::json;
 
-std::vector<Star> LoadData::loadStarsFromJson(const std::string& jsonFilePath, sf::RenderWindow& window, const LoadConfig& config)
+std::vector<Star> LoadData::loadStarsFromJson(const std::string &jsonFilePath, sf::RenderWindow &window, const LoadConfig &config)
 {
 	std::vector<Star> GalaxyVector;
 
@@ -30,6 +30,10 @@ std::vector<Star> LoadData::loadStarsFromJson(const std::string& jsonFilePath, s
 	{
 		// Access the array using operator[]
 		json starSystems = jsonData["star_systems"];
+		// Calculate the number of star systems in the JSON data
+		size_t numStarSystems = starSystems.size();
+		// Reserve memory in GalaxyVector to accommodate all star systems
+		GalaxyVector.reserve(numStarSystems + 1); // +1 for the "Sol" star
 
 		// Check if starSystems is an array
 		if (starSystems.is_array())
@@ -50,7 +54,7 @@ std::vector<Star> LoadData::loadStarsFromJson(const std::string& jsonFilePath, s
 			int maxY = windowSize.y - 20;
 
 			// Iterate through each entry in the JSON file
-			for (const auto& entry : starSystems)
+			for (const auto &entry : starSystems)
 			{
 				std::string name = entry["name"].get<std::string>();
 				char stellarType = entry["stellartype"].get<std::string>().front();
@@ -71,7 +75,9 @@ std::vector<Star> LoadData::loadStarsFromJson(const std::string& jsonFilePath, s
 
 				// Instantiate a new Star object and add it to GalaxyVector
 				Star newStar(x, y, name, color, metals, polymers, fuel);
-				GalaxyVector.push_back(newStar);
+
+				// GalaxyVector.push_back(newStar); //optimised loading to instead load to a temp vector, then push back to preallocated one
+				GalaxyVector.push_back(std::move(newStar));
 			}
 		}
 		else

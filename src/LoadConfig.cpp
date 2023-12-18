@@ -6,13 +6,13 @@
 
 using json = nlohmann::json;
 
-LoadConfig& LoadConfig::getInstance(const std::string& filename)
+LoadConfig &LoadConfig::getInstance(const std::string &filename)
 {
 	static LoadConfig instance(filename);
 	return instance;
 }
 
-LoadConfig::LoadConfig(const std::string& filename)
+LoadConfig::LoadConfig(const std::string &filename)
 {
 	loadFromFile(filename);
 }
@@ -47,7 +47,22 @@ unsigned int LoadConfig::getWorldSeed() const
 	return worldSeed;
 }
 
-void LoadConfig::loadFromFile(const std::string& filename)
+int LoadConfig::getQuadTreeSearchSize() const
+{
+	return quadtreeSearchSize;
+}
+
+bool LoadConfig::getSummaryShowPerProbe() const
+{
+	return summaryShowPerProbe;
+}
+
+bool LoadConfig::getSummaryShowFooter() const
+{
+	return summaryShowFooter;
+}
+
+void LoadConfig::loadFromFile(const std::string &filename)
 {
 	std::ifstream file(filename);
 	if (!file.is_open())
@@ -73,7 +88,7 @@ void LoadConfig::loadFromFile(const std::string& filename)
 
 		if (config.contains("window") && config["window"].is_object())
 		{
-			auto& window = config["window"];
+			auto &window = config["window"];
 			if (window.contains("width") && window["width"].is_number())
 			{
 				windowWidth = window["width"];
@@ -105,6 +120,7 @@ void LoadConfig::loadFromFile(const std::string& filename)
 		{
 			std::cerr << "Error: Missing or invalid sleepTimeMillis in the config file." << std::endl;
 		}
+
 		if (config.contains("simulationIterations") && config["simulationIterations"].is_number())
 		{
 			simulationIterations = config["simulationIterations"];
@@ -113,6 +129,7 @@ void LoadConfig::loadFromFile(const std::string& filename)
 		{
 			std::cerr << "Error: Missing or invalid simulationIterations in the config file." << std::endl;
 		}
+
 		if (config.contains("worldSeed") && config["worldSeed"].is_number())
 		{
 			worldSeed = config["worldSeed"];
@@ -121,8 +138,50 @@ void LoadConfig::loadFromFile(const std::string& filename)
 		{
 			std::cerr << "Error: Missing or invalid worldSeed in the config file." << std::endl;
 		}
+
+		if (config.contains("summaryShowPerProbe") && config["summaryShowPerProbe"].is_string())
+		{
+			std::string perProbe = config["summaryShowPerProbe"];
+			if (perProbe == "true")
+			{
+				summaryShowPerProbe = true;
+			}
+			else if (perProbe == "false")
+			{
+				summaryShowPerProbe = false;
+			}
+			else
+			{
+				std::cerr << "Error: Invalid value for summaryShowPerProbe in the config file." << std::endl;
+			}
+		}
+		else
+		{
+			std::cerr << "Error: Missing or invalid summaryShowPerProbe in the config file." << std::endl;
+		}
+
+		if (config.contains("summaryShowFooter") && config["summaryShowFooter"].is_string())
+		{
+			std::string footer = config["summaryShowFooter"];
+			if (footer == "true")
+			{
+				summaryShowFooter = true;
+			}
+			else if (footer == "false")
+			{
+				summaryShowFooter = false;
+			}
+			else
+			{
+				std::cerr << "Error: Invalid value for summaryShowFooter in the config file." << std::endl;
+			}
+		}
+		else
+		{
+			std::cerr << "Error: Missing or invalid summaryShowFooter in the config file." << std::endl;
+		}
 	}
-	catch (json::parse_error& e)
+	catch (json::parse_error &e)
 	{
 		std::cerr << "Error parsing JSON: " << e.what() << std::endl;
 	}

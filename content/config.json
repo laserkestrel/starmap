@@ -7,8 +7,11 @@
   "sleepTimeMillis": 0,
   "simulationIterations": 117,
   "worldSeed": 1234,
+  "quadtreeSearchSize": 16,
   "font": {
     "file": "./content/Oxygen-Light.ttf",
     "size": 12
-  }
+  },
+  "summaryShowPerProbe": "false",
+  "summaryShowFooter": "true"
 }

@@ -92,7 +92,8 @@
 		"thread": "cpp",
 		"typeinfo": "cpp",
 		"valarray": "cpp",
-		"variant": "cpp"
+		"variant": "cpp",
+		"cinttypes": "cpp"
 	},
 	"makefile.makefilePath": "./CMakeLists.txt",
 	"makefile.buildLog": "./buildlog.txt"
