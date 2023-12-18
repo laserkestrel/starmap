@@ -19,8 +19,8 @@ FetchContent_Declare(SFML
     GIT_TAG 2.6.x)
 FetchContent_MakeAvailable(SFML)
 
-
-add_executable(starmap3 src/Main.cpp src/Game.cpp src/LoadConfig.cpp src/LoadData.cpp src/Probe.cpp src/RenderSystem.cpp src/Star.cpp src/Utilities.cpp)
+file(GLOB SOURCES "src/*.cpp")
+add_executable(starmap3 ${SOURCES})
 target_link_libraries(starmap3 PRIVATE sfml-graphics)
 target_compile_features(starmap3 PRIVATE cxx_std_17)
 

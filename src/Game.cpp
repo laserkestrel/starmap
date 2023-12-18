@@ -29,12 +29,12 @@ Game::Game(const LoadConfig &config) :
 	sf::FloatRect gameBounds(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight());
 	int QuadTreeCapacity = config.getQuadTreeSearchSize();
 	// Initialize the GalaxyQuadTree with the game boundaries and a suitable capacity
-	// GalaxyQuadTree quadTree(gameBounds, QuadTreeCapacity);
+	GalaxyQuadTree quadTree(gameBounds, QuadTreeCapacity);
 
 	// Example population of the quadtree in Game.cpp
 	for (const auto &star : galaxyVector)
 	{
-		// GalaxyQuadTree.insert(star);
+		quadTree.insert(star); // Use 'quadTree' instance to call the insert method
 	}
 
 	// Calculate the center coordinates

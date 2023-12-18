@@ -1,3 +1,4 @@
+// GalaxyQuadTree.h
 #pragma once // Header guard
 
 #include <SFML/Graphics.hpp>	// Include necessary headers
@@ -13,5 +14,5 @@ public:
 private:
 	GalaxyQuadTreeNode *root; // Pointer to the root node of the quadtree
 	int capacity;			  // Maximum capacity of stars in a node before splitting
-							  // Other private helper methods for insertion, splitting nodes, querying, etc.
+	sf::FloatRect boundary;	  // Other private helper methods for insertion, splitting nodes, querying, etc.
 };

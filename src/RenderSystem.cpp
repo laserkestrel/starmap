@@ -138,15 +138,18 @@ void RenderSystem::renderSummaryText(const std::string &summary)
 
 void RenderSystem::calculateAndDisplayFPS()
 {
-	// Calculate FPS
-	sf::Time elapsed = fpsClock.restart();
-	float fps = 1.0f / elapsed.asSeconds();
+	if (showTextLabels)
+	{
+		// Calculate FPS
+		sf::Time elapsed = fpsClock.restart();
+		float fps = 1.0f / elapsed.asSeconds();
 
-	// Update text to display FPS
-	std::ostringstream ss;
-	ss << "FPS: " << static_cast<int>(fps);
-	fpsCounter.setString(ss.str());
+		// Update text to display FPS
+		std::ostringstream ss;
+		ss << "FPS: " << static_cast<int>(fps);
+		fpsCounter.setString(ss.str());
 
-	// Draw FPS counter text
-	renderWindow.draw(fpsCounter);
+		// Draw FPS counter text
+		renderWindow.draw(fpsCounter);
+	}
 }

@@ -1,4 +1,4 @@
-//Star.h
+// Star.h
 #ifndef STAR_H
 #define STAR_H
 
@@ -7,7 +7,7 @@
 class Star
 {
 public:
-	Star(int x, int y, const std::string& name, const sf::Color& colour, double metals, double polymers, double fuel);
+	Star(int x, int y, const std::string &name, const sf::Color &colour, double metals, double polymers, double fuel);
 
 	int getX() const;
 	int getY() const;
