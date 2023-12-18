@@ -170,8 +170,12 @@ void RenderSystem::renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *
 	nodeRect.setSize(sf::Vector2f(node->boundary.width, node->boundary.height));
 	nodeRect.setPosition(sf::Vector2f(node->boundary.left, node->boundary.top));
 	nodeRect.setFillColor(sf::Color::Transparent);
-	nodeRect.setOutlineThickness(-1.0f);
-	nodeRect.setOutlineColor(sf::Color::White);
+	nodeRect.setOutlineThickness(0.5f);
+	int outlineRed = 55; // Replace these values with your desired RGB components (0-255)
+	int outlineGreen = 55;
+	int outlineBlue = 55;
+	int outlineAlpha = 128;
+	nodeRect.setOutlineColor(sf::Color(outlineRed, outlineGreen, outlineBlue, outlineAlpha));
 	window.draw(nodeRect);
 
 	if (!node->isLeaf)

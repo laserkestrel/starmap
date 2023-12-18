@@ -138,6 +138,14 @@ void LoadConfig::loadFromFile(const std::string &filename)
 		{
 			std::cerr << "Error: Missing or invalid worldSeed in the config file." << std::endl;
 		}
+		if (config.contains("quadtreeSearchSize") && config["quadtreeSearchSize"].is_number())
+		{
+			quadtreeSearchSize = config["quadtreeSearchSize"];
+		}
+		else
+		{
+			std::cerr << "Error: Missing or invalid quadtreeSearchSize in the config file." << std::endl;
+		}
 
 		if (config.contains("summaryShowPerProbe") && config["summaryShowPerProbe"].is_string())
 		{

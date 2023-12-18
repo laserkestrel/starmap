@@ -27,7 +27,7 @@ jobs:
 
     - name: Install Windows Dependencies
       if: runner.os == 'Windows'
-      run: Install-Package -Name nlohmann-json -ProviderName NuGet
+      run: Install-Package -Name nlohmann-json -ProviderName NuGet -force
 
     - name: Install Mac OS Dependencies
       if: runner.os == 'macOS'

@@ -22,22 +22,6 @@ Game::Game(const LoadConfig &config) :
 	galaxyVector = dataLoader.loadStarsFromJson("./content/star_data.json", window, config); // todo - load this from config file
 	sf::Vector2u windowSize = window.getSize();
 
-	// build a texture of all the stars which can be reused each frame
-	renderSystem.initializeStarsTexture(galaxyVector);
-
-	// Example initialization in Game.cpp
-	// Assume gameBounds represent the entire playable area, and pull quadtree depth from config;
-	sf::FloatRect gameBounds(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight());
-	int QuadTreeCapacity = config.getQuadTreeSearchSize();
-	// Initialize the GalaxyQuadTree with the game boundaries and a suitable capacity
-	GalaxyQuadTree theQuadTreeInstance(gameBounds, QuadTreeCapacity);
-
-	// Example population of the quadtree in Game.cpp
-	for (const auto &star : galaxyVector)
-	{
-		theQuadTreeInstance.insert(star); // Use 'quadTree' instance to call the insert method
-	}
-
 	// Calculate the center coordinates
 	int centerX = windowSize.x / 2;
 	int centerY = windowSize.y / 2;
@@ -52,6 +36,19 @@ Game::Game(const LoadConfig &config) :
 	firstProbe.move();		// currently running the actual logic of the probe from its class.
 	// and add it to the probeVector (a list of all probes in simulation)
 	probeVector.push_back(firstProbe);
+
+	// build a texture of all the stars which can be reused each frame
+	renderSystem.initializeStarsTexture(galaxyVector);
+
+	// Assume gameBounds represent the entire playable area, and pull quadtree depth from config;
+	sf::FloatRect gameBounds(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight());
+	int QuadTreeCapacity = config.getQuadTreeSearchSize();
+
+	// Example population of the quadtree in Game.cpp
+	for (const auto &star : galaxyVector)
+	{
+		theQuadTreeInstance.insert(star); // Use 'quadTree' instance to call the insert method
+	}
 }
 
 void Game::run()
