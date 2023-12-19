@@ -93,6 +93,7 @@ void Game::run()
 	while (window.isOpen())
 	{
 		handleEvents();
+		sf::sleep(sf::milliseconds(1000));
 		// Add other relevant operations for the window here
 	}
 }
@@ -144,7 +145,7 @@ void Game::updateGameState()
 
 	// Estimate the required capacity for new probes (adjust as needed)
 	size_t estimatedReplicationCount = probesToReplicate.size();
-	newProbes.reserve(estimatedReplicationCount); // Missing semicolon here
+	newProbes.reserve(estimatedReplicationCount);
 
 	// COMMENT HERE TO AVOID REPLICATION
 	// Create new probes based on probesToReplicate
