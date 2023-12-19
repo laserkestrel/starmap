@@ -7,6 +7,7 @@
 #include <SFML/System/Vector2.hpp> // Include SFML for Vector2f
 #include <string>
 #include <vector>
+#include "GalaxyQuadTree.h"
 
 enum class ProbeMode
 {
@@ -25,7 +26,7 @@ struct VisitedStarSystem
 class Probe
 {
 public:
-	Probe(const std::string& probeName, float initialX, float initialY, float speed, const std::vector<Star>& galaxyVector); // Probes require access to the same shared galaxyVector object to update resources there.
+	Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree); // Probes require access to the same shared galaxyVector object to update resources there.
 
 	// Destructor
 	~Probe();
@@ -36,9 +37,9 @@ public:
 	void setMode(ProbeMode mode);
 	void setTargetCoordinates(float newX, float newY);
 	void setNewBorn(bool status);
-	void addVisitedStarSystem(const std::string& systemName, const sf::Vector2f& coordinates, bool visitedByProbe);
+	void addVisitedStarSystem(const std::string &systemName, const sf::Vector2f &coordinates, bool visitedByProbe);
 	void setRandomTrailColor();
-	void setTargetStar(std::string& setTargetStar);
+	void setTargetStar(std::string &setTargetStar);
 
 	// Getters
 	std::string getProbeName() const;
@@ -51,7 +52,7 @@ public:
 	float getTotalDistanceTraveled() const;
 	int getReplicationCount() const;
 	int getVisitedStarCount() const;
-	const std::vector<VisitedStarSystem>& getVisitedStarSystems() const;
+	const std::vector<VisitedStarSystem> &getVisitedStarSystems() const;
 	sf::Color getTrailColor() const; // Declaration of getTrailColor method
 
 	// Other methods
@@ -68,13 +69,13 @@ private:
 	ProbeMode mode;
 	std::vector<VisitedStarSystem> visitedStarSystems; // a vector named visitedStarSystems that contains elements of type VisitedStarSystem
 	std::vector<Star> galaxyVector;
-	//std::vector<sf::Vector2f> probeTrail; // Member variable to store the trail of places - this is redunant, use the visitedStarSystems instead.
+	GalaxyQuadTree &quadTree;
 	bool newBorn;
 	float totalDistanceTraveled;
 	int replicationCount;
 	int visitedStarCount;
-	const Star* findNearestUnvisitedStar() const;
-	const Star* findNearestUnvisitedStarByRadius() const;
+	const Star *findNearestUnvisitedStar() const;
+	const Star *findNearestUnvisitedStarByRadius() const;
 	sf::Color trailColor; // Declaration of trailColor within the class
 };
 

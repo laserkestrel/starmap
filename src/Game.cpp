@@ -26,7 +26,7 @@ Game::Game(const LoadConfig &config) :
 	int centerX = windowSize.x / 2;
 	int centerY = windowSize.y / 2;
 	// Instantiate a probe class called firstProbe - galaxyVector as argument so data is shared between probe instances.
-	Probe firstProbe("SOL-SOL-AAA", centerX, centerY, 0.0f, galaxyVector); // Example coordinates and speed
+	Probe firstProbe("SOL-SOL-AAA", centerX, centerY, 0.0f, galaxyVector, theQuadTreeInstance); // Example coordinates and speed
 	firstProbe.setMode(ProbeMode::Seek);
 	firstProbe.setNewBorn(false);
 	firstProbe.setRandomTrailColor();
@@ -163,7 +163,7 @@ void Game::updateGameState()
 
 		// Create a new replicated probe
 		std::string newName = Utilities::probeNamer((probe.getProbeName()), probe.getTargetStar());
-		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), galaxyVector);
+		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), galaxyVector, theQuadTreeInstance);
 		// std::cout << "Replicating probe [" << probe.getProbeName() << "] targetstar or child birthplace is ..." << probe.getTargetStar() << '\n';
 		replicatedProbe.setRandomTrailColor();
 

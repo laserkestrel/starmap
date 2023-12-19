@@ -8,16 +8,17 @@
 #include <random>
 
 // Constructor (these are things that get set on a new instance)
-Probe::Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector) : probeName(probeName),
-																																 x(initialX),
-																																 y(initialY),
-																																 speed(speed),
-																																 mode(ProbeMode::Seek),
-																																 galaxyVector(galaxyVector),
-																																 newBorn(true),
-																																 totalDistanceTraveled(0.0f),
-																																 replicationCount(0),
-																																 visitedStarCount(0)
+Probe::Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree) : probeName(probeName),
+																																						   x(initialX),
+																																						   y(initialY),
+																																						   speed(speed),
+																																						   mode(ProbeMode::Seek),
+																																						   galaxyVector(galaxyVector),
+																																						   quadTree(quadTree),
+																																						   newBorn(true),
+																																						   totalDistanceTraveled(0.0f),
+																																						   replicationCount(0),
+																																						   visitedStarCount(0)
 {
 	// Additional setup if needed
 }
