@@ -1,42 +1,42 @@
 {
   "star_systems": [
     {
-      "name": "2MASS J15404341-5101357",
+      "name": "Madeup1",
       "distance": 17.3738,
       "stellartype": "M"
     },
     {
-      "name": "61 Cygni A",
+      "name": "Madeup2",
       "distance": 11.4039,
       "stellartype": "K"
     },
     {
-      "name": "70 Ophiuchi A",
+      "name": "Madeup3",
       "distance": 16.7074,
       "stellartype": "K"
     },
     {
-      "name": "82 G. Eridani",
+      "name": "Madeup4",
       "distance": 19.7045,
       "stellartype": "G"
     },
     {
-      "name": "Achird",
+      "name": "Madeup5",
       "distance": 19.3314,
       "stellartype": "G"
     },
     {
-      "name": "AD Leonis",
+      "name": "Madeup6",
       "distance": 16.1939,
       "stellartype": "M"
     },
     {
-      "name": "Madeup1",
+      "name": "Madeup7",
       "distance": 16.3,
       "stellartype": "B"
     },
     {
-      "name": "Madeup2",
+      "name": "Madeup8",
       "distance": 19.3,
       "stellartype": "O"
     }

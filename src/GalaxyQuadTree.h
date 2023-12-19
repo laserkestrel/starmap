@@ -14,6 +14,7 @@ public:
 	{
 		return root;
 	} // Query stars within a radius around a point
+	void debugPrint() const;
 
 private:
 	GalaxyQuadTreeNode *root; // Pointer to the root node of the quadtree

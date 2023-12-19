@@ -49,6 +49,9 @@ Game::Game(const LoadConfig &config) :
 	{
 		theQuadTreeInstance.insert(star); // Use 'quadTree' instance to call the insert method
 	}
+#if defined(_DEBUG)
+	theQuadTreeInstance.debugPrint(); // This will print the structure of the quadtree and the stars in each node
+#endif
 }
 
 void Game::run()
@@ -175,7 +178,7 @@ void Game::updateGameState()
 		for (const auto &visitedSystem : visitedSystems)
 		{
 #if defined(_DEBUG)
-			std::cout << "Adding this system to child probe - [" << visitedSystem.systemName << "]" << '\n';
+			// std::cout << "Adding this system to child probe - [" << visitedSystem.systemName << "]" << '\n';
 #endif
 			// Set the visitedByProbe to false for this one as the child probe hasn't visited by itself.
 			replicatedProbe.addVisitedStarSystem(visitedSystem.systemName, visitedSystem.coordinates, false);
