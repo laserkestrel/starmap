@@ -122,6 +122,7 @@ void Game::handleEvents()
 		{
 			// Toggle text labels visibility
 			renderSystem.toggleTextLabels();
+			renderSystem.initializeStarsTexture(galaxyVector);
 		}
 		else if (event.key.code == sf::Keyboard::F3)
 		{
