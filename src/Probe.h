@@ -26,8 +26,8 @@ struct VisitedStarSystem
 class Probe
 {
 public:
-	Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree); // Probes require access to the same shared galaxyVector object to update resources there.
-
+	// Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree); // Probes require access to the same shared galaxyVector object to update resources there.
+	Probe(const std::string &probeName, float initialX, float initialY, float speed, GalaxyQuadTree &quadTree); // Probes require access to the same shared galaxyVector object to update resources there.
 	// Destructor
 	~Probe();
 
@@ -68,7 +68,7 @@ private:
 	float speed;
 	ProbeMode mode;
 	std::vector<VisitedStarSystem> visitedStarSystems; // a vector named visitedStarSystems that contains elements of type VisitedStarSystem
-	std::vector<Star> galaxyVector;
+	// std::vector<Star> galaxyVector;
 	GalaxyQuadTree &quadTree;
 	bool newBorn;
 	float totalDistanceTraveled;
@@ -76,6 +76,7 @@ private:
 	int visitedStarCount;
 	const Star *findNearestUnvisitedStar() const;
 	const Star *findNearestUnvisitedStarByRadius() const;
+	const Star *findNearestUnvisitedStarInQuadTree(const GalaxyQuadTreeNode *node, float searchRadius) const;
 	sf::Color trailColor; // Declaration of trailColor within the class
 };
 

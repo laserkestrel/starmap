@@ -8,17 +8,18 @@
 #include <random>
 
 // Constructor (these are things that get set on a new instance)
-Probe::Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree) : probeName(probeName),
-																																						   x(initialX),
-																																						   y(initialY),
-																																						   speed(speed),
-																																						   mode(ProbeMode::Seek),
-																																						   galaxyVector(galaxyVector),
-																																						   quadTree(quadTree),
-																																						   newBorn(true),
-																																						   totalDistanceTraveled(0.0f),
-																																						   replicationCount(0),
-																																						   visitedStarCount(0)
+// Probe::Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree)
+Probe::Probe(const std::string &probeName, float initialX, float initialY, float speed, GalaxyQuadTree &quadTree) : probeName(probeName),
+																													x(initialX),
+																													y(initialY),
+																													speed(speed),
+																													mode(ProbeMode::Seek),
+																													// galaxyVector(galaxyVector),
+																													quadTree(quadTree),
+																													newBorn(true),
+																													totalDistanceTraveled(0.0f),
+																													replicationCount(0),
+																													visitedStarCount(0)
 {
 	// Additional setup if needed
 }
@@ -121,7 +122,8 @@ void Probe::move()
 			// update probe memory with newly arrived star, before finding next target.
 			addVisitedStarSystem(this->getTargetStar(), sf::Vector2f(this->getX(), this->getY()), true);
 
-			// Update the target star's isExplored value to true
+			// Update the target star's isExplored value to true - Lets not bother for a bit.
+			/*
 			for (auto &star : galaxyVector)
 			{
 				if (star.getName() == this->getTargetStar())
@@ -131,7 +133,7 @@ void Probe::move()
 					break; // Exit the loop once the star is found and updated
 				}
 			}
-
+*/
 			/* this is seek behaviour, dont do this in travel mode!
 			const Star* nearestStar = findNearestUnvisitedStar();
 			if (nearestStar)
@@ -176,13 +178,14 @@ void Probe::move()
 	}
 	else if (mode == ProbeMode::Seek)
 	{
+		/*
 		if (galaxyVector.empty())
 		{
 			std::cout << "No stars available for seeking.\n";
 			setMode(ProbeMode::Shutdown);
 			return;
 		}
-
+		*/
 		if (this->isNewBorn() && !visitedStarSystems.empty())
 		{
 #if defined(_DEBUG)
@@ -209,7 +212,9 @@ void Probe::move()
 		}
 		else
 		{
-			const Star *nearestStar = findNearestUnvisitedStarByRadius();
+			int initialSearchRadius = 250;
+			// const Star *nearestStar = findNearestUnvisitedStarByRadius();
+			const Star *nearestStar = findNearestUnvisitedStarInQuadTree(quadTree.getRootNode(), initialSearchRadius);
 
 			if (nearestStar)
 			{
@@ -283,26 +288,28 @@ sf::Color Probe::getTrailColor() const
 }
 
 // Implementation of findNearestUnvisitedStar method
+
 const Star *Probe::findNearestUnvisitedStar() const
 {
 	const Star *nearestStar = nullptr;
 	float minDistance = std::numeric_limits<float>::max();
-
-	for (const Star &star : galaxyVector)
-	{
-		if (std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
-						 { return visitedSystem.systemName == star.getName(); }) == visitedStarSystems.end() &&
-			!(x == star.getX() && y == star.getY()))
+	/*
+		for (const Star &star : galaxyVector)
 		{
-			float distance = std::sqrt(std::pow(x - star.getX(), 2) + std::pow(y - star.getY(), 2));
-
-			if (distance < minDistance)
+			if (std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
+							 { return visitedSystem.systemName == star.getName(); }) == visitedStarSystems.end() &&
+				!(x == star.getX() && y == star.getY()))
 			{
-				minDistance = distance;
-				nearestStar = &star;
+				float distance = std::sqrt(std::pow(x - star.getX(), 2) + std::pow(y - star.getY(), 2));
+
+				if (distance < minDistance)
+				{
+					minDistance = distance;
+					nearestStar = &star;
+				}
 			}
 		}
-	}
+		*/
 	std::cout << "findNearestUnvisitedStar has just been called.\n";
 	return nearestStar;
 }
@@ -313,25 +320,26 @@ const Star *Probe::findNearestUnvisitedStarByRadius() const
 
 	const Star *nearestStar = nullptr;
 	float minDistance = std::numeric_limits<float>::max();
-
-	for (const Star &star : galaxyVector)
-	{
-		// Calculate distance between probe and the star
-		float distance = std::sqrt(std::pow(x - star.getX(), 2) + std::pow(y - star.getY(), 2));
-
-		// Check if the star is unvisited and within the specified radius
-		if (distance <= radius && std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
-											   { return visitedSystem.systemName == star.getName(); }) == visitedStarSystems.end() &&
-			!(x == star.getX() && y == star.getY()))
+	/*
+		for (const Star &star : galaxyVector)
 		{
-			if (distance < minDistance)
+			// Calculate distance between probe and the star
+			float distance = std::sqrt(std::pow(x - star.getX(), 2) + std::pow(y - star.getY(), 2));
+
+			// Check if the star is unvisited and within the specified radius
+			if (distance <= radius && std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
+												   { return visitedSystem.systemName == star.getName(); }) == visitedStarSystems.end() &&
+				!(x == star.getX() && y == star.getY()))
 			{
-				minDistance = distance;
-				nearestStar = &star;
+				if (distance < minDistance)
+				{
+					minDistance = distance;
+					nearestStar = &star;
+				}
 			}
 		}
-	}
-	// std::cout << "findNearestUnvisitedStarByRadius has just been called.\n";
+		*/
+	std::cout << "findNearestUnvisitedStarByRadius has just been called.\n";
 	return nearestStar;
 }
 
@@ -358,4 +366,53 @@ void Probe::setRandomTrailColor()
 
 	// Set the trail color
 	trailColor = sf::Color(red, green, blue);
+}
+
+const Star *Probe::findNearestUnvisitedStarInQuadTree(const GalaxyQuadTreeNode *node, float searchRadius) const
+{
+	if (node == nullptr)
+	{
+		return nullptr;
+	}
+
+	const Star *nearestStar = nullptr;
+	float minDistance = std::numeric_limits<float>::max();
+
+	sf::FloatRect searchArea(x - searchRadius, y - searchRadius, searchRadius * 2, searchRadius * 2);
+	if (node->boundary.intersects(searchArea))
+	{
+		for (const auto &star : node->stars)
+		{
+			if (!star.getIsExplored() && std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
+													  { return visitedSystem.systemName == star.getName(); }) == visitedStarSystems.end())
+			{
+
+				float distance = std::sqrt(std::pow(star.getX() - x, 2) + std::pow(star.getY() - y, 2));
+				if (distance <= searchRadius && distance < minDistance)
+				{
+					minDistance = distance;
+					nearestStar = &star;
+				}
+			}
+		}
+
+		if (!node->isLeaf)
+		{
+			for (int i = 0; i < 4; ++i)
+			{
+				const Star *childNearestStar = findNearestUnvisitedStarInQuadTree(node->getChild(i), searchRadius);
+				if (childNearestStar)
+				{
+					float childDistance = std::sqrt(std::pow(childNearestStar->getX() - x, 2) + std::pow(childNearestStar->getY() - y, 2));
+					if (childDistance < minDistance)
+					{
+						minDistance = childDistance;
+						nearestStar = childNearestStar;
+					}
+				}
+			}
+		}
+	}
+
+	return nearestStar;
 }

@@ -25,17 +25,6 @@ Game::Game(const LoadConfig &config) :
 	// Calculate the center coordinates
 	int centerX = windowSize.x / 2;
 	int centerY = windowSize.y / 2;
-	// Instantiate a probe class called firstProbe - galaxyVector as argument so data is shared between probe instances.
-	Probe firstProbe("SOL-SOL-AAA", centerX, centerY, 0.0f, galaxyVector, theQuadTreeInstance); // Example coordinates and speed
-	firstProbe.setMode(ProbeMode::Seek);
-	firstProbe.setNewBorn(false);
-	firstProbe.setRandomTrailColor();
-	sf::Vector2f SolCoordinates(centerX, centerY); // Replace these values with actual coordinates
-	firstProbe.addVisitedStarSystem("Sol", SolCoordinates, true);
-	firstProbe.setSpeed(1); // make sure starter system is set
-	firstProbe.move();		// currently running the actual logic of the probe from its class.
-	// and add it to the probeVector (a list of all probes in simulation)
-	probeVector.push_back(firstProbe);
 
 	// build a texture of all the stars which can be reused each frame
 	renderSystem.initializeStarsTexture(galaxyVector);
@@ -52,6 +41,19 @@ Game::Game(const LoadConfig &config) :
 #if defined(_DEBUG)
 	theQuadTreeInstance.debugPrint(); // This will print the structure of the quadtree and the stars in each node
 #endif
+
+	// Instantiate a probe class called firstProbe - galaxyVector as argument so data is shared between probe instances.
+	// Probe firstProbe("SOL-SOL-AAA", centerX, centerY, 0.0f, galaxyVector, theQuadTreeInstance); // Example coordinates and speed
+	Probe firstProbe("SOL-SOL-AAA", centerX, centerY, 0.0f, theQuadTreeInstance); // Example coordinates and speed
+	firstProbe.setMode(ProbeMode::Seek);
+	firstProbe.setNewBorn(false);
+	firstProbe.setRandomTrailColor();
+	sf::Vector2f SolCoordinates(centerX, centerY); // Replace these values with actual coordinates
+	firstProbe.addVisitedStarSystem("Sol", SolCoordinates, true);
+	firstProbe.setSpeed(1); // make sure starter system is set
+	firstProbe.move();		// currently running the actual logic of the probe from its class.
+	// and add it to the probeVector (a list of all probes in simulation)
+	probeVector.push_back(firstProbe);
 }
 
 void Game::run()
@@ -163,7 +165,8 @@ void Game::updateGameState()
 
 		// Create a new replicated probe
 		std::string newName = Utilities::probeNamer((probe.getProbeName()), probe.getTargetStar());
-		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), galaxyVector, theQuadTreeInstance);
+		// Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), galaxyVector, theQuadTreeInstance);
+		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), theQuadTreeInstance);
 		// std::cout << "Replicating probe [" << probe.getProbeName() << "] targetstar or child birthplace is ..." << probe.getTargetStar() << '\n';
 		replicatedProbe.setRandomTrailColor();
 
