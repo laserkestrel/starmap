@@ -14,6 +14,7 @@ public:
 	int getWindowHeight() const;
 	int getSleepTimeMillis() const;
 	int getSimulationIterations() const;
+	int getLoadStarsLimit() const;
 	unsigned int getWorldSeed() const;
 	int getQuadTreeSearchSize() const;
 	bool getSummaryShowPerProbe() const;
@@ -27,6 +28,7 @@ private:
 	int windowHeight;
 	int sleepTimeMillis;
 	int simulationIterations = 0;
+	int loadStarsLimit = 999999;
 	unsigned int worldSeed = 0;
 	int quadtreeSearchSize;
 	bool summaryShowPerProbe;

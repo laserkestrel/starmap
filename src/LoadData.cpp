@@ -22,6 +22,11 @@ std::vector<Star> LoadData::loadStarsFromJson(const std::string &jsonFilePath, s
 	json jsonData;
 	jsonFile >> jsonData;
 
+	if (jsonData.contains("loadStarsLimit"))
+	{
+		int dataLoaderStarsLimit = jsonData.value("loadStarsLimit", 0);
+	}
+
 	int worldSeed = config.getWorldSeed();
 	std::mt19937 rng(worldSeed); // Use the worldSeed for random number generation
 
@@ -53,9 +58,15 @@ std::vector<Star> LoadData::loadStarsFromJson(const std::string &jsonFilePath, s
 			int maxX = windowSize.x - 20; // Subtracting 20 to keep some margin from the edges
 			int maxY = windowSize.y - 20;
 
+			int loadedStars = 0; // Counter for the number of loaded stars
+			int dataLoaderStarsLimit;
+			dataLoaderStarsLimit = config.getLoadStarsLimit();
+
 			// Iterate through each entry in the JSON file
 			for (const auto &entry : starSystems)
 			{
+				if (loadedStars >= dataLoaderStarsLimit)
+					break;
 				std::string name = entry["name"].get<std::string>();
 				char stellarType = entry["stellartype"].get<std::string>().front();
 				// Generate random coordinates using the seeded generator
@@ -78,6 +89,7 @@ std::vector<Star> LoadData::loadStarsFromJson(const std::string &jsonFilePath, s
 
 				// GalaxyVector.push_back(newStar); //optimised loading to instead load to a temp vector, then push back to preallocated one
 				GalaxyVector.push_back(std::move(newStar));
+				loadedStars++;
 			}
 		}
 		else

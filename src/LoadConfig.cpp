@@ -42,6 +42,11 @@ int LoadConfig::getSimulationIterations() const
 	return simulationIterations;
 }
 
+int LoadConfig::getLoadStarsLimit() const
+{
+	return loadStarsLimit;
+}
+
 unsigned int LoadConfig::getWorldSeed() const
 {
 	return worldSeed;
@@ -124,6 +129,15 @@ void LoadConfig::loadFromFile(const std::string &filename)
 		if (config.contains("simulationIterations") && config["simulationIterations"].is_number())
 		{
 			simulationIterations = config["simulationIterations"];
+		}
+		else
+		{
+			std::cerr << "Error: Missing or invalid simulationIterations in the config file." << std::endl;
+		}
+
+		if (config.contains("loadStarsLimit") && config["loadStarsLimit"].is_number())
+		{
+			loadStarsLimit = config["loadStarsLimit"];
 		}
 		else
 		{

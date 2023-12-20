@@ -212,7 +212,7 @@ void Probe::move()
 		}
 		else
 		{
-			int initialSearchRadius = 250;
+			int initialSearchRadius = 800;
 			// const Star *nearestStar = findNearestUnvisitedStarByRadius();
 			const Star *nearestStar = findNearestUnvisitedStarInQuadTree(quadTree.getRootNode(), initialSearchRadius);
 
@@ -341,6 +341,16 @@ const Star *Probe::findNearestUnvisitedStarByRadius() const
 		*/
 	std::cout << "findNearestUnvisitedStarByRadius has just been called.\n";
 	return nearestStar;
+}
+
+void Probe::setBlackTrailColor()
+{
+	// Generate RGB values
+	sf::Uint8 red = 0;
+	sf::Uint8 green = 0;
+	sf::Uint8 blue = 0;
+	// Set the trail color
+	trailColor = sf::Color(red, green, blue);
 }
 
 void Probe::setRandomTrailColor()

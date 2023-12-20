@@ -39,6 +39,7 @@ public:
 	void setNewBorn(bool status);
 	void addVisitedStarSystem(const std::string &systemName, const sf::Vector2f &coordinates, bool visitedByProbe);
 	void setRandomTrailColor();
+	void setBlackTrailColor();
 	void setTargetStar(std::string &setTargetStar);
 
 	// Getters
