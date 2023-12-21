@@ -77,7 +77,7 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 		}
 	}
 
-	renderTexture.display();				   // Display the content on the render texture
+	// renderTexture.display();				   // Dont do this here, run from game.cpp
 	starsTexture = renderTexture.getTexture(); // Save the rendered texture
 }
 
