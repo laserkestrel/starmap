@@ -5,7 +5,7 @@
 #include <iostream>
 
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
-													   showTextLabels(false),
+													   showTextLabels(true),
 													   showProbeTrails(false)
 {
 	// Initialize RenderSystem, if needed
@@ -72,12 +72,12 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 		{
 			// Render text labels if the flag is true
 			sf::Text labelText(star.getName(), font, 12);
-			labelText.setPosition((star.getX()) - 10, (star.getY()) - 10);
+			labelText.setPosition((star.getX()) + 10, (star.getY()) + 10);
 			renderTexture.draw(labelText);
 		}
 	}
 
-	// renderTexture.display();				   // Dont do this here, run from game.cpp
+	renderTexture.display();				   // dont remove this, makes texture appear upside down or go underfined position.
 	starsTexture = renderTexture.getTexture(); // Save the rendered texture
 }
 

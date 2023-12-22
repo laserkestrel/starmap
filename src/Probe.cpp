@@ -121,8 +121,13 @@ void Probe::move()
 			totalDistanceTraveled += distanceToTarget;
 			// update probe memory with newly arrived star, before finding next target.
 			addVisitedStarSystem(this->getTargetStar(), sf::Vector2f(this->getX(), this->getY()), true);
+			/*
 			// MAGIC CODE TO GO HERE - NEED TO HANDLE NOT SENDING PARENT/CHILD TO SAME PLACES
-
+			1. Parent obtains "neareststar" - does this just return value or actually set anything? its just a string of the name, nothing else.
+			2. Convert nearestStar into a construct for the child to consume
+			3. replicate value.
+			//
+*/
 			if (this->isNewBorn())
 			{
 				this->setNewBorn(false);
