@@ -121,31 +121,8 @@ void Probe::move()
 			totalDistanceTraveled += distanceToTarget;
 			// update probe memory with newly arrived star, before finding next target.
 			addVisitedStarSystem(this->getTargetStar(), sf::Vector2f(this->getX(), this->getY()), true);
+			// MAGIC CODE TO GO HERE - NEED TO HANDLE NOT SENDING PARENT/CHILD TO SAME PLACES
 
-			// Update the target star's isExplored value to true - Lets not bother for a bit.
-			/*
-			for (auto &star : galaxyVector)
-			{
-				if (star.getName() == this->getTargetStar())
-				{
-					// Found the matching star, update its isExplored value
-					star.setIsExplored(true);
-					break; // Exit the loop once the star is found and updated
-				}
-			}
-*/
-			/* this is seek behaviour, dont do this in travel mode!
-			const Star* nearestStar = findNearestUnvisitedStar();
-			if (nearestStar)
-			{
-				std::cout << "Probe at (" << x << ", " << y << ") has nearest star: " << nearestStar->getName() << std::endl;
-				//addVisitedStarSystem(nearestStar->getName(), sf::Vector2f(nearestStar->getX(), nearestStar->getY()), true);
-			}
-			else
-			{
-				std::cout << "No nearest unvisited star found for the probe at (" << x << ", " << y << ").\n";
-				// Handle the case where there's no nearest unvisited star
-			}*/
 			if (this->isNewBorn())
 			{
 				this->setNewBorn(false);
@@ -285,62 +262,6 @@ const std::vector<VisitedStarSystem> &Probe::getVisitedStarSystems() const
 sf::Color Probe::getTrailColor() const
 {
 	return trailColor; // Return the trailColor
-}
-
-// Implementation of findNearestUnvisitedStar method
-
-const Star *Probe::findNearestUnvisitedStar() const
-{
-	const Star *nearestStar = nullptr;
-	float minDistance = std::numeric_limits<float>::max();
-	/*
-		for (const Star &star : galaxyVector)
-		{
-			if (std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
-							 { return visitedSystem.systemName == star.getName(); }) == visitedStarSystems.end() &&
-				!(x == star.getX() && y == star.getY()))
-			{
-				float distance = std::sqrt(std::pow(x - star.getX(), 2) + std::pow(y - star.getY(), 2));
-
-				if (distance < minDistance)
-				{
-					minDistance = distance;
-					nearestStar = &star;
-				}
-			}
-		}
-		*/
-	std::cout << "findNearestUnvisitedStar has just been called.\n";
-	return nearestStar;
-}
-
-const Star *Probe::findNearestUnvisitedStarByRadius() const
-{
-	float radius = 250.0f; // Set a default radius value
-
-	const Star *nearestStar = nullptr;
-	float minDistance = std::numeric_limits<float>::max();
-	/*
-		for (const Star &star : galaxyVector)
-		{
-			// Calculate distance between probe and the star
-			float distance = std::sqrt(std::pow(x - star.getX(), 2) + std::pow(y - star.getY(), 2));
-
-			// Check if the star is unvisited and within the specified radius
-			if (distance <= radius && std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
-												   { return visitedSystem.systemName == star.getName(); }) == visitedStarSystems.end() &&
-				!(x == star.getX() && y == star.getY()))
-			{
-				if (distance < minDistance)
-				{
-					minDistance = distance;
-					nearestStar = &star;
-				}
-			}
-		}
-		*/
-	std::cout << "findNearestUnvisitedStarByRadius has just been called.\n";
-	return nearestStar;
 }
 
 void Probe::setBlackTrailColor()
