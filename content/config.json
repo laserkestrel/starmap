@@ -5,8 +5,8 @@
     "height": 900
   },
   "sleepTimeMillis": 0,
-  "simulationIterations": 117,
-  "loadStarsLimit": 100,
+  "simulationIterations": 117000,
+  "loadStarsLimit": 10000,
   "worldSeed": 1234,
   "quadtreeSearchSize": 128,
   "font": {

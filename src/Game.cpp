@@ -160,7 +160,12 @@ void Game::updateGameState()
 	{
 		// Run specific logic when the mode is "Replicate"
 
-		const Probe &probe = probeVector[index];
+		Probe &probe = probeVector[index];
+
+		if (probe.getReplicationCount() > 3)
+		{
+			probe.setMode(ProbeMode::Shutdown);
+		}
 
 		// Create a new replicated probe
 		std::string newName = Utilities::probeNamer((probe.getProbeName()), probe.getTargetStar());
