@@ -179,6 +179,7 @@ void Game::updateGameState()
 		// so when does visitedSystem get populated?
 		// replicatedProbe.addVisitedStarSystem((probe.getTargetStar()),(probe.getX()),true);
 		// are these null visited sytems where the probe tries to get nearestStarSystem by radius and there isnt one? - no because they visit somewhere else after.
+
 		for (const auto &visitedSystem : visitedSystems)
 		{
 #if defined(_DEBUG)
