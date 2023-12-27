@@ -39,7 +39,7 @@ Game::Game(const LoadConfig &config) :
 		theQuadTreeInstance.insert(star); // Use 'quadTree' instance to call the insert method
 	}
 #if defined(_DEBUG)
-	theQuadTreeInstance.debugPrint(); // This will print the structure of the quadtree and the stars in each node
+	// theQuadTreeInstance.debugPrint(); // This will print the structure of the quadtree and the stars in each node EXTREME VERBOSE!
 #endif
 
 	// Instantiate a probe class called firstProbe - galaxyVector as argument so data is shared between probe instances.

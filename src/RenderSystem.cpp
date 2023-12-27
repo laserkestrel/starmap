@@ -5,7 +5,7 @@
 #include <iostream>
 
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
-													   showTextLabels(true),
+													   showTextLabels(false),
 													   showProbeTrails(false)
 {
 	// Initialize RenderSystem, if needed
