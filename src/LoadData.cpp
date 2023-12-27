@@ -50,7 +50,7 @@ std::vector<Star> LoadData::loadStarsFromJson(const std::string &jsonFilePath, s
 			int centerY = windowSize.y / 2;
 
 			// Create the Sol star using the calculated center coordinates
-			Star newStar(centerX, centerY, "Sol", (sf::Color(255, 255, 0)), 300, 300, 300);
+			Star newStar(centerX, centerY, "Sol", (sf::Color(255, 255, 0)));
 			newStar.setIsExplored(true);
 			GalaxyVector.push_back(newStar);
 
@@ -75,17 +75,18 @@ std::vector<Star> LoadData::loadStarsFromJson(const std::string &jsonFilePath, s
 				int x = distX(rng);
 				int y = distY(rng);
 
+				/*
 				// Generate random values for metals, polymers, and fuel using the seeded generator
 				std::uniform_real_distribution<double> distValues(400.0, 1000.0);
 				double metals = distValues(rng);
 				double polymers = distValues(rng);
 				double fuel = distValues(rng);
-
+*/
 				// Convert stellarType to RGB color using the provided function
 				sf::Color color = convertStellarTypeToColor(stellarType);
 
 				// Instantiate a new Star object and add it to GalaxyVector
-				Star newStar(x, y, name, color, metals, polymers, fuel);
+				Star newStar(x, y, name, color);
 
 				// GalaxyVector.push_back(newStar); //optimised loading to instead load to a temp vector, then push back to preallocated one
 				GalaxyVector.push_back(std::move(newStar));

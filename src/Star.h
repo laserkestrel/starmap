@@ -7,7 +7,7 @@
 class Star
 {
 public:
-	Star(int x, int y, const std::string &name, const sf::Color &colour, double metals, double polymers, double fuel);
+	Star(int x, int y, const std::string &name, const sf::Color &colour);
 
 	int getX() const;
 	int getY() const;
@@ -27,9 +27,9 @@ private:
 	int y;
 	std::string name;
 	sf::Color colour; // Change the type to sf::Color
-	double metals;
-	double polymers;
-	double fuel;
+	// double metals;
+	// double polymers;
+	// double fuel;
 	bool isExplored;
 };
 
