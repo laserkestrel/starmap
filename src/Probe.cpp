@@ -14,12 +14,11 @@ Probe::Probe(const std::string &probeName, float initialX, float initialY, float
 																													y(initialY),
 																													speed(speed),
 																													mode(ProbeMode::Seek),
-																													// galaxyVector(galaxyVector),
 																													quadTree(quadTree),
 																													newBorn(true),
 																													totalDistanceTraveled(0.0f),
-																													replicationCount(0),
-																													visitedStarCount(0)
+																													replicationCount(0)
+// visitedStarCount(0)
 {
 	// Additional setup if needed
 }
@@ -100,8 +99,6 @@ void Probe::move()
 {
 	if (mode == ProbeMode::Travel)
 	{
-		// Implement travel behavior
-		// std::cout << "Probe is traveling.\n";
 		// Calculate the direction from current position to the target position
 		float deltaX = targetX - x;
 		float deltaY = targetY - y;
@@ -112,22 +109,15 @@ void Probe::move()
 
 		if (distanceToTarget <= stepSize)
 		{
-			// If the distance to the target is smaller than or equal to the step size,
-			// move directly to the target position
+			// If the distance to the target is smaller than or equal to the step size, move directly to the target position
 			setCoordinates(targetX, targetY);
-			// we have arrived, implement some new behaviour
+			// Probe has arrived!
 
 			// Update distance traveled
 			totalDistanceTraveled += distanceToTarget;
 			// update probe memory with newly arrived star, before finding next target.
 			addVisitedStarSystem(this->getTargetStar(), sf::Vector2f(this->getX(), this->getY()), true);
-			/*
-			// MAGIC CODE TO GO HERE - NEED TO HANDLE NOT SENDING PARENT/CHILD TO SAME PLACES
-			1. Parent obtains "neareststar" - does this just return value or actually set anything? its just a string of the name, nothing else.
-			2. Convert nearestStar into a construct for the child to consume
-			3. replicate value.
-			//
-*/
+
 			if (this->isNewBorn())
 			{
 				this->setNewBorn(false);
@@ -147,32 +137,19 @@ void Probe::move()
 
 			// Move towards the target position by the step size in the direction of the target
 			setCoordinates(x + directionX * stepSize, y + directionY * stepSize);
-			// setSpeed(100); // dont need to set this here. gets auto set in travel.
 		}
 	}
 	else if (mode == ProbeMode::Replicate)
 	{
-		// Implement replicate behavior
-		// std::cout << "Probe would replicate now inside probe.cpp.\n";
 		// This now does nothing, because replicate is checked in game.cpp
 		replicationCount++;
 		setMode(ProbeMode::Seek);
 	}
 	else if (mode == ProbeMode::Seek)
 	{
-		/*
-		if (galaxyVector.empty())
-		{
-			std::cout << "No stars available for seeking.\n";
-			setMode(ProbeMode::Shutdown);
-			return;
-		}
-		*/
 		if (this->isNewBorn() && !visitedStarSystems.empty())
 		{
-#if defined(_DEBUG)
-			std::cout << "Probe is newborn so will seek new direction from parent.\n";
-#endif
+			// Probe is newborn
 			// Define an offset range from the parent's position
 			std::uniform_real_distribution<float> disAngle(0.0f, 2.0f * 3.14159f); // Angle range for full circle
 			std::uniform_real_distribution<float> disDistance(150.0f, 200.0f);	   // Distance range from 50 to 100 pixels
@@ -196,14 +173,11 @@ void Probe::move()
 		{
 			int initialSearchRadius = 800;
 			// const Star *nearestStar = findNearestUnvisitedStarByRadius();
+			// setup a pointer (called nearestStar) to a star object returned by the finding method.
 			const Star *nearestStar = findNearestUnvisitedStarInQuadTree(quadTree.getRootNode(), initialSearchRadius);
 
 			if (nearestStar)
 			{
-#if defined(_DEBUG)
-				std::cout << "Probe [" << this->probeName << "] is seeking the nearest star: " << nearestStar->getName() << ".\n";
-				std::cout << "Nearest Star Coordinates: (" << nearestStar->getX() << ", " << nearestStar->getY() << ")" << std::endl;
-#endif
 				this->setTargetCoordinates(nearestStar->getX(), nearestStar->getY());
 				std::string newTarget = (nearestStar->getName()); // NOTE:have to create intermediate string for star name to then pass into setTargetStar. Complains if done directly.
 				this->setTargetStar(newTarget);
@@ -254,10 +228,11 @@ int Probe::getReplicationCount() const
 	return replicationCount;
 }
 
-int Probe::getVisitedStarCount() const
+/*int Probe::getVisitedStarCount() const
 {
 	return visitedStarCount;
 }
+*/
 
 const std::vector<VisitedStarSystem> &Probe::getVisitedStarSystems() const
 {

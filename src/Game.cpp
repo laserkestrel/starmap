@@ -153,38 +153,26 @@ void Game::updateGameState()
 	size_t estimatedReplicationCount = probesToReplicate.size();
 	newProbes.reserve(estimatedReplicationCount);
 
-	// COMMENT HERE TO AVOID REPLICATION
+	// TODO: Can we move logic together into probe class itself?
 	// Create new probes based on probesToReplicate
+
 	for (const auto &index : probesToReplicate)
 	{
-// Run specific logic when the mode is "Replicate"
-#if defined(_DEBUG)
-		std::cout << "Probe is in Replicate mode from the Game loop, and is spawning a new probe instance now\n";
-#endif
+		// Run specific logic when the mode is "Replicate"
+
 		const Probe &probe = probeVector[index];
 
 		// Create a new replicated probe
 		std::string newName = Utilities::probeNamer((probe.getProbeName()), probe.getTargetStar());
-		// Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), galaxyVector, theQuadTreeInstance);
+
 		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), theQuadTreeInstance);
-		// std::cout << "Replicating probe [" << probe.getProbeName() << "] targetstar or child birthplace is ..." << probe.getTargetStar() << '\n';
+
 		replicatedProbe.setRandomTrailColor();
 
 		// Iterate through visited star systems of the original probe and add to replicated probe
-		// IS THIS IN THE CONTEXT OF THE CHILD PROBE, NOT THE PARENT!? -doesnt seem to be.
 		const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
-		// BUG issue #18 - missing logic to populate the birthplace system first.
-		// how do we set this, shouldnt this birthplace be in the visited system of the parent yet? Take the child, add the parents current location to its properties.
-		// am I making this hard, cant I just add the parents current location to visitedStarSystem BEFORE replication?
-		// so when does visitedSystem get populated?
-		// replicatedProbe.addVisitedStarSystem((probe.getTargetStar()),(probe.getX()),true);
-		// are these null visited sytems where the probe tries to get nearestStarSystem by radius and there isnt one? - no because they visit somewhere else after.
-
 		for (const auto &visitedSystem : visitedSystems)
 		{
-#if defined(_DEBUG)
-			// std::cout << "Adding this system to child probe - [" << visitedSystem.systemName << "]" << '\n';
-#endif
 			// Set the visitedByProbe to false for this one as the child probe hasn't visited by itself.
 			replicatedProbe.addVisitedStarSystem(visitedSystem.systemName, visitedSystem.coordinates, false);
 		}
@@ -193,7 +181,6 @@ void Game::updateGameState()
 
 		newProbes.emplace_back(replicatedProbe);
 	}
-	// UNCOMMENT HERE TO AVOID REPLICATION
 
 	// Add new probes created during replication mode to the main probe vector
 	for (const auto &newProbe : newProbes)
@@ -213,10 +200,9 @@ void Game::updateGameState()
 void Game::render()
 {
 	window.clear();
-	// Draw the pre-rendered stars texture
-	sf::Sprite starsSprite(renderSystem.getStarsTexture());
+
+	sf::Sprite starsSprite(renderSystem.getStarsTexture()); // Draw the pre-rendered stars texture
 	window.draw(starsSprite);
-	// requires getRootNode method.
 	renderSystem.renderQuadtree(window, theQuadTreeInstance.getRootNode());
 
 	// render any probes that may exist in probeVector
@@ -226,7 +212,6 @@ void Game::render()
 	}
 	renderSystem.calculateAndDisplayFPS();
 	window.display();
-	// printProbeVectorContents(); //print some debug stuff
 }
 
 void Game::generateSummary() const

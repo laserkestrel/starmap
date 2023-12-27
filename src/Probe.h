@@ -16,7 +16,7 @@ enum class ProbeMode
 	Seek,
 	Shutdown
 };
-struct VisitedStarSystem
+struct VisitedStarSystem // Probes own private memory of visited systems.
 {
 	std::string systemName;
 	sf::Vector2f coordinates; // Coordinates of the star system
@@ -26,7 +26,6 @@ struct VisitedStarSystem
 class Probe
 {
 public:
-	// Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree); // Probes require access to the same shared galaxyVector object to update resources there.
 	Probe(const std::string &probeName, float initialX, float initialY, float speed, GalaxyQuadTree &quadTree); // Probes require access to the same shared galaxyVector object to update resources there.
 	// Destructor
 	~Probe();
@@ -52,7 +51,7 @@ public:
 	bool isNewBorn() const;
 	float getTotalDistanceTraveled() const;
 	int getReplicationCount() const;
-	int getVisitedStarCount() const;
+	// int getVisitedStarCount() const;
 	const std::vector<VisitedStarSystem> &getVisitedStarSystems() const;
 	sf::Color getTrailColor() const; // Declaration of getTrailColor method
 
@@ -74,9 +73,9 @@ private:
 	bool newBorn;
 	float totalDistanceTraveled;
 	int replicationCount;
-	int visitedStarCount;
-	const Star *findNearestUnvisitedStar() const;
-	const Star *findNearestUnvisitedStarByRadius() const;
+	// int visitedStarCount;
+	//  const Star *findNearestUnvisitedStar() const;
+	//  const Star *findNearestUnvisitedStarByRadius() const;
 	const Star *findNearestUnvisitedStarInQuadTree(const GalaxyQuadTreeNode *node, float searchRadius) const;
 	sf::Color trailColor; // Declaration of trailColor within the class
 };
