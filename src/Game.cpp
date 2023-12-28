@@ -113,7 +113,8 @@ void Game::run()
 	while (window.isOpen())
 	{
 		handleEvents();
-		sf::sleep(sf::milliseconds(1000));
+		render();
+		sf::sleep(sf::milliseconds(200));
 		// Add other relevant operations for the window here
 	}
 }
@@ -188,7 +189,7 @@ void Game::updateGameState()
 
 		Probe &probe = probeVector[index];
 
-		if (probe.getReplicationCount() > 0) // TODO - ADD TO CONFIG
+		if (probe.getReplicationCount() > 1) // TODO - ADD TO CONFIG
 		{
 			probe.setMode(ProbeMode::Shutdown);
 		}
