@@ -67,7 +67,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 
 		// Convert Spectral Type to RGB color using the provided function
 		std::string spectralType = fields[NAME_INDEX15]; // Assuming spectral type is in the 16th column
-		std::cout << "Spectral Value from CSV: " << fields[NAME_INDEX15] << std::endl;
+		// std::cout << "Spectral Value from CSV: " << fields[NAME_INDEX15] << std::endl; // TOO VERBOSE
 
 		float starAppMagnitude = std::stof(fields[NAME_INDEX14]);
 
@@ -147,7 +147,7 @@ sf::Color LoadCSVData::convertStellarTypeToColor(const std::string &stellarType)
 sf::Color LoadCSVData::adjustStellarBrightness(const sf::Color &originalColor, float starAppMagnitude)
 {
 	// Hardcoded brightness scaling factor (adjust as needed)
-	const float brightnessScalingFactor = 100.0f;
+	const float brightnessScalingFactor = 1.0f; // TODO - MOVE TO CONFIG
 
 	// Calculate the brightness factor based on magnitude and the scaling factor
 	float brightnessFactor = 1.0f / pow(2.512f, starAppMagnitude) * brightnessScalingFactor;

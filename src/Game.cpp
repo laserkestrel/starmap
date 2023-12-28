@@ -135,10 +135,16 @@ void Game::handleEvents()
 				window.close();
 			}
 		}
+		else if (event.key.code == sf::Keyboard::F1)
+		{
+			// Toggle text labels (Stars) visibility
+			renderSystem.toggleTextLabelsStars();
+			renderSystem.initializeStarsTexture(galaxyVector);
+		}
 		else if (event.key.code == sf::Keyboard::F2)
 		{
-			// Toggle text labels visibility
-			renderSystem.toggleTextLabels();
+			// Toggle text labels (Probes) visibility
+			renderSystem.toggleTextLabelsProbes();
 			renderSystem.initializeStarsTexture(galaxyVector);
 		}
 		else if (event.key.code == sf::Keyboard::F3)
@@ -177,7 +183,7 @@ void Game::updateGameState()
 
 		Probe &probe = probeVector[index];
 
-		if (probe.getReplicationCount() > 3)
+		if (probe.getReplicationCount() > 0) // TODO - ADD TO CONFIG
 		{
 			probe.setMode(ProbeMode::Shutdown);
 		}
@@ -288,7 +294,7 @@ void Game::generateSummary() const
 				  << "Total number of stars: " << galaxyVector.size() << '\n'
 				  << "Total number of probes: " << probeCount << '\n'
 				  << "Total Simulation Time: " << simulationTimeInSeconds << " seconds." << '\n'
-				  // need to work out what a perfect score is on this. aparantly min number for 7 stars is 3 probes.
+				  // TODO - FIX and workout what a perfect score is on this. aparantly min number for 7 stars is 3 probes.
 				  << "Efficiency Ratio: " << efficiencyScore << '\n'
 				  << "Efficiency Percent: " << efficiencyPercentage << '\n'
 				  << "-----------------" << std::endl;

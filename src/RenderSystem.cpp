@@ -5,7 +5,8 @@
 #include <iostream>
 
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
-													   showTextLabels(true),
+													   showTextLabelsStars(true),
+													   showTextLabelsProbes(false),
 													   showProbeTrails(true)
 {
 	// Initialize RenderSystem, if needed
@@ -21,9 +22,14 @@ RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 	fpsCounter.setPosition(10.f, 10.f); // Adjust position as needed
 }
 
-void RenderSystem::toggleTextLabels()
+void RenderSystem::toggleTextLabelsStars()
 {
-	showTextLabels = !showTextLabels; // Toggle the flag
+	showTextLabelsStars = !showTextLabelsStars; // Toggle the flag
+}
+
+void RenderSystem::toggleTextLabelsProbes()
+{
+	showTextLabelsProbes = !showTextLabelsProbes; // Toggle the flag
 }
 
 void RenderSystem::toggleProbeTrails()
@@ -68,14 +74,14 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 		centerShape.setFillColor(lighterColor);
 		renderTexture.draw(centerShape);
 
-		if (showTextLabels)
+		if (showTextLabelsStars)
 		{
 			if (!star.getName().empty() && star.getName() != "\"\"") // deal with stars with blank names that get populated as ""
 			{
 				// Render text labels if the flag is true
 
 				sf::Text labelText(star.getName(), font, 12);
-				std::cout << "Text Label for Star will be: " << star.getName() << std::endl;
+				// std::cout << "Text Label for Star will be: " << star.getName() << std::endl; // TOO VERBOSE
 				labelText.setPosition((star.getX()) + 10, (star.getY()) + 10);
 				renderTexture.draw(labelText);
 			}
@@ -124,7 +130,7 @@ void RenderSystem::renderProbe(const Probe &probe)
 	probeShape.setPosition(probe.getX(), probe.getY());
 	probeShape.setFillColor(sf::Color(173, 216, 230));
 	renderWindow.draw(probeShape);
-	if (showTextLabels)
+	if (showTextLabelsProbes)
 	{
 		// Render probe text label if the flag is true
 		sf::Text labelText(probe.getProbeName(), font, 8);
@@ -144,7 +150,7 @@ void RenderSystem::renderSummaryText(const std::string &summary)
 
 void RenderSystem::calculateAndDisplayFPS()
 {
-	if (showTextLabels)
+	if (showTextLabelsProbes) // TODO - change this to have own keybind? maybe like a dev setting
 	{
 		// Calculate FPS
 		sf::Time elapsed = fpsClock.restart();

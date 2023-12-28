@@ -17,7 +17,8 @@ public:
 	void renderStars(const std::vector<Star> &stars);
 	void renderProbe(const Probe &probe); // Declaration for renderProbe
 	void renderSummaryText(const std::string &summary);
-	void toggleTextLabels();									 // Method to toggle text labels visibility
+	void toggleTextLabelsStars(); // Method to toggle text labels visibility
+	void toggleTextLabelsProbes();
 	void toggleProbeTrails();									 // Method to toggle probe trails visibility
 	void initializeStarsTexture(const std::vector<Star> &stars); // Draw stars on a texture, then render that
 	const sf::Texture &getStarsTexture() const
@@ -35,7 +36,8 @@ private:
 	sf::Text fpsCounter;
 	sf::Clock fpsClock;
 	// void renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *node);
-	bool showTextLabels;  // Flag to control visibility of text labels
+	bool showTextLabelsStars; // Flag to control visibility of text labels
+	bool showTextLabelsProbes;
 	bool showProbeTrails; // Flag to control visibility of text labels
 };
 

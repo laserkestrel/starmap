@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(starmap3 LANGUAGES CXX)
 
 # Set the build type to Release/Debug
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 
 # Add debug symbols for Debug build type, and enable debug console msgs
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
