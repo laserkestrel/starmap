@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include "LoadData.h"
 #include "LoadCSVData.h"
 #include <cmath>
 
@@ -12,17 +13,23 @@
 #define M_PI (3.14159265358979323846)
 #endif
 
-std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath)
+std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, sf::RenderWindow &window, const LoadConfig &config)
 {
 	std::vector<Star> stars;
 	std::ifstream csvFile(csvFilePath);
 	std::string line;
 
+	sf::Vector2u windowSize = window.getSize();
+
+	// Example how to get center point..not actually used yet.
+	int centerX = windowSize.x / 2;
+	int centerY = windowSize.y / 2;
+
 	// Define the center point of your view (e.g., the Solar System)
-	const float center_x = 0.0f;			// Adjust this as needed - seems to need setting as 0
-	const float center_y = 0.0f;			// Adjust this as needed - seems to need setting as 0
-	const float scaling_factor_x = 2560.0f; // Adjust this as needed - set to same as width of screen? (positive)
-	const float scaling_factor_y = 1080.0f; // Adjust this as needed - set to same as width of screen? (positive)
+	const float center_x = 0.0f;				   // Adjust this as needed - seems to need setting as 0
+	const float center_y = 0.0f;				   // Adjust this as needed - seems to need setting as 0
+	const float scaling_factor_x = (windowSize.x); // Adjust this as needed - set to same as width of screen? (positive)
+	const float scaling_factor_y = (windowSize.y); // Adjust this as needed - set to same as width of screen? (positive)
 
 	// Define the column indices based on your CSV structure
 	const int NAME_INDEX6 = 6;	 // "proper" column for the name
@@ -39,10 +46,14 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath)
 		return stars;
 	}
 
+	int loadedStars = 0; // Counter for the number of loaded stars
+	int dataLoaderStarsLimit;
+	dataLoaderStarsLimit = config.getLoadStarsLimit();
+
 	// Skip the header line
 	std::getline(csvFile, line);
 
-	while (std::getline(csvFile, line))
+	while (std::getline(csvFile, line) && loadedStars < dataLoaderStarsLimit)
 	{
 		std::stringstream ss(line);
 		std::string field;
@@ -78,18 +89,22 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath)
 
 		// Create a Star object and add it to the vector
 		stars.emplace_back(star_x, star_y, newStarName, adjStarColor);
-	}
 
-	sf::Color testrawStarColor = convertStellarTypeToColor("K");
-	sf::Color testadjStarColor2 = adjustStellarBrightness(testrawStarColor, 2);
-	sf::Color testadjStarColor6 = adjustStellarBrightness(testrawStarColor, 6);
-	sf::Color testadjStarColor0 = adjustStellarBrightness(testrawStarColor, 0);
-	sf::Color testadjStarColor22 = adjustStellarBrightness(testrawStarColor, 22);
-	stars.emplace_back(40, 40, "LOOK HERE RAW", testrawStarColor);
-	stars.emplace_back(40, 80, "LOOK HERE ADJ2", testadjStarColor2);
-	stars.emplace_back(40, 120, "LOOK HERE ADJ6", testadjStarColor6);
-	stars.emplace_back(40, 160, "LOOK HERE ADJ0", testadjStarColor0);
-	stars.emplace_back(40, 200, "LOOK HERE ADJ22", testadjStarColor22);
+		// Increment the loadedStars counter
+		loadedStars++;
+	}
+	/*
+		sf::Color testrawStarColor = convertStellarTypeToColor("K");
+		sf::Color testadjStarColor2 = adjustStellarBrightness(testrawStarColor, 2);
+		sf::Color testadjStarColor6 = adjustStellarBrightness(testrawStarColor, 6);
+		sf::Color testadjStarColor0 = adjustStellarBrightness(testrawStarColor, 0);
+		sf::Color testadjStarColor22 = adjustStellarBrightness(testrawStarColor, 22);
+		stars.emplace_back(40, 40, "LOOK HERE RAW", testrawStarColor);
+		stars.emplace_back(40, 80, "LOOK HERE ADJ2", testadjStarColor2);
+		stars.emplace_back(40, 120, "LOOK HERE ADJ6", testadjStarColor6);
+		stars.emplace_back(40, 160, "LOOK HERE ADJ0", testadjStarColor0);
+		stars.emplace_back(40, 200, "LOOK HERE ADJ22", testadjStarColor22);
+		*/
 	csvFile.close();
 	return stars;
 }
@@ -106,6 +121,10 @@ sf::Color LoadCSVData::convertStellarTypeToColor(const std::string &stellarType)
 		if (firstChar == 'O')
 		{
 			return sf::Color(255, 255, 255); // White
+		}
+		else if (firstChar == 'D')
+		{
+			return sf::Color(224, 225, 253); // White Blue (White Dwarf)
 		}
 		else if (firstChar == 'B')
 		{

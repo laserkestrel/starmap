@@ -19,20 +19,15 @@ Game::Game(const LoadConfig &config) :
 									   theQuadTreeInstance(sf::FloatRect(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight()), config.getQuadTreeSearchSize())
 {
 	// Load star systems from JSON file into GalaxyVector
-	LoadData dataLoader;
+	// LoadData dataLoader;
 	// galaxyVector = dataLoader.loadStarsFromJson("./content/star_data.json", window, config); // todo - load this from config file
 
 	// Same again using the new CSV loader. (not used at moment, but working in)
 	LoadCSVData dataLoader2;
-	galaxyVector = dataLoader2.loadStarsFromCsv("./content/hygdata_v40.csv");
+	galaxyVector = dataLoader2.loadStarsFromCsv("./content/hygdata_v40.csv", window, config);
 	if (!galaxyVector.empty())
 	{
 		std::cout << "galaxyVector2 vector is populated with " << galaxyVector.size() << " stars." << std::endl;
-		for (const Star &star : galaxyVector)
-		{
-			std::cout << "Star Name: " << star.getName() << " Position (x, y): (" << star.getX() << ", " << star.getY() << ")"
-					  << "Color (R, G, B): (" << int(star.getColour().r) << ", " << int(star.getColour().g) << ", " << int(star.getColour().b) << ")" << std::endl;
-		}
 	}
 	else
 	{
