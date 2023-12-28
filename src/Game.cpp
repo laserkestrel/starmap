@@ -1,6 +1,7 @@
 // game.cpp
 #include "Game.h"
 #include "LoadConfig.h"
+#include "LoadCSVData.h"
 #include "Probe.h"
 #include "RenderSystem.h"
 #include "Utilities.h"
@@ -20,6 +21,10 @@ Game::Game(const LoadConfig &config) :
 	// Load star systems from JSON file into GalaxyVector
 	LoadData dataLoader;
 	galaxyVector = dataLoader.loadStarsFromJson("./content/star_data.json", window, config); // todo - load this from config file
+
+	LoadCSVData dataLoader2;
+	galaxyVector2 = dataLoader2.loadStarsFromCsv("./content/hygdata_v40.csv");
+
 	sf::Vector2u windowSize = window.getSize();
 
 	// Calculate the center coordinates

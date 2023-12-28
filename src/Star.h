@@ -2,7 +2,7 @@
 #ifndef STAR_H
 #define STAR_H
 
-#include <SFML/Graphics/Color.hpp> // Include the SFML header for sf::Color
+#include <SFML/Graphics/Color.hpp>
 #include <string>
 class Star
 {
@@ -12,24 +12,15 @@ public:
 	int getX() const;
 	int getY() const;
 	std::string getName() const;
-	sf::Color getColour() const; // Change the return type to sf::Color
-	double getMetals() const;
-	double getPolymers() const;
-	double getFuel() const;
+	sf::Color getColour() const;
 	bool getIsExplored() const;
-	void setMetals(double newMetalsValue);
-	void setPolymers(double newPolymersValue);
-	void setFuel(double newFuelValue);
 	void setIsExplored(bool newIsExploredValue);
 
 private:
 	int x;
 	int y;
 	std::string name;
-	sf::Color colour; // Change the type to sf::Color
-	// double metals;
-	// double polymers;
-	// double fuel;
+	sf::Color colour;
 	bool isExplored;
 };
 

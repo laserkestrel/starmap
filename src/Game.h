@@ -4,6 +4,7 @@
 
 #include "LoadConfig.h"
 #include "LoadData.h"
+#include "LoadCSVData.h"
 #include "Probe.h"
 #include "RenderSystem.h"
 #include <SFML/Graphics.hpp>
@@ -20,6 +21,7 @@ private:
 	sf::RenderWindow window;
 	RenderSystem renderSystem;
 	std::vector<Star> galaxyVector;
+	std::vector<Star> galaxyVector2;
 	std::vector<Probe> probeVector; // used to keep list of all probe objects so they can be looped through and processed for logic/render.
 
 	void handleEvents();	// will be for reading user input
