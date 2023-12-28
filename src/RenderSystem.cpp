@@ -7,7 +7,7 @@
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 													   showTextLabelsStars(true),
 													   showTextLabelsProbes(false),
-													   showProbeTrails(true),
+													   showProbeTrails(false),
 													   showDebugGraphics(false)
 {
 	// Initialize RenderSystem, if needed

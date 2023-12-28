@@ -65,6 +65,19 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		// Extract and convert fields
 		std::string newStarName = fields[NAME_INDEX6];
 
+		// If column 7's value is "", check columns 2 through 6 for a non-empty string to use as the name
+		if (newStarName == "\"\"")
+		{
+			for (int i = 6; i >= 2; --i)
+			{
+				if (!fields[i].empty() && fields[i] != "\"\"")
+				{
+					newStarName = fields[i];
+					break; // Found a non-empty name, break the loop
+				}
+			}
+		}
+
 		// Convert Spectral Type to RGB color using the provided function
 		std::string spectralType = fields[NAME_INDEX15]; // Assuming spectral type is in the 16th column
 		// std::cout << "Spectral Value from CSV: " << fields[NAME_INDEX15] << std::endl; // TOO VERBOSE
