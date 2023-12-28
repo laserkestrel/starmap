@@ -20,10 +20,24 @@ Game::Game(const LoadConfig &config) :
 {
 	// Load star systems from JSON file into GalaxyVector
 	LoadData dataLoader;
-	galaxyVector = dataLoader.loadStarsFromJson("./content/star_data.json", window, config); // todo - load this from config file
+	// galaxyVector = dataLoader.loadStarsFromJson("./content/star_data.json", window, config); // todo - load this from config file
 
+	// Same again using the new CSV loader. (not used at moment, but working in)
 	LoadCSVData dataLoader2;
-	galaxyVector2 = dataLoader2.loadStarsFromCsv("./content/hygdata_v40.csv");
+	galaxyVector = dataLoader2.loadStarsFromCsv("./content/hygdata_v40.csv");
+	if (!galaxyVector.empty())
+	{
+		std::cout << "galaxyVector2 vector is populated with " << galaxyVector.size() << " stars." << std::endl;
+		for (const Star &star : galaxyVector)
+		{
+			std::cout << "Star Name: " << star.getName() << " Position (x, y): (" << star.getX() << ", " << star.getY() << ")"
+					  << "Color (R, G, B): (" << int(star.getColour().r) << ", " << int(star.getColour().g) << ", " << int(star.getColour().b) << ")" << std::endl;
+		}
+	}
+	else
+	{
+		std::cout << "galaxyVector vector is empty." << std::endl;
+	}
 
 	sf::Vector2u windowSize = window.getSize();
 
@@ -32,6 +46,7 @@ Game::Game(const LoadConfig &config) :
 	int centerY = windowSize.y / 2;
 
 	// build a texture of all the stars which can be reused each frame
+	// renderSystem.initializeStarsTexture(galaxyVector); //comment out while implementing galaxyVector2 (new csv)
 	renderSystem.initializeStarsTexture(galaxyVector);
 
 	// Assume gameBounds represent the entire playable area, and pull quadtree depth from config;

@@ -197,7 +197,7 @@ void Probe::move()
 	{
 // remove probe from vector for logic processing or set some requiresLogic property to false?
 #if defined(_DEBUG)
-		std::cout << "Probe has shutdown.\n";
+		// std::cout << "Probe has shutdown.\n"; // overly verbose
 #endif
 	}
 	else
