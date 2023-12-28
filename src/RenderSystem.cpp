@@ -7,7 +7,8 @@
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 													   showTextLabelsStars(true),
 													   showTextLabelsProbes(false),
-													   showProbeTrails(true)
+													   showProbeTrails(true),
+													   showDebugGraphics(false)
 {
 	// Initialize RenderSystem, if needed
 	// TODO - load this from the config object somehow.
@@ -15,7 +16,7 @@ RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 	{
 		std::cerr << "Error loading font file.\n";
 	}
-	// Configure FPS counter text
+	// Configure FPS counter text //TODO - add this to debug view along with the quadtree grid.
 	fpsCounter.setFont(font);
 	fpsCounter.setCharacterSize(20);
 	fpsCounter.setFillColor(sf::Color::White);
@@ -35,6 +36,11 @@ void RenderSystem::toggleTextLabelsProbes()
 void RenderSystem::toggleProbeTrails()
 {
 	showProbeTrails = !showProbeTrails; // Toggle the flag
+}
+
+void RenderSystem::toggleDebugGraphics()
+{
+	showDebugGraphics = !showDebugGraphics; // Toggle the flag
 }
 
 // Initialization - Render stars onto a texture
@@ -88,7 +94,7 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 		}
 	}
 
-	renderTexture.display();				   // dont remove this, makes texture appear upside down or go underfined position.
+	renderTexture.display();				   // dont remove this, makes texture appear upside down or go undefined position.
 	starsTexture = renderTexture.getTexture(); // Save the rendered texture
 }
 
@@ -150,7 +156,7 @@ void RenderSystem::renderSummaryText(const std::string &summary)
 
 void RenderSystem::calculateAndDisplayFPS()
 {
-	if (showTextLabelsProbes) // TODO - change this to have own keybind? maybe like a dev setting
+	if (showDebugGraphics) // TODO - change this to have own keybind? maybe like a dev setting
 	{
 		// Calculate FPS
 		sf::Time elapsed = fpsClock.restart();
@@ -166,10 +172,6 @@ void RenderSystem::calculateAndDisplayFPS()
 	}
 }
 
-// void RenderSystem::renderQuadtree(GalaxyQuadTree &quadTree)
-//{
-// }
-
 void RenderSystem::renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *node)
 {
 	if (node == nullptr)
@@ -177,23 +179,27 @@ void RenderSystem::renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *
 		return;
 	}
 
-	sf::RectangleShape nodeRect;
-	nodeRect.setSize(sf::Vector2f(node->boundary.width, node->boundary.height));
-	nodeRect.setPosition(sf::Vector2f(node->boundary.left, node->boundary.top));
-	nodeRect.setFillColor(sf::Color::Transparent);
-	nodeRect.setOutlineThickness(0.5f);
-	int outlineRed = 55; // Replace these values with your desired RGB components (0-255)
-	int outlineGreen = 55;
-	int outlineBlue = 55;
-	int outlineAlpha = 128;
-	nodeRect.setOutlineColor(sf::Color(outlineRed, outlineGreen, outlineBlue, outlineAlpha));
-	window.draw(nodeRect);
-
-	if (!node->isLeaf)
+	if (showDebugGraphics)
 	{
-		for (int i = 0; i < 4; ++i)
+
+		sf::RectangleShape nodeRect;
+		nodeRect.setSize(sf::Vector2f(node->boundary.width, node->boundary.height));
+		nodeRect.setPosition(sf::Vector2f(node->boundary.left, node->boundary.top));
+		nodeRect.setFillColor(sf::Color::Transparent);
+		nodeRect.setOutlineThickness(0.5f);
+		int outlineRed = 55; // Replace these values with your desired RGB components (0-255)
+		int outlineGreen = 55;
+		int outlineBlue = 55;
+		int outlineAlpha = 128;
+		nodeRect.setOutlineColor(sf::Color(outlineRed, outlineGreen, outlineBlue, outlineAlpha));
+		window.draw(nodeRect);
+
+		if (!node->isLeaf)
 		{
-			renderQuadtree(window, node->getChild(i));
+			for (int i = 0; i < 4; ++i)
+			{
+				renderQuadtree(window, node->getChild(i));
+			}
 		}
 	}
 }

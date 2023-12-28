@@ -152,6 +152,11 @@ void Game::handleEvents()
 			// Toggle probe trails visibility
 			renderSystem.toggleProbeTrails();
 		}
+		else if (event.key.code == sf::Keyboard::F12)
+		{
+			// Toggle debug stuff visibility
+			renderSystem.toggleDebugGraphics();
+		}
 	}
 }
 
