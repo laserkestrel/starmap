@@ -21,15 +21,12 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 
 	sf::Vector2u windowSize = window.getSize();
 
-	// Example how to get center point..not actually used yet.
-	int centerX = windowSize.x / 2;
-	int centerY = windowSize.y / 2;
+	float center_x = windowSize.x / 2.0f;
+	float center_y = windowSize.y / 2.0f;
 
-	// Define the center point of your view (e.g., the Solar System)
-	const float center_x = 0.0f;				   // Adjust this as needed - seems to need setting as 0
-	const float center_y = 0.0f;				   // Adjust this as needed - seems to need setting as 0
-	const float scaling_factor_x = (windowSize.x); // Adjust this as needed - set to same as width of screen? (positive)
-	const float scaling_factor_y = (windowSize.y); // Adjust this as needed - set to same as width of screen? (positive)
+	const float dataScalingFactor = config.getScaleFactor();
+	const float scaling_factor_x = dataScalingFactor; // Adjust as needed
+	const float scaling_factor_y = dataScalingFactor; // Adjust as needed
 
 	// Define the column indices based on your CSV structure
 	const int NAME_INDEX6 = 6;	 // "proper" column for the name
@@ -82,10 +79,12 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		float dec_rad = std::stof(fields[NAME_INDEX9]) * (M_PI / 180.0f);
 
 		// Calculate x and y based on the center point and scaling factor
-		float star_x = (ra_rad - center_x) * scaling_factor_x;
-		float star_y = (dec_rad - center_y) * scaling_factor_y;
+		float distance = std::stof(fields[NAME_INDEX10]); // Assuming "dist" column for the distance
+		float azimuth = ra_rad;							  // Use right ascension as azimuth angle (in radians)
 
-		// sf::Color color = sf::Color(191, 64, 191); /* default or based on spectral type or other criteria */
+		// Convert polar coordinates to Cartesian coordinates
+		float star_x = center_x + distance * std::cos(azimuth) * scaling_factor_x;
+		float star_y = center_y + distance * std::sin(azimuth) * scaling_factor_y;
 
 		// Create a Star object and add it to the vector
 		stars.emplace_back(star_x, star_y, newStarName, adjStarColor);
@@ -93,18 +92,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		// Increment the loadedStars counter
 		loadedStars++;
 	}
-	/*
-		sf::Color testrawStarColor = convertStellarTypeToColor("K");
-		sf::Color testadjStarColor2 = adjustStellarBrightness(testrawStarColor, 2);
-		sf::Color testadjStarColor6 = adjustStellarBrightness(testrawStarColor, 6);
-		sf::Color testadjStarColor0 = adjustStellarBrightness(testrawStarColor, 0);
-		sf::Color testadjStarColor22 = adjustStellarBrightness(testrawStarColor, 22);
-		stars.emplace_back(40, 40, "LOOK HERE RAW", testrawStarColor);
-		stars.emplace_back(40, 80, "LOOK HERE ADJ2", testadjStarColor2);
-		stars.emplace_back(40, 120, "LOOK HERE ADJ6", testadjStarColor6);
-		stars.emplace_back(40, 160, "LOOK HERE ADJ0", testadjStarColor0);
-		stars.emplace_back(40, 200, "LOOK HERE ADJ22", testadjStarColor22);
-		*/
+
 	csvFile.close();
 	return stars;
 }

@@ -6,7 +6,7 @@
 
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 													   showTextLabels(true),
-													   showProbeTrails(false)
+													   showProbeTrails(true)
 {
 	// Initialize RenderSystem, if needed
 	// TODO - load this from the config object somehow.
@@ -70,10 +70,15 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 
 		if (showTextLabels)
 		{
-			// Render text labels if the flag is true
-			sf::Text labelText(star.getName(), font, 12);
-			labelText.setPosition((star.getX()) + 10, (star.getY()) + 10);
-			renderTexture.draw(labelText);
+			if (!star.getName().empty() && star.getName() != "\"\"") // deal with stars with blank names that get populated as ""
+			{
+				// Render text labels if the flag is true
+
+				sf::Text labelText(star.getName(), font, 12);
+				std::cout << "Text Label for Star will be: " << star.getName() << std::endl;
+				labelText.setPosition((star.getX()) + 10, (star.getY()) + 10);
+				renderTexture.draw(labelText);
+			}
 		}
 	}
 
