@@ -88,7 +88,18 @@ void GalaxyQuadTreeNode::debugPrint(int depth) const
 	{
 		for (const auto &star : stars)
 		{
-			std::cout << indent << "  Star: " << star.getName() << " (" << star.getX() << ", " << star.getY() << ")" << std::endl;
+			std::cout << indent << "  Star: ";
+
+			if (!star.getName().empty())
+			{
+				std::cout << star.getName();
+			}
+			else
+			{
+				std::cout << "Unnamed";
+			}
+
+			std::cout << " (" << star.getX() << ", " << star.getY() << ")" << std::endl;
 		}
 	}
 	else

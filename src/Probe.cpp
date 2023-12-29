@@ -36,7 +36,7 @@ void Probe::setCoordinates(float x, float y)
 	this->y = y;
 }
 
-void Probe::setTargetStar(std::string &targetStar)
+void Probe::setTargetStar(uint32_t &targetStar)
 {
 	this->targetStar = targetStar;
 }
@@ -58,9 +58,9 @@ void Probe::setTargetCoordinates(float newX, float newY)
 	targetY = newY;
 }
 
-void Probe::addVisitedStarSystem(const std::string &systemName, const sf::Vector2f &coordinates, bool visitedByProbe)
+void Probe::addVisitedStarSystem(const uint32_t &starID, const sf::Vector2f &coordinates, bool visitedByProbe)
 {
-	VisitedStarSystem visitedSystem = {systemName, coordinates, visitedByProbe};
+	VisitedStarSystem visitedSystem = {starID, coordinates, visitedByProbe};
 	visitedStarSystems.push_back(visitedSystem);
 }
 
@@ -85,7 +85,7 @@ float Probe::getSpeed() const
 	return speed;
 }
 
-std::string Probe::getTargetStar() const
+uint32_t Probe::getTargetStar() const
 {
 	return targetStar;
 }
@@ -179,7 +179,7 @@ void Probe::move()
 			if (nearestStar)
 			{
 				this->setTargetCoordinates(nearestStar->getX(), nearestStar->getY());
-				std::string newTarget = (nearestStar->getName()); // NOTE:have to create intermediate string for star name to then pass into setTargetStar. Complains if done directly.
+				uint32_t newTarget = (nearestStar->getID()); // NOTE:have to create intermediate variable for star ID to then pass into setTargetStar. Complains if done directly.
 				this->setTargetStar(newTarget);
 				setMode(ProbeMode::Travel);
 				this->setSpeed(10);
@@ -295,7 +295,7 @@ const Star *Probe::findNearestUnvisitedStarInQuadTree(const GalaxyQuadTreeNode *
 		for (const auto &star : node->stars)
 		{
 			if (!star.getIsExplored() && std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
-													  { return visitedSystem.systemName == star.getName(); }) == visitedStarSystems.end())
+													  { return visitedSystem.starID == star.getID(); }) == visitedStarSystems.end())
 			{
 
 				float distance = std::sqrt(std::pow(star.getX() - x, 2) + std::pow(star.getY() - y, 2));

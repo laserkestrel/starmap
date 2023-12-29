@@ -64,7 +64,7 @@ Game::Game(const LoadConfig &config) :
 	firstProbe.setNewBorn(false);
 	firstProbe.setRandomTrailColor();
 	sf::Vector2f SolCoordinates(centerX, centerY); // Replace these values with actual coordinates
-	firstProbe.addVisitedStarSystem("Sol", SolCoordinates, true);
+	firstProbe.addVisitedStarSystem(0, SolCoordinates, true);
 	firstProbe.setSpeed(1); // make sure starter system is set
 	firstProbe.move();		// currently running the actual logic of the probe from its class.
 	// and add it to the probeVector (a list of all probes in simulation)
@@ -195,8 +195,10 @@ void Game::updateGameState()
 		}
 
 		// Create a new replicated probe
-		std::string newName = Utilities::probeNamer((probe.getProbeName()), probe.getTargetStar());
-
+		// must be using targetStar name to generate the child probe name string.
+		// first arg is used as parent name, second string as replication location.
+		// std::string newName = Utilities::probeNamer((probe.getProbeName()), probe.getTargetStar());
+		std::string newName = Utilities::probeNamer((probe.getProbeName()), "TBC");
 		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), theQuadTreeInstance);
 
 		replicatedProbe.setRandomTrailColor();
@@ -206,7 +208,7 @@ void Game::updateGameState()
 		for (const auto &visitedSystem : visitedSystems)
 		{
 			// Set the visitedByProbe to false for this one as the child probe hasn't visited by itself.
-			replicatedProbe.addVisitedStarSystem(visitedSystem.systemName, visitedSystem.coordinates, false);
+			replicatedProbe.addVisitedStarSystem(visitedSystem.starID, visitedSystem.coordinates, false);
 		}
 
 		// TODO: Logic for updating star isExplored property
@@ -266,7 +268,7 @@ void Game::generateSummary() const
 				{
 					if (visitedSystem.visitedByProbe)
 					{
-						std::cout << "[" << visitedSystem.systemName << "];";
+						std::cout << "[" << visitedSystem.starID << "];";
 					}
 				}
 				std::cout << '\n';

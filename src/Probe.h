@@ -18,7 +18,8 @@ enum class ProbeMode
 };
 struct VisitedStarSystem // Probes own private memory of visited systems.
 {
-	std::string systemName;
+	// std::string systemName;
+	uint32_t starID;
 	sf::Vector2f coordinates; // Coordinates of the star system
 	bool visitedByProbe;	  // Indicator to differentiate direct visitation by probe (true) or parent (false)
 };
@@ -36,17 +37,18 @@ public:
 	void setMode(ProbeMode mode);
 	void setTargetCoordinates(float newX, float newY);
 	void setNewBorn(bool status);
-	void addVisitedStarSystem(const std::string &systemName, const sf::Vector2f &coordinates, bool visitedByProbe);
+	// void addVisitedStarSystem(const std::string &systemName, const sf::Vector2f &coordinates, bool visitedByProbe);
+	void addVisitedStarSystem(const uint32_t &starID, const sf::Vector2f &coordinates, bool visitedByProbe);
 	void setRandomTrailColor();
 	void setBlackTrailColor();
-	void setTargetStar(std::string &setTargetStar);
+	void setTargetStar(uint32_t &setTargetStar);
 
 	// Getters
 	std::string getProbeName() const;
 	float getX() const;
 	float getY() const;
 	float getSpeed() const;
-	std::string getTargetStar() const;
+	uint32_t getTargetStar() const;
 	ProbeMode getMode() const;
 	bool isNewBorn() const;
 	float getTotalDistanceTraveled() const;
@@ -64,7 +66,7 @@ private:
 	float y;
 	float targetX;
 	float targetY;
-	std::string targetStar;
+	uint32_t targetStar;
 	float speed;
 	ProbeMode mode;
 	std::vector<VisitedStarSystem> visitedStarSystems; // a vector named visitedStarSystems that contains elements of type VisitedStarSystem
