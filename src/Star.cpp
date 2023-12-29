@@ -1,17 +1,24 @@
 // Star.cpp
 #include "Star.h"
 
-Star::Star(int x, int y, const std::string &name, const sf::Color &colour) : x(x),
-																			 y(y),
-																			 name(name),
-																			 colour(colour),
-																			 // metals(metals),
-																			 // polymers(polymers),
-																			 // fuel(fuel),
-																			 isExplored(false)
+Star::Star(uint32_t ID, int x, int y, const std::string &name, const sf::Color &colour) : ID(ID),
+																						  x(x),
+																						  y(y),
+																						  name(name),
+																						  colour(colour),
+																						  // metals(metals),
+																						  // polymers(polymers),
+																						  // fuel(fuel),
+																						  isExplored(false)
 {
 	// why does this have to be here?
 }
+
+u_int32_t Star::getID() const
+{
+	return ID;
+}
+
 int Star::getX() const
 {
 	return x;

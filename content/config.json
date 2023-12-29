@@ -1,12 +1,12 @@
 {
-  "scaleFactor": 1.0,
+  "scaleFactor": 25.0,
   "window": {
     "width": 2560,
     "height": 1080
   },
   "sleepTimeMillis": 0,
   "simulationIterations": 2000,
-  "loadStarsLimit": 15000,
+  "loadStarsLimit": 12,
   "worldSeed": 1234,
   "quadtreeSearchSize": 128,
   "font": {

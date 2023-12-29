@@ -7,7 +7,7 @@ int main()
 {
 
 #if defined(_DEBUG)
-	std::cout << "Hello World 1" << std::endl;
+	std::cout << "Welcome to Starmap" << std::endl;
 	std::cout << "Compiled on " << __DATE__ << " at " << __TIME__ << std::endl;
 #endif
 

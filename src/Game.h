@@ -3,7 +3,6 @@
 #define GAME_H
 
 #include "LoadConfig.h"
-#include "LoadData.h"
 #include "LoadCSVData.h"
 #include "Probe.h"
 #include "RenderSystem.h"

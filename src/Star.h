@@ -7,8 +7,8 @@
 class Star
 {
 public:
-	Star(int x, int y, const std::string &name, const sf::Color &colour);
-
+	Star(uint32_t ID, int x, int y, const std::string &name, const sf::Color &colour);
+	uint32_t getID() const;
 	int getX() const;
 	int getY() const;
 	std::string getName() const;
@@ -17,6 +17,7 @@ public:
 	void setIsExplored(bool newIsExploredValue);
 
 private:
+	uint32_t ID;
 	int x;
 	int y;
 	std::string name;

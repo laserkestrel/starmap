@@ -5,9 +5,9 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "LoadData.h"
 #include "LoadCSVData.h"
 #include <cmath>
+#include <SFML/Graphics/RenderWindow.hpp>
 
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)
@@ -29,6 +29,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 	const float scaling_factor_y = dataScalingFactor; // Adjust as needed
 
 	// Define the column indices based on your CSV structure
+	const int NAME_INDEX0 = 0;	 // "id" column for the id value
 	const int NAME_INDEX6 = 6;	 // "proper" column for the name
 	const int NAME_INDEX8 = 8;	 // "ra" column for the right assention.
 	const int NAME_INDEX9 = 9;	 // "dec" column for the declination
@@ -63,6 +64,27 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		}
 
 		// Extract and convert fields
+
+		// Assign the id column as star unique identifier. needs converting from string to uint32.
+		// std::cout << "Field column Value: " << fields[0] << std::endl; // useful debug.
+		std::string newStarIDAsString = fields[NAME_INDEX0];
+		uint32_t newStarID;
+
+		try
+		{
+			newStarID = std::stoul(newStarIDAsString);
+			std::cout << "Converted value: " << newStarID << std::endl;
+		}
+		catch (const std::invalid_argument &e)
+		{
+			std::cerr << "Invalid argument: " << e.what() << std::endl;
+		}
+		catch (const std::out_of_range &e)
+		{
+			std::cerr << "Out of range: " << e.what() << std::endl;
+		}
+
+		// Get the Name of the Star from column 7 or others.
 		std::string newStarName = fields[NAME_INDEX6];
 
 		// If column 7's value is "", check columns 2 through 6 for a non-empty string to use as the name
@@ -100,7 +122,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		float star_y = center_y + distance * std::sin(azimuth) * scaling_factor_y;
 
 		// Create a Star object and add it to the vector
-		stars.emplace_back(star_x, star_y, newStarName, adjStarColor);
+		stars.emplace_back(newStarID, star_x, star_y, newStarName, adjStarColor);
 
 		// Increment the loadedStars counter
 		loadedStars++;

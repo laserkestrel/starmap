@@ -3,9 +3,10 @@
 #define LOADCSVDATA_H
 
 #include "Star.h"
-
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/Color.hpp>
 #include <string>
-
+#include "LoadConfig.h"
 #include <vector>
 
 class LoadCSVData
