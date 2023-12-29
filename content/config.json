@@ -1,10 +1,10 @@
 {
-  "scaleFactor": 25.0,
+  "scaleFactor": 1.0,
   "window": {
     "width": 2560,
     "height": 1080
   },
-  "sleepTimeMillis": 0,
+  "sleepTimeMillis": 1000,
   "simulationIterations": 2000,
   "loadStarsLimit": 300,
   "worldSeed": 1234,

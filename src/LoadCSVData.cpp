@@ -91,9 +91,10 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		{
 			for (int i = 6; i >= 2; --i)
 			{
-				if (!fields[i].empty() && fields[i] != "\"\"")
+				if (fields[i] != "\"\"")
 				{
 					newStarName = fields[i];
+					std::cout << "Found a non blank alternative name to use: " << newStarName << std::endl;
 					break; // Found a non-empty name, break the loop
 				}
 			}

@@ -139,7 +139,7 @@ void RenderSystem::renderProbe(const Probe &probe)
 	if (showTextLabelsProbes)
 	{
 		// Render probe text label if the flag is true
-		sf::Text labelText(probe.getProbeName(), font, 8);
+		sf::Text labelText(probe.getProbeName(), font, 14);
 		labelText.setPosition((probe.getX()) - 10, (probe.getY()) - 10);
 		renderWindow.draw(labelText);
 	}
