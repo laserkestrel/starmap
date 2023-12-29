@@ -201,12 +201,13 @@ void Game::updateGameState()
 		// Create a new replicated probe
 		// must be using targetStar name to generate the child probe name string.
 		// first arg is used as parent name, second string as replication location.
-		// std::string newName = Utilities::probeNamer((probe.getProbeName()), probe.getTargetStar());
 
-		// std::string ajrstar = Utilities::getStarNameFromID(3000);
-		// std::cout << "AJRSTAR IS :" << ajrstar << std::endl;
+		// Need to convert current location ID to string name. use utility class.
+		uint32_t replicationLocationID;															   // declare new varaible
+		replicationLocationID = probe.getTargetStar();											   // get the probes current target ID
+		std::string replicationLocationName = Utilities::getStarNameFromID(replicationLocationID); // pass target ID into lookup utility, returns string of system name.
 
-		std::string newName = Utilities::probeNamer((probe.getProbeName()), "TBC");
+		std::string newName = Utilities::probeNamer((probe.getProbeName()), replicationLocationName);
 		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), theQuadTreeInstance);
 
 		replicatedProbe.setRandomTrailColor();
