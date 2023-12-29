@@ -2,8 +2,30 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <vector>
+#include <unordered_map>
 
-std::string Utilities::probeNamer(const std::string& str1, const std::string& str2)
+std::unordered_map<uint32_t, std::string> starIdToName; // Add this member variable to store the star ID-to-name mapping.
+
+void Utilities::populateStarData(const std::vector<Star> &starVector)
+{
+	for (const Star &star : starVector)
+	{
+		starIdToName[star.getID()] = star.getName();
+	}
+}
+
+std::string Utilities::getStarNameFromID(uint32_t starId)
+{
+	auto it = starIdToName.find(starId);
+	if (it != starIdToName.end())
+	{
+		return it->second;
+	}
+	return "Unknown"; // Return a default value if the ID is not found.
+}
+
+std::string Utilities::probeNamer(const std::string &str1, const std::string &str2)
 {
 	/*
 	Each group (GRP) is 3 characters (Alphabetical A-Z)
@@ -14,7 +36,7 @@ std::string Utilities::probeNamer(const std::string& str1, const std::string& st
 	Example: Probe from Sol to Proxima Centauri is SOL-SOL-AAA > replicates to PRO-SOL-AAB
 
 	*/
-	std::string abvParentBirplace = str1.substr(0, 3); //String 1 passed in from game is probe.getProbeName()
+	std::string abvParentBirplace = str1.substr(0, 3); // String 1 passed in from game is probe.getProbeName()
 	std::string abvChildBirplace = str2.substr(0, 3);  // String 2 passed in from game is probe.getTargetStar()
 	std::string abvGenerationID = str1.substr(str1.length() - 3);
 	std::string currentSequence = abvGenerationID;
@@ -24,7 +46,7 @@ std::string Utilities::probeNamer(const std::string& str1, const std::string& st
 	return newName;
 }
 
-std::string Utilities::getNextSequence(const std::string& sequence)
+std::string Utilities::getNextSequence(const std::string &sequence)
 {
 	std::string result = sequence;
 

@@ -73,7 +73,6 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		try
 		{
 			newStarID = std::stoul(newStarIDAsString);
-			std::cout << "Converted value: " << newStarID << std::endl;
 		}
 		catch (const std::invalid_argument &e)
 		{

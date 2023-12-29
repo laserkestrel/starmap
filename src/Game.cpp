@@ -44,6 +44,9 @@ Game::Game(const LoadConfig &config) :
 	// renderSystem.initializeStarsTexture(galaxyVector); //comment out while implementing galaxyVector2 (new csv)
 	renderSystem.initializeStarsTexture(galaxyVector);
 
+	// Create a mapping table of star names to their ID values. Used for passing to probe namer.
+	Utilities::populateStarData(galaxyVector);
+
 	// Assume gameBounds represent the entire playable area, and pull quadtree depth from config;
 	sf::FloatRect gameBounds(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight());
 	int QuadTreeCapacity = config.getQuadTreeSearchSize();
@@ -56,6 +59,7 @@ Game::Game(const LoadConfig &config) :
 #if defined(_DEBUG)
 	// theQuadTreeInstance.debugPrint(); // This will print the structure of the quadtree and the stars in each node EXTREME VERBOSE!
 #endif
+	// create a mapping of starID values to star names.
 
 	// Instantiate a probe class called firstProbe - galaxyVector as argument so data is shared between probe instances.
 	// Probe firstProbe("SOL-SOL-AAA", centerX, centerY, 0.0f, galaxyVector, theQuadTreeInstance); // Example coordinates and speed
@@ -198,6 +202,10 @@ void Game::updateGameState()
 		// must be using targetStar name to generate the child probe name string.
 		// first arg is used as parent name, second string as replication location.
 		// std::string newName = Utilities::probeNamer((probe.getProbeName()), probe.getTargetStar());
+
+		// std::string ajrstar = Utilities::getStarNameFromID(3000);
+		// std::cout << "AJRSTAR IS :" << ajrstar << std::endl;
+
 		std::string newName = Utilities::probeNamer((probe.getProbeName()), "TBC");
 		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), theQuadTreeInstance);
 
