@@ -24,18 +24,19 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 	float center_x = windowSize.x / 2.0f;
 	float center_y = windowSize.y / 2.0f;
 
-	const float dataScalingFactor = config.getScaleFactor();
-	const float scaling_factor_x = dataScalingFactor; // Adjust as needed
-	const float scaling_factor_y = dataScalingFactor; // Adjust as needed
+	const float dataScalingFactor = config.getScaleFactor();			   // The config scale value is how many parsecs you want to view on screen.
+	const float syntheticScalingFactor = windowSize.x / dataScalingFactor; // The data is then plotted X + Y to scale into the available resolution.
+	const float scaling_factor_x = syntheticScalingFactor;
+	const float scaling_factor_y = syntheticScalingFactor; // Keep same as X so to keep map "square"
 
 	// Define the column indices based on your CSV structure
 	const int NAME_INDEX0 = 0;	 // "id" column for the id value
 	const int NAME_INDEX6 = 6;	 // "proper" column for the name
-	const int NAME_INDEX8 = 8;	 // "ra" column for the right assention.
+	const int NAME_INDEX8 = 8;	 // "ra" column for the right assention (Hours)
 	const int NAME_INDEX9 = 9;	 // "dec" column for the declination
-	const int NAME_INDEX10 = 10; // "dist" column for the distance
-	const int NAME_INDEX14 = 14; // "mag" column for the apparant magnitude (visibility from earth
-	const int NAME_INDEX15 = 15; // "spect" column for the spectral type
+	const int NAME_INDEX10 = 10; // "dist" column for the distance (Parsecs)
+	const int NAME_INDEX14 = 14; // "mag" column for the apparant magnitude (visibility from earth)
+	const int NAME_INDEX15 = 15; // "spect" column for the spectral type (K, M etc)
 	const int NAME_INDEX16 = 16; // "ci" column for the colour index
 
 	if (!csvFile.is_open())
@@ -94,7 +95,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 				if (fields[i] != "\"\"")
 				{
 					newStarName = fields[i];
-					std::cout << "Found a non blank alternative name to use: " << newStarName << std::endl;
+					// std::cout << "Found a non blank alternative name to use: " << newStarName << std::endl; // TOO VERBOSE
 					break; // Found a non-empty name, break the loop
 				}
 			}
@@ -108,18 +109,38 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 
 		sf::Color rawStarColor = convertStellarTypeToColor(spectralType);
 		sf::Color adjStarColor = adjustStellarBrightness(rawStarColor, starAppMagnitude);
+		// RA from a top down perspective is the angle found from north, in hours, min, sec from london, around the globe. so small 0 values of RA are north, 6 hours west, 12hours is south, 18 is east, 24 full circle.
+		// declination would be how high or low in the sky it is, so for my top down view, its irrelevent, unless I wished to apply a scaling to the star objects size.
+		// to render the correct XY I really need the distance value too. This is found in column 9 "dist" which is in parsec units.
+		// RA values in my dataset are in hours.
+		// Assuming RA is in hours, distance is in parsecs, and scaling_factor_x and scaling_factor_y are in pixels/parsec.
 
-		// Convert RA and Dec to radians (assuming they are in degrees)
-		float ra_rad = std::stof(fields[NAME_INDEX8]) * (M_PI / 180.0f);
-		float dec_rad = std::stof(fields[NAME_INDEX9]) * (M_PI / 180.0f);
+		// Convert RA to radians (360 degrees = 24 hours)
+		float ra_rad = std::stof(fields[NAME_INDEX8]) * (2.0f * M_PI / 24.0f);
 
-		// Calculate x and y based on the center point and scaling factor
-		float distance = std::stof(fields[NAME_INDEX10]); // Assuming "dist" column for the distance
-		float azimuth = ra_rad;							  // Use right ascension as azimuth angle (in radians)
+		// Get the distance in parsecs
+		float distance_parsecs = std::stof(fields[NAME_INDEX10]);
 
-		// Convert polar coordinates to Cartesian coordinates
-		float star_x = center_x + distance * std::cos(azimuth) * scaling_factor_x;
-		float star_y = center_y + distance * std::sin(azimuth) * scaling_factor_y;
+		// Calculate x and y based on scaling factor
+		float star_x = center_x + distance_parsecs * std::cos(ra_rad) * scaling_factor_x;
+		float star_y = center_y + distance_parsecs * std::sin(ra_rad) * scaling_factor_y;
+
+		// old way.
+		/*
+				// Convert RA and Dec to radians (assuming they are in degrees - this is wrong and needs changing for hours/minsetc.
+				float ra_rad = std::stof(fields[NAME_INDEX8]) * (M_PI / 180.0f);
+				float dec_rad = std::stof(fields[NAME_INDEX9]) * (M_PI / 180.0f); // we dont care about the declination, as we are viewing in 2D from a top down view.
+
+				// Calculate x and y based on the center point and scaling factor
+				float distance = std::stof(fields[NAME_INDEX10]); // Assuming "dist" column for the distance
+				float azimuth = ra_rad;							  // Use right ascension as azimuth angle (in radians)
+
+				// Convert polar coordinates to Cartesian coordinates
+				float star_x = center_x + distance * std::cos(azimuth) * scaling_factor_x;
+				float star_y = center_y + distance * std::sin(azimuth) * scaling_factor_y;
+
+				// end old star cords.
+		*/
 
 		// Create a Star object and add it to the vector
 		stars.emplace_back(newStarID, star_x, star_y, newStarName, adjStarColor);

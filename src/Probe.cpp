@@ -22,6 +22,18 @@ Probe::Probe(const std::string &probeName, float initialX, float initialY, float
 {
 	// Additional setup if needed
 }
+std::string Probe::visitedStarSystemsToString() const
+{
+	std::string result;
+
+	for (const auto &visitedSystem : visitedStarSystems)
+	{
+		result += "Star ID: " + std::to_string(visitedSystem.starID) + result += " Coordinates: (" + std::to_string(visitedSystem.coordinates.x) + ", " + std::to_string(visitedSystem.coordinates.y) + ")\n";
+		// result += "Visited by Probe: " + (visitedSystem.visitedByProbe ? "Yes" : "No") + "\n\n";
+	}
+
+	return result;
+}
 
 // Destructor
 Probe::~Probe()
@@ -117,6 +129,13 @@ void Probe::move()
 			totalDistanceTraveled += distanceToTarget;
 			// update probe memory with newly arrived star, before finding next target.
 			addVisitedStarSystem(this->getTargetStar(), sf::Vector2f(this->getX(), this->getY()), true);
+
+			// TODO - need to set this probes current quadtree location so that we can use it as a search parameter from game class, so we can establish next valid target and stop child probe going there. phew.
+			// Determine the current quadtree node based on the probe's position
+			// ...
+
+			// Update currentQuadTreeNode with the new node
+			// currentQuadTreeNode = // ... the new node
 
 			if (this->isNewBorn())
 			{

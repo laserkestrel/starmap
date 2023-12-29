@@ -31,13 +31,14 @@ public:
 	// Destructor
 	~Probe();
 
+	std::string visitedStarSystemsToString() const;
+
 	// Setters
 	void setCoordinates(float x, float y);
 	void setSpeed(float speed);
 	void setMode(ProbeMode mode);
 	void setTargetCoordinates(float newX, float newY);
 	void setNewBorn(bool status);
-	// void addVisitedStarSystem(const std::string &systemName, const sf::Vector2f &coordinates, bool visitedByProbe);
 	void addVisitedStarSystem(const uint32_t &starID, const sf::Vector2f &coordinates, bool visitedByProbe);
 	void setRandomTrailColor();
 	void setBlackTrailColor();
@@ -59,6 +60,11 @@ public:
 
 	// Other methods
 	void move(); // Example method representing movement logic
+	const Star *findNearestUnvisitedStarInQuadTree(const GalaxyQuadTreeNode *node, float searchRadius) const;
+	const GalaxyQuadTreeNode *getCurrentQuadTreeNode() const
+	{
+		return currentQuadTreeNode;
+	}
 
 private:
 	std::string probeName;
@@ -70,15 +76,11 @@ private:
 	float speed;
 	ProbeMode mode;
 	std::vector<VisitedStarSystem> visitedStarSystems; // a vector named visitedStarSystems that contains elements of type VisitedStarSystem
-	// std::vector<Star> galaxyVector;
 	GalaxyQuadTree &quadTree;
+	const GalaxyQuadTreeNode *currentQuadTreeNode;
 	bool newBorn;
 	float totalDistanceTraveled;
 	int replicationCount;
-	// int visitedStarCount;
-	//  const Star *findNearestUnvisitedStar() const;
-	//  const Star *findNearestUnvisitedStarByRadius() const;
-	const Star *findNearestUnvisitedStarInQuadTree(const GalaxyQuadTreeNode *node, float searchRadius) const;
 	sf::Color trailColor; // Declaration of trailColor within the class
 };
 

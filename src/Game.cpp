@@ -220,6 +220,23 @@ void Game::updateGameState()
 			replicatedProbe.addVisitedStarSystem(visitedSystem.starID, visitedSystem.coordinates, false);
 		}
 
+		// TODO: Get next target Star for current probe, pass this as a visted system to child.
+		// step 1 - to get next target, we need the findNearestUnvisitedStarInQuadTree (FNUSIQT) function
+		// step 2- FNUSIQT needs the probes current quadtree location, and a search radius. (hard code, but setup TODO into config.800 is value from other part doing same.)
+		const GalaxyQuadTreeNode *parentProbeCurrentQuadTreeLocation = probe.getCurrentQuadTreeNode();
+		// step 3 - we dont have implementation for current quadtree location! - we do now.
+		// step 4-  we also dont have anything to set the quadtree location.
+		const Star *parentProbeNextTarget = probe.findNearestUnvisitedStarInQuadTree(parentProbeCurrentQuadTreeLocation, 800);
+		if (parentProbeNextTarget != nullptr)
+		{
+			// step 5 - need to convert the xy into avector object
+			replicatedProbe.addVisitedStarSystem(parentProbeNextTarget->getID(), sf::Vector2f(parentProbeNextTarget->getX(), parentProbeNextTarget->getY()), false);
+		}
+		else
+		{
+			// Handle the case where no nearest unvisited star was found
+		}
+
 		// TODO: Logic for updating star isExplored property
 
 		newProbes.emplace_back(replicatedProbe);

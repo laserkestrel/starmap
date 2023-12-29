@@ -6,9 +6,9 @@
 
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 													   showTextLabelsStars(true),
-													   showTextLabelsProbes(false),
-													   showProbeTrails(false),
-													   showDebugGraphics(false)
+													   showTextLabelsProbes(true),
+													   showProbeTrails(true),
+													   showDebugGraphics(true)
 {
 	// Initialize RenderSystem, if needed
 	// TODO - load this from the config object somehow.
@@ -139,8 +139,11 @@ void RenderSystem::renderProbe(const Probe &probe)
 	if (showTextLabelsProbes)
 	{
 		// Render probe text label if the flag is true
-		sf::Text labelText(probe.getProbeName(), font, 14);
+		std::string ajrtemp = probe.visitedStarSystemsToString();
+		// sf::Text labelText(probe.getProbeName(), font, 14);
+		sf::Text labelText(ajrtemp, font, 12);
 		labelText.setPosition((probe.getX()) - 10, (probe.getY()) - 10);
+		labelText.setColor(probe.getTrailColor());
 		renderWindow.draw(labelText);
 	}
 }
