@@ -29,13 +29,13 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 	const float scaling_factor_x = syntheticScalingFactor;
 	const float scaling_factor_y = syntheticScalingFactor; // Keep same as X so to keep map "square"
 
-	// Define the column indices based on your CSV structure
+	// Define the column indices based on your CSV structure (The code indexes first column as zero)
 	const int NAME_INDEX0 = 0;	 // "id" column for the id value
 	const int NAME_INDEX6 = 6;	 // "proper" column for the name
-	const int NAME_INDEX8 = 8;	 // "ra" column for the right assention (Hours)
-	const int NAME_INDEX9 = 9;	 // "dec" column for the declination
-	const int NAME_INDEX10 = 10; // "dist" column for the distance (Parsecs)
-	const int NAME_INDEX14 = 14; // "mag" column for the apparant magnitude (visibility from earth)
+	const int NAME_INDEX7 = 7;	 // "ra" column for the right assention (Hours)
+	const int NAME_INDEX8 = 8;	 // "dec" column for the declination
+	const int NAME_INDEX9 = 9;	 // "dist" column for the distance (Parsecs)
+	const int NAME_INDEX13 = 13; // "mag" column for the apparant magnitude (visibility from earth)
 	const int NAME_INDEX15 = 15; // "spect" column for the spectral type (K, M etc)
 	const int NAME_INDEX16 = 16; // "ci" column for the colour index
 
@@ -105,7 +105,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		std::string spectralType = fields[NAME_INDEX15]; // Assuming spectral type is in the 16th column
 		// std::cout << "Spectral Value from CSV: " << fields[NAME_INDEX15] << std::endl; // TOO VERBOSE
 
-		float starAppMagnitude = std::stof(fields[NAME_INDEX14]);
+		float starAppMagnitude = std::stof(fields[NAME_INDEX13]);
 
 		sf::Color rawStarColor = convertStellarTypeToColor(spectralType);
 		sf::Color adjStarColor = adjustStellarBrightness(rawStarColor, starAppMagnitude);
@@ -116,10 +116,10 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		// Assuming RA is in hours, distance is in parsecs, and scaling_factor_x and scaling_factor_y are in pixels/parsec.
 
 		// Convert RA to radians (360 degrees = 24 hours)
-		float ra_rad = std::stof(fields[NAME_INDEX8]) * (2.0f * M_PI / 24.0f);
-
-		// Get the distance in parsecs
-		float distance_parsecs = std::stof(fields[NAME_INDEX10]);
+		float ra_rad = std::stof(fields[NAME_INDEX7]) * (2.0f * M_PI / 24.0f);
+		// std::cout << "Input hours/mins value of " << fields[NAME_INDEX7] << " for star ID: " << fields[NAME_INDEX0] << " generates radian value of: " << ra_rad << std::endl; // TOO VERBOSE
+		//  Get the distance in parsecs
+		float distance_parsecs = std::stof(fields[NAME_INDEX9]);
 
 		// Calculate x and y based on scaling factor
 		float star_x = center_x + distance_parsecs * std::cos(ra_rad) * scaling_factor_x;
@@ -128,11 +128,11 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		// old way.
 		/*
 				// Convert RA and Dec to radians (assuming they are in degrees - this is wrong and needs changing for hours/minsetc.
-				float ra_rad = std::stof(fields[NAME_INDEX8]) * (M_PI / 180.0f);
-				float dec_rad = std::stof(fields[NAME_INDEX9]) * (M_PI / 180.0f); // we dont care about the declination, as we are viewing in 2D from a top down view.
+				float ra_rad = std::stof(fields[NAME_INDEX7]) * (M_PI / 180.0f);
+				float dec_rad = std::stof(fields[NAME_INDEX8]) * (M_PI / 180.0f); // we dont care about the declination, as we are viewing in 2D from a top down view.
 
 				// Calculate x and y based on the center point and scaling factor
-				float distance = std::stof(fields[NAME_INDEX10]); // Assuming "dist" column for the distance
+				float distance = std::stof(fields[NAME_INDEX9]); // Assuming "dist" column for the distance
 				float azimuth = ra_rad;							  // Use right ascension as azimuth angle (in radians)
 
 				// Convert polar coordinates to Cartesian coordinates
@@ -203,7 +203,7 @@ sf::Color LoadCSVData::convertStellarTypeToColor(const std::string &stellarType)
 sf::Color LoadCSVData::adjustStellarBrightness(const sf::Color &originalColor, float starAppMagnitude)
 {
 	// Hardcoded brightness scaling factor (adjust as needed)
-	const float brightnessScalingFactor = 1.0f; // TODO - MOVE TO CONFIG
+	const float brightnessScalingFactor = 100.5f; // TODO - MOVE TO CONFIG
 
 	// Calculate the brightness factor based on magnitude and the scaling factor
 	float brightnessFactor = 1.0f / pow(2.512f, starAppMagnitude) * brightnessScalingFactor;

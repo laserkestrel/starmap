@@ -5,10 +5,10 @@
 #include <iostream>
 
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
-													   showTextLabelsStars(true),
-													   showTextLabelsProbes(true),
-													   showProbeTrails(true),
-													   showDebugGraphics(true)
+													   showTextLabelsStars(false),
+													   showTextLabelsProbes(false),
+													   showProbeTrails(false),
+													   showDebugGraphics(false)
 {
 	// Initialize RenderSystem, if needed
 	// TODO - load this from the config object somehow.
