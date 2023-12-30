@@ -1,8 +1,8 @@
 {
-  "scaleFactor": 200,
+  "scaleFactor": 14,
   "window": {
-    "width": 2560,
-    "height": 1080
+    "width": 800,
+    "height": 800
   },
   "sleepTimeMillis": 0,
   "simulationIterations": 117,

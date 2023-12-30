@@ -3,7 +3,17 @@ Thanks to
 https://github.com/astronexus/HYG-Database for the source of astronomical data.
 https://github.com/SFML/cmake-sfml-project for the project boilerplate code/template.
 
-## Useful commands
+# Configuration
+
+scaleFactor - The number of parsecs across the width of the display. (1 Parsec ~ 3.26156 Light Years)
+sleepTimeMillis - Debugging, introduce artificial pause between each loop of code. Should be 0 for full performance.
+worldSeed - Not used anymore. Was used in previous datasets where no angular or distance information available.
+quadtreeSearchSize - used to strike a balance for how small the map is divided up. default 128 for around 150,000 starss.
+font - to be implemented
+summaryShowPerProbe - show console debug info on each probe at end of simulation.
+summaryShowFooter - show console  summary at end of simulation.
+
+## Useful build commands
 
 How to check if binary contains debug symbols
 nm -C starmap3 | grep ' [BD] '
