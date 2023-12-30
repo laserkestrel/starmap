@@ -15,5 +15,5 @@
   },
   "summaryShowPerProbe": "true",
   "summaryShowFooter": "true",
-  "probeIndividualReplicationLimit": 0
+  "probeIndividualReplicationLimit": 1
 }

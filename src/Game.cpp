@@ -204,8 +204,7 @@ void Game::updateGameState()
 			probe.setMode(ProbeMode::Shutdown);
 		}
 		else
-		{
-
+		{ // if probe hasnt reached its replication limit, do some replicating. shouldnt we be doing this before a probe goes into replication mode?!
 			// Create a new replicated probe
 			// must be using targetStar name to generate the child probe name string.
 			// first arg is used as parent name, second string as replication location.

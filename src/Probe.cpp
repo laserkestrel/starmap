@@ -6,6 +6,7 @@
 #include <iostream>
 #include <limits>
 #include <random>
+#include "LoadConfig.h"
 
 // Constructor (these are things that get set on a new instance)
 // Probe::Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree)
@@ -144,8 +145,21 @@ void Probe::move()
 			}
 			else
 			{
-				// Set mode to Seek (to have one probe just move around) or replicate to start spreading.(ONLY IF NOT NEWBORN)
-				setMode(ProbeMode::Replicate);
+				// if (this->getReplicationCount() >= config.getprobeIndividualReplicationLimit()){
+				// int globalSetting = myConfigInstance.getprobeIndividualReplicationLimit();
+				// int globalSetting = LoadConfig::getInstance().getprobeIndividualReplicationLimit();
+
+				if (this->getReplicationCount() >= 0)
+				{
+					// do what we like here, keep seeking if cant replicate.
+					setMode(ProbeMode::Seek);
+					// setMode(ProbeMode::Shutdown);
+				}
+				else
+				{
+					// Set mode to Seek (to have one probe just move around) or replicate to start spreading.(ONLY IF NOT NEWBORN)
+					setMode(ProbeMode::Replicate);
+				}
 			}
 		}
 		else
