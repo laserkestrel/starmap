@@ -7,7 +7,7 @@ Michael from www.dream-ware.co.uk for use of the Elite Frontier TTF font.
 
 # Configuration
 
-scaleFactor - The number of parsecs across the width of the display. (1 Parsec ~ 3.26156 Light Years)<BR>
+scaleFactor - The number of parsecs across the width of the display. (1 Parsec ~ 3.26156 Light Years, Milky way aprox 40,000 parsecs. Advise no more than 1000) as most data is under this value.<BR>
 sleepTimeMillis - Debugging, introduce artificial pause between each loop of code. Should be 0 for full performance.<BR>
 worldSeed - Not used anymore. Was used in previous datasets where no angular or distance information available.<BR>
 quadtreeSearchSize - used to strike a balance for how small the map is divided up. default 128 for around 150,000 stars.<BR>

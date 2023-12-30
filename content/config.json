@@ -1,5 +1,5 @@
 {
-  "scaleFactor": 100,
+  "scaleFactor": 50,
   "window": {
     "width": 2800,
     "height": 1000
@@ -16,5 +16,5 @@
   "summaryShowPerProbe": "false",
   "summaryShowFooter": "true",
   "probeIndividualReplicationLimit": 3,
-  "probeSearchRadiusPixels": 250
+  "probeSearchRadiusPixels": 300
 }

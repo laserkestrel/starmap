@@ -55,29 +55,32 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 	for (const Star &star : stars)
 	{
 		// Create a base circle slightly larger and darker
-		sf::CircleShape baseShape(3.0f);
+		sf::CircleShape baseShape(3.5f);
 		baseShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
 		sf::Color darkerColor = star.getColour();
 		darkerColor.r = std::max(0, darkerColor.r - 50);
 		darkerColor.g = std::max(0, darkerColor.g - 50);
 		darkerColor.b = std::max(0, darkerColor.b - 50);
 		baseShape.setFillColor(darkerColor);
+		baseShape.setOrigin(baseShape.getRadius(), baseShape.getRadius());
 		renderTexture.draw(baseShape);
 
 		// Create a core circle with the star's color
-		sf::CircleShape coreShape(2.0f);
+		sf::CircleShape coreShape(3.0f);
 		coreShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
 		coreShape.setFillColor(star.getColour());
+		coreShape.setOrigin(coreShape.getRadius(), coreShape.getRadius());
 		renderTexture.draw(coreShape);
 
 		// Create a smaller circle in the center with a slightly lighter shade
-		sf::CircleShape centerShape(1.0f);
+		sf::CircleShape centerShape(2.5f);
 		centerShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
 		sf::Color lighterColor = star.getColour();
 		lighterColor.r = std::min(255, lighterColor.r + 50);
 		lighterColor.g = std::min(255, lighterColor.g + 50);
 		lighterColor.b = std::min(255, lighterColor.b + 50);
 		centerShape.setFillColor(lighterColor);
+		centerShape.setOrigin(centerShape.getRadius(), centerShape.getRadius());
 		renderTexture.draw(centerShape);
 
 		if (showTextLabelsStars)
@@ -135,6 +138,7 @@ void RenderSystem::renderProbe(const Probe &probe)
 	sf::CircleShape probeShape(0.5f); // Adjust the radius as needed
 	probeShape.setPosition(probe.getX(), probe.getY());
 	probeShape.setFillColor(sf::Color(173, 216, 230));
+	probeShape.setOrigin(probeShape.getRadius(), probeShape.getRadius());
 	renderWindow.draw(probeShape);
 	if (showTextLabelsProbes)
 	{
