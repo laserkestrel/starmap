@@ -18,11 +18,14 @@ Probe::Probe(const std::string &probeName, float initialX, float initialY, float
 																													quadTree(quadTree),
 																													newBorn(true),
 																													totalDistanceTraveled(0.0f),
-																													replicationCount(0)
+																													replicationCount(0),
+																													myConfigInstance(&LoadConfig::getInstance())
+
 // visitedStarCount(0)
 {
 	// Additional setup if needed
 }
+
 std::string Probe::visitedStarSystemsToString() const
 {
 	std::string result;
@@ -149,11 +152,11 @@ void Probe::move()
 				// int globalSetting = myConfigInstance.getprobeIndividualReplicationLimit();
 				// int globalSetting = LoadConfig::getInstance().getprobeIndividualReplicationLimit();
 
-				if (this->getReplicationCount() >= 0)
+				if (this->getReplicationCount() >= myConfigInstance->getprobeIndividualReplicationLimit())
 				{
 					// do what we like here, keep seeking if cant replicate.
-					setMode(ProbeMode::Seek);
-					// setMode(ProbeMode::Shutdown);
+					// setMode(ProbeMode::Seek);
+					setMode(ProbeMode::Shutdown);
 				}
 				else
 				{
@@ -204,10 +207,9 @@ void Probe::move()
 		}
 		else
 		{
-			int initialSearchRadius = 180;
 			// const Star *nearestStar = findNearestUnvisitedStarByRadius();
 			// setup a pointer (called nearestStar) to a star object returned by the finding method.
-			const Star *nearestStar = findNearestUnvisitedStarInQuadTree(quadTree.getRootNode(), initialSearchRadius);
+			const Star *nearestStar = findNearestUnvisitedStarInQuadTree(quadTree.getRootNode(), myConfigInstance->getProbeSearchRadiusPixels());
 
 			if (nearestStar)
 			{

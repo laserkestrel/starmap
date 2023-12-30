@@ -233,11 +233,13 @@ void Game::updateGameState()
 			const GalaxyQuadTreeNode *parentProbeCurrentQuadTreeLocation = probe.getCurrentQuadTreeNode();
 			// step 3 - we dont have implementation for current quadtree location! - we do now.
 			// step 4-  we also dont have anything to set the quadtree location.
-			const Star *parentProbeNextTarget = probe.findNearestUnvisitedStarInQuadTree(parentProbeCurrentQuadTreeLocation, 800);
+			const Star *parentProbeNextTarget = probe.findNearestUnvisitedStarInQuadTree(parentProbeCurrentQuadTreeLocation, config.getProbeSearchRadiusPixels());
 			if (parentProbeNextTarget != nullptr)
 			{
 				// step 5 - need to convert the xy into avector object
 				replicatedProbe.addVisitedStarSystem(parentProbeNextTarget->getID(), sf::Vector2f(parentProbeNextTarget->getX(), parentProbeNextTarget->getY()), false);
+
+				// debug here
 			}
 			else
 			{

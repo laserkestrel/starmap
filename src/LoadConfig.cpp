@@ -6,15 +6,20 @@
 
 using json = nlohmann::json;
 
-LoadConfig &LoadConfig::getInstance(const std::string &filename)
+namespace
 {
-	static LoadConfig instance(filename);
+	std::string configFilename = "./content/config.json"; // Hardcoded default "/config_path/filename.json"
+}
+
+LoadConfig &LoadConfig::getInstance()
+{
+	static LoadConfig instance;
 	return instance;
 }
 
-LoadConfig::LoadConfig(const std::string &filename)
+LoadConfig::LoadConfig()
 {
-	loadFromFile(filename);
+	loadFromFile();
 }
 
 int LoadConfig::getScaleFactor() const
@@ -72,12 +77,18 @@ int LoadConfig::getprobeIndividualReplicationLimit() const
 	return probeIndividualReplicationLimit;
 }
 
-void LoadConfig::loadFromFile(const std::string &filename)
+int LoadConfig::getProbeSearchRadiusPixels() const
 {
-	std::ifstream file(filename);
+	return probeSearchRadiusPixels;
+}
+
+void LoadConfig::loadFromFile()
+{
+	// std::string filename = configFilename;
+	std::ifstream file(configFilename);
 	if (!file.is_open())
 	{
-		std::cerr << "Error opening file: " << filename << std::endl;
+		std::cerr << "Error opening file: " << configFilename << std::endl;
 		return;
 	}
 
@@ -214,6 +225,14 @@ void LoadConfig::loadFromFile(const std::string &filename)
 		else
 		{
 			std::cerr << "Error: Missing or invalid probeIndividualReplicationLimit in the config file." << std::endl;
+		}
+		if (config.contains("probeSearchRadiusPixels") && config["probeSearchRadiusPixels"].is_number())
+		{
+			probeSearchRadiusPixels = config["probeSearchRadiusPixels"];
+		}
+		else
+		{
+			std::cerr << "Error: Missing or invalid probeSearchRadiusPixels in the config file." << std::endl;
 		}
 	}
 	catch (json::parse_error &e)

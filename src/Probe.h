@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include "GalaxyQuadTree.h"
+#include "LoadConfig.h"
 
 enum class ProbeMode
 {
@@ -16,6 +17,7 @@ enum class ProbeMode
 	Seek,
 	Shutdown
 };
+
 struct VisitedStarSystem // Probes own private memory of visited systems.
 {
 	// std::string systemName;
@@ -24,6 +26,7 @@ struct VisitedStarSystem // Probes own private memory of visited systems.
 	bool visitedByProbe;	  // Indicator to differentiate direct visitation by probe (true) or parent (false)
 };
 
+// The constructor for any class .h file is defined in the class under the "public" section. In C++, the constructor is a special member function with the same name as the class, and it is used for initializing the object's state when an instance of the class is created.
 class Probe
 {
 public:
@@ -82,6 +85,7 @@ private:
 	float totalDistanceTraveled;
 	int replicationCount;
 	sf::Color trailColor; // Declaration of trailColor within the class
+	LoadConfig *myConfigInstance;
 };
 
 #endif // PROBE_H

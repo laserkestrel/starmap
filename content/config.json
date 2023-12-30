@@ -15,5 +15,6 @@
   },
   "summaryShowPerProbe": "true",
   "summaryShowFooter": "true",
-  "probeIndividualReplicationLimit": 1
+  "probeIndividualReplicationLimit": 2,
+  "probeSearchRadiusPixels": 175
 }

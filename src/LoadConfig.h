@@ -7,7 +7,7 @@
 class LoadConfig
 {
 public:
-	static LoadConfig &getInstance(const std::string &filename);
+	static LoadConfig &getInstance();
 
 	int getScaleFactor() const;
 	int getWindowWidth() const;
@@ -20,24 +20,27 @@ public:
 	bool getSummaryShowPerProbe() const;
 	bool getSummaryShowFooter() const;
 	int getprobeIndividualReplicationLimit() const;
+	int getProbeSearchRadiusPixels() const;
+	void loadFromFile();
 
 private:
-	LoadConfig(const std::string &filename);
+	LoadConfig();
 
 	int scaleFactor;
 	int windowWidth;
 	int windowHeight;
 	int sleepTimeMillis;
-	int simulationIterations = 0;
-	int loadStarsLimit = 999999;
-	unsigned int worldSeed = 0;
+	int simulationIterations;
+	int loadStarsLimit;
+	unsigned int worldSeed;
 	int quadtreeSearchSize;
 	bool summaryShowPerProbe;
 	bool summaryShowFooter;
 	int probeIndividualReplicationLimit;
+	int probeSearchRadiusPixels;
 
-	void loadFromFile(const std::string &filename);
-	// Declare copy constructor and assignment operator as private to prevent copying
+	// void loadFromFile(const std::string &filename);
+	//  Declare copy constructor and assignment operator as private to prevent copying
 	LoadConfig(const LoadConfig &) = delete;
 	LoadConfig &operator=(const LoadConfig &) = delete;
 };
