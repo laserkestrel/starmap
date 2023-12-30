@@ -1,19 +1,19 @@
 # Credits
 
 Thanks to; <BR>
-https://github.com/astronexus/HYG-Database for the source of astronomical data.
-https://github.com/SFML/cmake-sfml-project for the project boilerplate code/template.
+https://github.com/astronexus/HYG-Database for the source of astronomical data.<BR>
+https://github.com/SFML/cmake-sfml-project for the project boilerplate code/template.<BR>
 Michael from www.dream-ware.co.uk for use of the Elite Frontier TTF font.
 
 # Configuration
 
-scaleFactor - The number of parsecs across the width of the display. (1 Parsec ~ 3.26156 Light Years)
-sleepTimeMillis - Debugging, introduce artificial pause between each loop of code. Should be 0 for full performance.
-worldSeed - Not used anymore. Was used in previous datasets where no angular or distance information available.
-quadtreeSearchSize - used to strike a balance for how small the map is divided up. default 128 for around 150,000 starss.
-font - to be implemented
-summaryShowPerProbe - show console debug info on each probe at end of simulation.
-summaryShowFooter - show console  summary at end of simulation.
+scaleFactor - The number of parsecs across the width of the display. (1 Parsec ~ 3.26156 Light Years)<BR>
+sleepTimeMillis - Debugging, introduce artificial pause between each loop of code. Should be 0 for full performance.<BR>
+worldSeed - Not used anymore. Was used in previous datasets where no angular or distance information available.<BR>
+quadtreeSearchSize - used to strike a balance for how small the map is divided up. default 128 for around 150,000 stars.<BR>
+font - to be implemented<BR>
+summaryShowPerProbe - show console debug info on each probe at end of simulation.<BR>
+summaryShowFooter - show console  summary at end of simulation.<BR>
 
 ## Useful build commands
 
