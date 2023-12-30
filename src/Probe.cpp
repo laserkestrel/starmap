@@ -171,7 +171,7 @@ void Probe::move()
 			// Probe is newborn
 			// Define an offset range from the parent's position
 			std::uniform_real_distribution<float> disAngle(0.0f, 2.0f * 3.14159f); // Angle range for full circle
-			std::uniform_real_distribution<float> disDistance(150.0f, 200.0f);	   // Distance range from 50 to 100 pixels
+			std::uniform_real_distribution<float> disDistance(0.0f, 0.0f);		   // Distance range from 50 to 100 pixels
 			std::random_device rd;
 			std::mt19937 gen(rd());
 			float randomAngle = disAngle(gen);		 // Random angle in radians
@@ -190,7 +190,7 @@ void Probe::move()
 		}
 		else
 		{
-			int initialSearchRadius = 800;
+			int initialSearchRadius = 180;
 			// const Star *nearestStar = findNearestUnvisitedStarByRadius();
 			// setup a pointer (called nearestStar) to a star object returned by the finding method.
 			const Star *nearestStar = findNearestUnvisitedStarInQuadTree(quadTree.getRootNode(), initialSearchRadius);

@@ -193,53 +193,62 @@ void Game::updateGameState()
 
 		Probe &probe = probeVector[index];
 
-		if (probe.getReplicationCount() > 1) // TODO - ADD TO CONFIG
+		// int probereplimit;
+		// probereplimit = config.getprobeIndividualReplicationLimit();
+		// so if replication count is 0, and our limit is 0 (do not replicate EQUAL TO OR GTR THAN)
+		// if replication count is 0 and our limit is 1 - replicate
+		// if replication count is 1 and our limit is 1 - do not replicate (EQUAL TO OR GTR THAN)
+
+		if (probe.getReplicationCount() >= config.getprobeIndividualReplicationLimit())
 		{
 			probe.setMode(ProbeMode::Shutdown);
 		}
-
-		// Create a new replicated probe
-		// must be using targetStar name to generate the child probe name string.
-		// first arg is used as parent name, second string as replication location.
-
-		// Need to convert current location ID to string name. use utility class.
-		uint32_t replicationLocationID;															   // declare new varaible
-		replicationLocationID = probe.getTargetStar();											   // get the probes current target ID
-		std::string replicationLocationName = Utilities::getStarNameFromID(replicationLocationID); // pass target ID into lookup utility, returns string of system name.
-
-		std::string newName = Utilities::probeNamer((probe.getProbeName()), replicationLocationName);
-		Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), theQuadTreeInstance);
-
-		replicatedProbe.setRandomTrailColor();
-
-		// Iterate through visited star systems of the original probe and add to replicated probe
-		const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
-		for (const auto &visitedSystem : visitedSystems)
-		{
-			// Set the visitedByProbe to false for this one as the child probe hasn't visited by itself.
-			replicatedProbe.addVisitedStarSystem(visitedSystem.starID, visitedSystem.coordinates, false);
-		}
-
-		// TODO: Get next target Star for current probe, pass this as a visted system to child.
-		// step 1 - to get next target, we need the findNearestUnvisitedStarInQuadTree (FNUSIQT) function
-		// step 2- FNUSIQT needs the probes current quadtree location, and a search radius. (hard code, but setup TODO into config.800 is value from other part doing same.)
-		const GalaxyQuadTreeNode *parentProbeCurrentQuadTreeLocation = probe.getCurrentQuadTreeNode();
-		// step 3 - we dont have implementation for current quadtree location! - we do now.
-		// step 4-  we also dont have anything to set the quadtree location.
-		const Star *parentProbeNextTarget = probe.findNearestUnvisitedStarInQuadTree(parentProbeCurrentQuadTreeLocation, 800);
-		if (parentProbeNextTarget != nullptr)
-		{
-			// step 5 - need to convert the xy into avector object
-			replicatedProbe.addVisitedStarSystem(parentProbeNextTarget->getID(), sf::Vector2f(parentProbeNextTarget->getX(), parentProbeNextTarget->getY()), false);
-		}
 		else
 		{
-			// Handle the case where no nearest unvisited star was found
+
+			// Create a new replicated probe
+			// must be using targetStar name to generate the child probe name string.
+			// first arg is used as parent name, second string as replication location.
+
+			// Need to convert current location ID to string name. use utility class.
+			uint32_t replicationLocationID;															   // declare new varaible
+			replicationLocationID = probe.getTargetStar();											   // get the probes current target ID
+			std::string replicationLocationName = Utilities::getStarNameFromID(replicationLocationID); // pass target ID into lookup utility, returns string of system name.
+
+			std::string newName = Utilities::probeNamer((probe.getProbeName()), replicationLocationName);
+			Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), theQuadTreeInstance);
+
+			replicatedProbe.setRandomTrailColor();
+
+			// Iterate through visited star systems of the original probe and add to replicated probe
+			const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
+			for (const auto &visitedSystem : visitedSystems)
+			{
+				// Set the visitedByProbe to false for this one as the child probe hasn't visited by itself.
+				replicatedProbe.addVisitedStarSystem(visitedSystem.starID, visitedSystem.coordinates, false);
+			}
+
+			// TODO: Get next target Star for current probe, pass this as a visted system to child.
+			// step 1 - to get next target, we need the findNearestUnvisitedStarInQuadTree (FNUSIQT) function
+			// step 2- FNUSIQT needs the probes current quadtree location, and a search radius. (hard code, but setup TODO into config.800 is value from other part doing same.)
+			const GalaxyQuadTreeNode *parentProbeCurrentQuadTreeLocation = probe.getCurrentQuadTreeNode();
+			// step 3 - we dont have implementation for current quadtree location! - we do now.
+			// step 4-  we also dont have anything to set the quadtree location.
+			const Star *parentProbeNextTarget = probe.findNearestUnvisitedStarInQuadTree(parentProbeCurrentQuadTreeLocation, 800);
+			if (parentProbeNextTarget != nullptr)
+			{
+				// step 5 - need to convert the xy into avector object
+				replicatedProbe.addVisitedStarSystem(parentProbeNextTarget->getID(), sf::Vector2f(parentProbeNextTarget->getX(), parentProbeNextTarget->getY()), false);
+			}
+			else
+			{
+				// Handle the case where no nearest unvisited star was found
+			}
+
+			// TODO: Logic for updating star isExplored property
+
+			newProbes.emplace_back(replicatedProbe);
 		}
-
-		// TODO: Logic for updating star isExplored property
-
-		newProbes.emplace_back(replicatedProbe);
 	}
 
 	// Add new probes created during replication mode to the main probe vector
@@ -287,7 +296,8 @@ void Game::generateSummary() const
 		{
 			if (probe.getTotalDistanceTraveled() > 0 && probe.getReplicationCount() > 0)
 			{
-				std::cout << "- Probe Name: [" << probe.getProbeName() << "] Traveled [" << probe.getTotalDistanceTraveled() << "], replicated [" << probe.getReplicationCount() << "] times, visiting ";
+				std::cout << "- Probe Name: [" << probe.getProbeName() << "] Traveled [" << probe.getTotalDistanceTraveled() << "], replicated [" << probe.getReplicationCount() << "] times,"
+						  << "visiting ";
 
 				const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
 				for (const auto &visitedSystem : visitedSystems)
@@ -297,7 +307,7 @@ void Game::generateSummary() const
 						std::cout << "[" << visitedSystem.starID << "];";
 					}
 				}
-				std::cout << '\n';
+				std::cout << std::endl;
 			}
 		}
 	}

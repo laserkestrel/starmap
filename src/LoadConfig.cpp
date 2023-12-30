@@ -67,6 +67,11 @@ bool LoadConfig::getSummaryShowFooter() const
 	return summaryShowFooter;
 }
 
+int LoadConfig::getprobeIndividualReplicationLimit() const
+{
+	return probeIndividualReplicationLimit;
+}
+
 void LoadConfig::loadFromFile(const std::string &filename)
 {
 	std::ifstream file(filename);
@@ -201,6 +206,14 @@ void LoadConfig::loadFromFile(const std::string &filename)
 		else
 		{
 			std::cerr << "Error: Missing or invalid summaryShowFooter in the config file." << std::endl;
+		}
+		if (config.contains("probeIndividualReplicationLimit") && config["probeIndividualReplicationLimit"].is_number())
+		{
+			probeIndividualReplicationLimit = config["probeIndividualReplicationLimit"];
+		}
+		else
+		{
+			std::cerr << "Error: Missing or invalid probeIndividualReplicationLimit in the config file." << std::endl;
 		}
 	}
 	catch (json::parse_error &e)

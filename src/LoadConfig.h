@@ -19,6 +19,7 @@ public:
 	int getQuadTreeSearchSize() const;
 	bool getSummaryShowPerProbe() const;
 	bool getSummaryShowFooter() const;
+	int getprobeIndividualReplicationLimit() const;
 
 private:
 	LoadConfig(const std::string &filename);
@@ -33,6 +34,7 @@ private:
 	int quadtreeSearchSize;
 	bool summaryShowPerProbe;
 	bool summaryShowFooter;
+	int probeIndividualReplicationLimit;
 
 	void loadFromFile(const std::string &filename);
 	// Declare copy constructor and assignment operator as private to prevent copying

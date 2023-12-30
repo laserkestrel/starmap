@@ -13,6 +13,7 @@
     "file": "./content/Oxygen-Light.ttf",
     "size": 12
   },
-  "summaryShowPerProbe": "false",
-  "summaryShowFooter": "true"
+  "summaryShowPerProbe": "true",
+  "summaryShowFooter": "true",
+  "probeIndividualReplicationLimit": 0
 }
