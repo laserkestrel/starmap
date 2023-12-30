@@ -117,7 +117,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 
 		// float ra_rad = std::stof(fields[NAME_INDEX7]) * (2.0f * M_PI / 24.0f);
 		// do an 18 hour correction to rotate so we have N at upper display, S at bottom, and E+W associated to Right and left.
-		float ra_rad = (18.0f - std::stof(fields[NAME_INDEX7])) * (2.0f * M_PI / 24.0f);
+		float ra_rad = (6.0f - std::stof(fields[NAME_INDEX7])) * (2.0f * M_PI / 24.0f);
 
 		// std::cout << "Input hours/mins value of " << fields[NAME_INDEX7] << " for star ID: " << fields[NAME_INDEX0] << " generates radian value of: " << ra_rad << std::endl; // TOO VERBOSE
 		//  Get the distance in parsecs

@@ -12,7 +12,7 @@ RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 {
 	// Initialize RenderSystem, if needed
 	// TODO - load this from the config object somehow.
-	if (!font.loadFromFile("./content/Oxygen-Light.ttf"))
+	if (!font.loadFromFile("./content/Frontier.ttf"))
 	{
 		std::cerr << "Error loading font file.\n";
 	}
@@ -55,7 +55,7 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 	for (const Star &star : stars)
 	{
 		// Create a base circle slightly larger and darker
-		sf::CircleShape baseShape(2.0f);
+		sf::CircleShape baseShape(3.0f);
 		baseShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
 		sf::Color darkerColor = star.getColour();
 		darkerColor.r = std::max(0, darkerColor.r - 50);
@@ -65,7 +65,7 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 		renderTexture.draw(baseShape);
 
 		// Create a core circle with the star's color
-		sf::CircleShape coreShape(1.5f);
+		sf::CircleShape coreShape(2.0f);
 		coreShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
 		coreShape.setFillColor(star.getColour());
 		renderTexture.draw(coreShape);
@@ -86,7 +86,7 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 			{
 				// Render text labels if the flag is true
 
-				sf::Text labelText(star.getName(), font, 12);
+				sf::Text labelText(star.getName(), font, 14);
 				// std::cout << "Text Label for Star will be: " << star.getName() << std::endl; // TOO VERBOSE
 				labelText.setPosition((star.getX()) + 10, (star.getY()) + 10);
 				renderTexture.draw(labelText);
@@ -140,7 +140,7 @@ void RenderSystem::renderProbe(const Probe &probe)
 	{
 		// Render probe text label if the flag is true
 		// std::string ajrtemp = probe.visitedStarSystemsToString();
-		sf::Text labelText(probe.getProbeName(), font, 14);
+		sf::Text labelText(probe.getProbeName(), font, 10);
 		// sf::Text labelText(ajrtemp, font, 12);
 		labelText.setPosition((probe.getX()) - 10, (probe.getY()) - 10);
 		labelText.setColor(probe.getTrailColor());

@@ -1,7 +1,9 @@
 # Credits
-Thanks to
+
+Thanks to; <BR>
 https://github.com/astronexus/HYG-Database for the source of astronomical data.
 https://github.com/SFML/cmake-sfml-project for the project boilerplate code/template.
+Michael from www.dream-ware.co.uk for use of the Elite Frontier TTF font.
 
 # Configuration
 

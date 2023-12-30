@@ -222,7 +222,7 @@ void Probe::move()
 			else
 			{
 #if defined(_DEBUG)
-				std::cout << "All stars have been visited by probe and it has no new stars to seek.\n";
+				// std::cout << "All stars have been visited by probe and it has no new stars to seek.\n";// TOO VERBOSE
 #endif
 				setMode(ProbeMode::Shutdown);
 			}
