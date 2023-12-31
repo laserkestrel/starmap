@@ -15,6 +15,14 @@ font - to be implemented<BR>
 summaryShowPerProbe - show console debug info on each probe at end of simulation.<BR>
 summaryShowFooter - show console  summary at end of simulation.<BR>
 
+# Key Bindings
+
+F1 - Toggle Star Names<BR>
+F2 - Toggle Probe Names<BR>
+F3 - Toggle Probe Trails<BR>
+F12 - Toggle Debug (Shows Quadtree boundaries and FPS)<BR>
+ESC - Exit Program<BR>
+
 ## Useful build commands
 
 How to check if binary contains debug symbols

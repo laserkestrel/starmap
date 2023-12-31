@@ -138,7 +138,7 @@ void RenderSystem::renderProbe(const Probe &probe)
 	sf::CircleShape probeShape(0.5f); // Adjust the radius as needed
 	probeShape.setPosition(probe.getX(), probe.getY());
 	probeShape.setFillColor(sf::Color(173, 216, 230));
-	probeShape.setOrigin(probeShape.getRadius(), probeShape.getRadius());
+	// probeShape.setOrigin(probeShape.getRadius(), probeShape.getRadius()); // TODO - check if this hurts performance at high probe counts.
 	renderWindow.draw(probeShape);
 	if (showTextLabelsProbes)
 	{
