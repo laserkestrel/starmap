@@ -18,11 +18,7 @@ Game::Game(const LoadConfig &config) :
 									   config(config),
 									   theQuadTreeInstance(sf::FloatRect(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight()), config.getQuadTreeSearchSize())
 {
-	// Load star systems from JSON file into GalaxyVector
-	// LoadData dataLoader;
-	// galaxyVector = dataLoader.loadStarsFromJson("./content/star_data.json", window, config); // todo - load this from config file
-
-	// Same again using the new CSV loader. (not used at moment, but working in)
+	// Load star systems from CSV file into GalaxyVector
 	LoadCSVData dataLoader2;
 	galaxyVector = dataLoader2.loadStarsFromCsv("./content/hygdata_v40.csv", window, config);
 	if (!galaxyVector.empty())
@@ -75,8 +71,23 @@ Game::Game(const LoadConfig &config) :
 	probeVector.push_back(firstProbe);
 }
 
+void Game::initializeKeyBindings()
+{
+	keyBindings[sf::Keyboard::Escape] = [this]()
+	{ window.close(); };
+	keyBindings[sf::Keyboard::F1] = [this]()
+	{ renderSystem.toggleTextLabelsStars(); renderSystem.initializeStarsTexture(galaxyVector); };
+	keyBindings[sf::Keyboard::F2] = [this]()
+	{ renderSystem.toggleTextLabelsProbes(); renderSystem.initializeStarsTexture(galaxyVector); };
+	keyBindings[sf::Keyboard::F3] = [this]()
+	{ renderSystem.toggleProbeTrails(); };
+	keyBindings[sf::Keyboard::F12] = [this]()
+	{ renderSystem.toggleDebugGraphics(); };
+}
+
 void Game::run()
 {
+	initializeKeyBindings();
 	// Start measuring time before entering the simulation loop
 	auto simulationStartTime = std::chrono::high_resolution_clock::now();
 	int simulationIterations = config.getSimulationIterations(); // Use config received in the constructor
@@ -126,6 +137,7 @@ void Game::run()
 void Game::handleEvents()
 {
 	sf::Event event;
+
 	while (window.pollEvent(event))
 	{
 		if (event.type == sf::Event::Closed)
@@ -134,33 +146,26 @@ void Game::handleEvents()
 		}
 		else if (event.type == sf::Event::KeyPressed)
 		{
-			if (event.key.code == sf::Keyboard::Escape)
+			auto it = keyBindings.find(event.key.code);
+			if (it != keyBindings.end())
 			{
-				// generateSummary();
-				window.close();
+				it->second();
 			}
 		}
-		else if (event.key.code == sf::Keyboard::F1)
+		else if (event.type == sf::Event::MouseWheelScrolled)
 		{
-			// Toggle text labels (Stars) visibility
-			renderSystem.toggleTextLabelsStars();
-			renderSystem.initializeStarsTexture(galaxyVector);
-		}
-		else if (event.key.code == sf::Keyboard::F2)
-		{
-			// Toggle text labels (Probes) visibility
-			renderSystem.toggleTextLabelsProbes();
-			renderSystem.initializeStarsTexture(galaxyVector);
-		}
-		else if (event.key.code == sf::Keyboard::F3)
-		{
-			// Toggle probe trails visibility
-			renderSystem.toggleProbeTrails();
-		}
-		else if (event.key.code == sf::Keyboard::F12)
-		{
-			// Toggle debug stuff visibility
-			renderSystem.toggleDebugGraphics();
+			if (event.mouseWheelScroll.delta > 0)
+			{
+				// Zoom in
+				// view.zoom(0.8f);
+				std::cout << "Do some Zoom In" << '\n';
+			}
+			else
+			{
+				// Zoom out
+				std::cout << "Do some Zoom Out" << '\n';
+				// view.zoom(1.2f);
+			}
 		}
 	}
 }

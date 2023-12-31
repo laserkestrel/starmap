@@ -14,6 +14,7 @@ class Game
 public:
 	Game(const LoadConfig &config);
 	void printProbeVectorContents() const; // Function declaration for printing probeVector contents
+	void initializeKeyBindings();
 	void run();
 
 private:
@@ -31,6 +32,7 @@ private:
 	const LoadConfig &config; // Member variable to hold the LoadConfig object
 	double simulationTimeInSeconds;
 	GalaxyQuadTree theQuadTreeInstance;
+	std::unordered_map<sf::Keyboard::Key, std::function<void()>> keyBindings;
 };
 
 #endif // GAME_H
