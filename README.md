@@ -1,3 +1,7 @@
+# About
+
+Starmap is a simulation of a Von Neumann probe set against a galaxy, experimenting with navigation and replication algorithms to effeciently explore the galaxy and visualise as the experiment unfolds. 
+
 # Credits
 
 Thanks to; <BR>
