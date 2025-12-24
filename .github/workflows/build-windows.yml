@@ -21,20 +21,27 @@ jobs:
         .\vcpkg\vcpkg install nlohmann-json:x64-windows
       shell: powershell
 
+    # Configure CMake with vcpkg toolchain and C++17
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE=.\vcpkg\scripts\buildsystems\vcpkg.cmake `
+      run: cmake -S . -B build `
+            -G "Visual Studio 17 2022" `
+            -A x64 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake `
             -DCMAKE_CXX_STANDARD=17
 
+    # Build project
     - name: Build
       run: cmake --build build --config Release
 
+    # Package executable and DLLs
     - name: Package executable
       run: |
         mkdir artifact
         copy build\bin\Release\starmap3.exe artifact\
         copy build\bin\Release\*.dll artifact\ || echo "No extra DLLs"
 
+    # Upload artifact
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
