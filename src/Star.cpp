@@ -14,9 +14,9 @@ Star::Star(uint32_t ID, int x, int y, const std::string &name, const sf::Color &
 	// why does this have to be here?
 }
 
-u_int32_t Star::getID() const
+uint32_t Star::getID() const
 {
-	return ID;
+    return ID;
 }
 
 int Star::getX() const
