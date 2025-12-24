@@ -8,6 +8,8 @@
 #include "RenderSystem.h"
 #include <SFML/Graphics.hpp>
 #include "GalaxyQuadTree.h"
+#include <unordered_map>
+#include <functional>
 
 class Game
 {
