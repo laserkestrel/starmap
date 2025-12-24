@@ -1,56 +1,45 @@
 cmake_minimum_required(VERSION 3.16)
 project(starmap3 LANGUAGES CXX)
 
-# Output binaries to a predictable location
+# Output binaries
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Use modern C++
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Do NOT force build type (important for Windows / CI)
-# Let the generator or CI choose Debug/Release
-
-# Ensure consistent MSVC runtime (Debug vs Release)
+# Ensure consistent MSVC runtime
 if (MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-# Export compile_commands.json (useful, harmless)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 # ---- Dependencies ----
 include(FetchContent)
-
 FetchContent_Declare(
     SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
     GIT_TAG 2.6.x
 )
-
-# Build SFML as shared libs (default ON, but explicit is clearer)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
-
 FetchContent_MakeAvailable(SFML)
 
-# ---- Your executable ----
-file(GLOB_RECURSE CONFIGURE_DEPENDS SOURCES
-    "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp"
+# ---- Explicit sources ----
+add_executable(starmap3
+    src/GalaxyQuadTree.cpp
+    src/GalaxyQuadTreeNode.cpp
+    src/Game.cpp
+    src/LoadConfig.cpp
+    src/LoadCSVData.cpp
+    src/Main.cpp
+    src/Probe.cpp
+    src/RenderSystem.cpp
+    src/Star.cpp
+    src/Utilities.cpp
 )
-
-message(STATUS "Found source files: ${SOURCES}")
-
-
-add_executable(starmap3 ${SOURCES})
 
 target_link_libraries(starmap3 PRIVATE sfml-graphics)
-
 target_compile_features(starmap3 PRIVATE cxx_std_17)
-
-# Define _DEBUG only for Debug builds, in a portable way
-target_compile_definitions(starmap3 PRIVATE
-    $<$<CONFIG:Debug>:_DEBUG>
-)
+target_compile_definitions(starmap3 PRIVATE $<$<CONFIG:Debug>:_DEBUG>)
 
 # ---- Windows DLL handling ----
 if (WIN32)
@@ -64,5 +53,4 @@ if (WIN32)
     )
 endif()
 
-# ---- Install rule (optional, but fine) ----
 install(TARGETS starmap3)
