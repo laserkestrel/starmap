@@ -10,10 +10,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
+    # 1️⃣ Checkout repository
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    # Install vcpkg and dependencies
+    # 2️⃣ Install vcpkg and dependencies
     - name: Setup vcpkg
       run: |
         git clone https://github.com/microsoft/vcpkg.git
@@ -21,17 +22,17 @@ jobs:
         .\vcpkg\vcpkg install nlohmann-json:x64-windows
       shell: powershell
 
-    # Configure CMake with vcpkg toolchain and C++17
+    # 3️⃣ Configure CMake with proper toolchain and C++17
     - name: Configure CMake
       run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_STANDARD=17
       shell: powershell
 
-    # Build project
+    # 4️⃣ Build the project
     - name: Build
       run: cmake --build build --config Release
       shell: powershell
 
-    # Package executable and DLLs
+    # 5️⃣ Package executable and any DLLs
     - name: Package executable
       run: |
         mkdir artifact
@@ -39,7 +40,7 @@ jobs:
         copy build\bin\Release\*.dll artifact\ || echo "No extra DLLs"
       shell: powershell
 
-    # Upload artifact
+    # 6️⃣ Upload artifact
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
