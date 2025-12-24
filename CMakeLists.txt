@@ -35,10 +35,11 @@ FetchContent_MakeAvailable(SFML)
 
 # ---- Your executable ----
 file(GLOB_RECURSE CONFIGURE_DEPENDS SOURCES
-    src/*.cpp
-    src/*.cc
-    src/*.cxx
+    "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp"
 )
+
+message(STATUS "Found source files: ${SOURCES}")
+
 
 add_executable(starmap3 ${SOURCES})
 
