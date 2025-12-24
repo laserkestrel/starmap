@@ -15,6 +15,8 @@ endif()
 
 # ---- Dependencies ----
 include(FetchContent)
+
+# SFML
 FetchContent_Declare(
     SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
@@ -22,6 +24,9 @@ FetchContent_Declare(
 )
 set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(SFML)
+
+# nlohmann-json (via vcpkg)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # ---- Explicit sources ----
 add_executable(starmap3
@@ -37,7 +42,8 @@ add_executable(starmap3
     src/Utilities.cpp
 )
 
-target_link_libraries(starmap3 PRIVATE sfml-graphics)
+# ---- Link libraries ----
+target_link_libraries(starmap3 PRIVATE sfml-graphics nlohmann_json::nlohmann_json)
 target_compile_features(starmap3 PRIVATE cxx_std_17)
 target_compile_definitions(starmap3 PRIVATE $<$<CONFIG:Debug>:_DEBUG>)
 
@@ -53,4 +59,5 @@ if (WIN32)
     )
 endif()
 
+# Install target
 install(TARGETS starmap3)
