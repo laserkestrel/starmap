@@ -37,7 +37,7 @@ jobs:
       run: |
         mkdir artifact
         copy build\bin\Release\starmap3.exe artifact\
-        copy build\bin\Release\*.dll artifact\ || echo "No extra DLLs"
+        Copy-Item "build\bin\Release\*.dll" artifact\ -ErrorAction SilentlyContinue
       shell: powershell
 
     # 6️⃣ Upload artifact
