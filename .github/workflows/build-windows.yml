@@ -23,16 +23,13 @@ jobs:
 
     # Configure CMake with vcpkg toolchain and C++17
     - name: Configure CMake
-      run: cmake -S . -B build `
-            -G "Visual Studio 17 2022" `
-            -A x64 `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake `
-            -DCMAKE_CXX_STANDARD=17
+      run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_STANDARD=17
+      shell: powershell
 
     # Build project
     - name: Build
       run: cmake --build build --config Release
+      shell: powershell
 
     # Package executable and DLLs
     - name: Package executable
@@ -40,6 +37,7 @@ jobs:
         mkdir artifact
         copy build\bin\Release\starmap3.exe artifact\
         copy build\bin\Release\*.dll artifact\ || echo "No extra DLLs"
+      shell: powershell
 
     # Upload artifact
     - name: Upload artifact
