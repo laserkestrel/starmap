@@ -34,7 +34,11 @@ set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(SFML)
 
 # ---- Your executable ----
-file(GLOB CONFIGURE_DEPENDS SOURCES "src/*.cpp")
+file(GLOB_RECURSE CONFIGURE_DEPENDS SOURCES
+    src/*.cpp
+    src/*.cc
+    src/*.cxx
+)
 
 add_executable(starmap3 ${SOURCES})
 
