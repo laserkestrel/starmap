@@ -1,37 +1,63 @@
 cmake_minimum_required(VERSION 3.16)
 project(starmap3 LANGUAGES CXX)
 
-# Set the build type to Release/Debug
-set(CMAKE_BUILD_TYPE Debug)
+# Output binaries to a predictable location
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Add debug symbols for Debug build type, and enable debug console msgs
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options("-g")
-    add_definitions(-D_DEBUG)
+# Use modern C++
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Do NOT force build type (important for Windows / CI)
+# Let the generator or CI choose Debug/Release
+
+# Ensure consistent MSVC runtime (Debug vs Release)
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-option(BUILD_SHARED_LIBS "Build shared libraries" ON)
-
+# Export compile_commands.json (useful, harmless)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# ---- Dependencies ----
 include(FetchContent)
-FetchContent_Declare(SFML
+
+FetchContent_Declare(
+    SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG 2.6.x)
+    GIT_TAG 2.6.x
+)
+
+# Build SFML as shared libs (default ON, but explicit is clearer)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+
 FetchContent_MakeAvailable(SFML)
 
-file(GLOB SOURCES "src/*.cpp")
+# ---- Your executable ----
+file(GLOB CONFIGURE_DEPENDS SOURCES "src/*.cpp")
+
 add_executable(starmap3 ${SOURCES})
+
 target_link_libraries(starmap3 PRIVATE sfml-graphics)
+
 target_compile_features(starmap3 PRIVATE cxx_std_17)
 
-if(WIN32)
+# Define _DEBUG only for Debug builds, in a portable way
+target_compile_definitions(starmap3 PRIVATE
+    $<$<CONFIG:Debug>:_DEBUG>
+)
+
+# ---- Windows DLL handling ----
+if (WIN32)
     add_custom_command(
         TARGET starmap3
+        PRE_BUILD
         COMMENT "Copy OpenAL DLL"
-        PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SFML_SOURCE_DIR}/extlibs/bin/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x64,x86>/openal32.dll $<TARGET_FILE_DIR:starmap3>
-        VERBATIM)
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${SFML_SOURCE_DIR}/extlibs/bin/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x64,x86>/openal32.dll
+            $<TARGET_FILE_DIR:starmap3>
+    )
 endif()
 
+# ---- Install rule (optional, but fine) ----
 install(TARGETS starmap3)
