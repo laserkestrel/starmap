@@ -5,16 +5,16 @@ on:
   push:
     branches: [ main ]
 
+env:
+  BUILD_TYPE: Debug
+
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    # 1️⃣ Checkout repository
-    - name: Checkout repo
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    # 2️⃣ Install vcpkg and dependencies
     - name: Setup vcpkg
       run: |
         git clone https://github.com/microsoft/vcpkg.git
@@ -22,27 +22,27 @@ jobs:
         .\vcpkg\vcpkg install nlohmann-json:x64-windows
       shell: powershell
 
-    # 3️⃣ Configure CMake with absolute toolchain path and C++17
     - name: Configure CMake
-      run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_CXX_STANDARD=17
+      run: >
+        cmake -S . -B build
+        -G "Visual Studio 17 2022"
+        -A x64
+        -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake
       shell: powershell
 
-    # 4️⃣ Build the project
     - name: Build
-      run: cmake --build build --config Release
+      run: cmake --build build --config ${{ env.BUILD_TYPE }}
       shell: powershell
 
-    # 5️⃣ Package executable and any DLLs
     - name: Package executable
       run: |
         mkdir artifact
-        copy build\bin\Release\starmap3.exe artifact\
-        Copy-Item "build\bin\Release\*.dll" artifact\ -ErrorAction SilentlyContinue
+        copy build\bin\${{ env.BUILD_TYPE }}\starmap3.exe artifact\
+        Copy-Item "build\bin\${{ env.BUILD_TYPE }}\*.dll" artifact\ -ErrorAction SilentlyContinue
       shell: powershell
 
-    # 6️⃣ Upload artifact
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: starmap3-windows
+        name: starmap3-windows-${{ env.BUILD_TYPE }}
         path: artifact
