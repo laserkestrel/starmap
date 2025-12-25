@@ -1,4 +1,4 @@
-name: Build Windows EXE
+name: Build Windows EXE (SFML 2.6)
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 env:
-  BUILD_TYPE: Debug  # Change to Release if you want a release build
+  BUILD_TYPE: Debug  # Change to Release if needed
 
 jobs:
   build:
@@ -17,12 +17,18 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    # 2️⃣ Install vcpkg and dependencies
-    - name: Setup vcpkg
+    # 2️⃣ Setup vcpkg and install dependencies
+    - name: Setup vcpkg and install SFML 2.6
       run: |
+        # Clone vcpkg
         git clone https://github.com/microsoft/vcpkg.git
         .\vcpkg\bootstrap-vcpkg.bat
-        .\vcpkg\vcpkg install sfml:x64-windows nlohmann-json:x64-windows
+
+        # Remove any existing SFML to avoid conflicts
+        .\vcpkg\vcpkg remove sfml:x64-windows
+
+        # Install SFML 2.6 and nlohmann-json
+        .\vcpkg\vcpkg install sfml@2.6:x64-windows nlohmann-json:x64-windows
       shell: powershell
 
     # 3️⃣ Configure CMake with vcpkg toolchain
@@ -39,7 +45,7 @@ jobs:
       run: cmake --build build --config ${{ env.BUILD_TYPE }}
       shell: powershell
 
-    # 5️⃣ Package executable and required DLLs
+    # 5️⃣ Package executable and DLLs
     - name: Package executable
       run: |
         mkdir artifact
