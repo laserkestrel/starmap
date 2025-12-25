@@ -1,34 +1,30 @@
 cmake_minimum_required(VERSION 3.16)
+
 project(starmap3 LANGUAGES CXX)
 
-# Output binaries
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+# ------------------------------------------------------------
+# Global project settings
+# ------------------------------------------------------------
 
-# Use modern C++
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Ensure consistent MSVC runtime
-if (MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif()
+# Put executables in a predictable place
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# ---- Dependencies ----
-include(FetchContent)
+# ------------------------------------------------------------
+# Dependencies (via vcpkg)
+# ------------------------------------------------------------
+# vcpkg toolchain is provided by the build system (CI / user)
 
-# SFML
-FetchContent_Declare(
-    SFML
-    GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG 2.6.x
-)
-set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(SFML)
-
-# nlohmann-json (via vcpkg)
+find_package(SFML 2.6 CONFIG REQUIRED COMPONENTS graphics window system)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-# ---- Explicit sources ----
+# ------------------------------------------------------------
+# Target
+# ------------------------------------------------------------
+
 add_executable(starmap3
     src/GalaxyQuadTree.cpp
     src/GalaxyQuadTreeNode.cpp
@@ -42,22 +38,22 @@ add_executable(starmap3
     src/Utilities.cpp
 )
 
-# ---- Link libraries ----
-target_link_libraries(starmap3 PRIVATE sfml-graphics nlohmann_json::nlohmann_json)
-target_compile_features(starmap3 PRIVATE cxx_std_17)
-target_compile_definitions(starmap3 PRIVATE $<$<CONFIG:Debug>:_DEBUG>)
+target_link_libraries(starmap3
+    PRIVATE
+        sfml-graphics
+        sfml-window
+        sfml-system
+        nlohmann_json::nlohmann_json
+)
 
-# ---- Windows DLL handling ----
-if (WIN32)
-    add_custom_command(
-        TARGET starmap3
-        PRE_BUILD
-        COMMENT "Copy OpenAL DLL"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${SFML_SOURCE_DIR}/extlibs/bin/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x64,x86>/openal32.dll
-            $<TARGET_FILE_DIR:starmap3>
-    )
-endif()
+# Optional but fine: explicit Debug macro (MSVC already defines _DEBUG)
+target_compile_definitions(starmap3
+    PRIVATE
+        $<$<CONFIG:Debug>:_DEBUG>
+)
 
-# Install target
+# ------------------------------------------------------------
+# Install
+# ------------------------------------------------------------
+
 install(TARGETS starmap3)
