@@ -1,4 +1,4 @@
-name: Build Windows EXE (SFML 2.6)
+name: Build Windows EXE (SFML 2.6 via FetchContent)
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 env:
-  BUILD_TYPE: Debug  # Change to Release if needed
+  BUILD_TYPE: Debug  # Change to Release if desired
 
 jobs:
   build:
@@ -17,26 +17,21 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    # 2️⃣ Setup vcpkg and install dependencies
-    - name: Setup vcpkg and install SFML 2.6
+    # 2️⃣ Setup vcpkg and install dependencies (nlohmann-json only)
+    - name: Setup vcpkg
       run: |
-        # Clone vcpkg
         git clone https://github.com/microsoft/vcpkg.git
         .\vcpkg\bootstrap-vcpkg.bat
-
-        # Remove any existing SFML to avoid conflicts
-        .\vcpkg\vcpkg remove sfml:x64-windows
-
-        # Install SFML 2.6 and nlohmann-json
-        .\vcpkg\vcpkg install sfml@2.6:x64-windows nlohmann-json:x64-windows
+        .\vcpkg\vcpkg install nlohmann-json:x64-windows
       shell: powershell
 
-    # 3️⃣ Configure CMake with vcpkg toolchain
+    # 3️⃣ Configure CMake with vcpkg toolchain (SFML will come from FetchContent)
     - name: Configure CMake
       run: |
         cmake -S . -B build `
           -G "Visual Studio 17 2022" `
           -A x64 `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
           -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake
       shell: powershell
 
@@ -45,7 +40,7 @@ jobs:
       run: cmake --build build --config ${{ env.BUILD_TYPE }}
       shell: powershell
 
-    # 5️⃣ Package executable and DLLs
+    # 5️⃣ Package executable and any DLLs
     - name: Package executable
       run: |
         mkdir artifact
