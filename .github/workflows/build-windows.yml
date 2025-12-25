@@ -6,34 +6,40 @@ on:
     branches: [ main ]
 
 env:
-  BUILD_TYPE: Debug
+  BUILD_TYPE: Debug  # Change to Release if you want a release build
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+    # 1️⃣ Checkout repository
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
+    # 2️⃣ Install vcpkg and dependencies
     - name: Setup vcpkg
       run: |
         git clone https://github.com/microsoft/vcpkg.git
         .\vcpkg\bootstrap-vcpkg.bat
-        .\vcpkg\vcpkg install nlohmann-json:x64-windows
+        .\vcpkg\vcpkg install sfml:x64-windows nlohmann-json:x64-windows
       shell: powershell
 
+    # 3️⃣ Configure CMake with vcpkg toolchain
     - name: Configure CMake
-      run: >
-        cmake -S . -B build
-        -G "Visual Studio 17 2022"
-        -A x64
-        -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake
+      run: |
+        cmake -S . -B build `
+          -G "Visual Studio 17 2022" `
+          -A x64 `
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake
       shell: powershell
 
+    # 4️⃣ Build the project
     - name: Build
       run: cmake --build build --config ${{ env.BUILD_TYPE }}
       shell: powershell
 
+    # 5️⃣ Package executable and required DLLs
     - name: Package executable
       run: |
         mkdir artifact
@@ -41,6 +47,7 @@ jobs:
         Copy-Item "build\bin\${{ env.BUILD_TYPE }}\*.dll" artifact\ -ErrorAction SilentlyContinue
       shell: powershell
 
+    # 6️⃣ Upload artifact
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
