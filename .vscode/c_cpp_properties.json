@@ -1,0 +1,19 @@
+{
+  "configurations": [
+    {
+      "name": "Win32",
+      "compilerPath": "C:/msys64/mingw64/bin/g++.exe",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "gcc-x64",
+      "includePath": [
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/src/Platform",
+        "${workspaceFolder}/src/Platform/Win32",
+        "${workspaceFolder}/content"
+      ],
+      "browse": { "path": ["${workspaceFolder}/src", "${workspaceFolder}/content"] }
+    }
+  ],
+  "version": 4
+}

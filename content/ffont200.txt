@@ -1,0 +1,39 @@
+FRONTIER FONT v2.0
+
+Frontier Font TTF created by Mike Cook 2002
+Original Typeface copyright David Braben/Frontier Developments
+
+webmaster@dream-ware.co.uk
+www.dream-ware.co.uk
+-----------------------------------------------------------------------------
+
+This font has been created in an attempt to reproduce the typeface from the
+classic Frontier & Frontier:First Encounters games produced by Frontier
+Developments in 1993 & 1995 respectively.
+
+Frontier: Elite, Frontier:First Encounters and all their contents are under
+copyright so it is probably illegal to own this font.
+
+            It will be removed immediately if anyone complains.
+
+
+INSTALLATION:
+
+This is very easy: Install to the FONT folder in your Windows directory.
+For more detailed information visit the website: www.dream-ware.co.uk
+
+
+OTHER INFO:
+
+The Frontier Font is a 'pixel exact' font and has been optimized at font
+sizes of:
+
+px (pixel) sizes
+9-30, 32, 34, 40, 48 and multiples of 10 (50, 60, 70, etc)
+
+Because I have tried to recreate the Frontier typeface as close as possible
+there are some limitations in using this font compared to how you would use
+any other TrueType Font (Arial, Times New Roman, etc).
+
+Please visit the website (www.dream-ware.co.uk) for more information and some
+useful tips on using the font: 

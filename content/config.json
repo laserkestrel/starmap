@@ -1,0 +1,19 @@
+{
+  "scaleFactor": 50,
+  "window": {
+    "width": 2800,
+    "height": 1000
+  },
+  "sleepTimeMillis": 0,
+  "simulationIterations": 200000,
+  "loadStarsLimit": 2000000,
+  "quadtreeSearchSize": 128,
+  "font": {
+    "file": "./content/Oxygen-Light.ttf",
+    "size": 12
+  },
+  "summaryShowPerProbe": "false",
+  "summaryShowFooter": "true",
+  "probeIndividualReplicationLimit": 3,
+  "probeSearchRadiusPixels": 300
+}
