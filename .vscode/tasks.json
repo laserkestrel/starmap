@@ -27,13 +27,46 @@
             "group": "build"
         },
         {
-            "label": "Copy Resources",
+            "label": "Copy Resources (Windows)",
+            "type": "shell",
+            "command": "Copy-Item",
+            "args": [
+                "-Path",
+                "${workspaceFolder}\\content\\*",
+                "-Destination",
+                "${workspaceFolder}\\build\\bin\\",
+                "-Recurse",
+                "-Force"
+            ],
+            "options": {
+                "shell": {
+                    "executable": "powershell.exe"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Copy Resources (Linux/macOS)",
             "type": "shell",
             "command": "cp",
             "args": [
                 "-r",
-                "${workspaceFolder}/content",
+                "${workspaceFolder}/content/*",
                 "${workspaceFolder}/build/bin/"
+            ],
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake Build And Copy Resources (Windows)",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "CMake Build",
+                "Copy Resources (Windows)"
             ],
             "group": {
                 "kind": "build",
@@ -41,11 +74,11 @@
             }
         },
         {
-            "label": "CMake Build And Copy Resources",
+            "label": "CMake Build And Copy Resources (Linux/macOS)",
             "dependsOrder": "sequence",
             "dependsOn": [
                 "CMake Build",
-                "Copy Resources"
+                "Copy Resources (Linux/macOS)"
             ],
             "group": {
                 "kind": "build",

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <iostream>
 #include "LoadCSVData.h"
 #include <cmath>
@@ -45,14 +46,13 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		return stars;
 	}
 
-	int loadedStars = 0; // Counter for the number of loaded stars
-	int dataLoaderStarsLimit;
-	dataLoaderStarsLimit = config.getLoadStarsLimit();
+	// Read all records into memory, parse the distance column, then sort by distance and load the nearest N
+	std::vector<std::vector<std::string>> allRecords;
 
 	// Skip the header line
 	std::getline(csvFile, line);
 
-	while (std::getline(csvFile, line) && loadedStars < dataLoaderStarsLimit)
+	while (std::getline(csvFile, line))
 	{
 		std::stringstream ss(line);
 		std::string field;
@@ -64,30 +64,58 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 			fields.push_back(field);
 		}
 
-		// Extract and convert fields
+		if (!fields.empty())
+		{
+			allRecords.push_back(std::move(fields));
+		}
+	}
+
+	csvFile.close();
+
+	// Prepare a vector of indices sorted by distance (NAME_INDEX9)
+	std::vector<size_t> indices(allRecords.size());
+	for (size_t i = 0; i < indices.size(); ++i)
+		indices[i] = i;
+
+	auto parseDistance = [&](const std::vector<std::string> &fields) -> float {
+		try
+		{
+			if (fields.size() > static_cast<size_t>(NAME_INDEX9))
+				return std::stof(fields[NAME_INDEX9]);
+		}
+		catch (...) {}
+		return std::numeric_limits<float>::infinity();
+	};
+
+	std::sort(indices.begin(), indices.end(), [&](size_t a, size_t b) {
+		return parseDistance(allRecords[a]) < parseDistance(allRecords[b]);
+	});
+
+	int dataLoaderStarsLimit = config.getLoadStarsLimit();
+	size_t limit = indices.size();
+	if (dataLoaderStarsLimit > 0 && static_cast<size_t>(dataLoaderStarsLimit) < limit)
+		limit = static_cast<size_t>(dataLoaderStarsLimit);
+
+	for (size_t idx = 0; idx < limit; ++idx)
+	{
+		const auto &fields = allRecords[indices[idx]];
 
 		// Assign the id column as star unique identifier. needs converting from string to uint32.
-		// std::cout << "Field column Value: " << fields[0] << std::endl; // useful debug.
 		std::string newStarIDAsString = fields[NAME_INDEX0];
-		uint32_t newStarID;
+		uint32_t newStarID = 0;
 
 		try
 		{
 			newStarID = std::stoul(newStarIDAsString);
 		}
-		catch (const std::invalid_argument &e)
+		catch (const std::exception &e)
 		{
-			std::cerr << "Invalid argument: " << e.what() << std::endl;
-		}
-		catch (const std::out_of_range &e)
-		{
-			std::cerr << "Out of range: " << e.what() << std::endl;
+			std::cerr << "Invalid/Out of range ID: " << e.what() << std::endl;
 		}
 
 		// Get the Name of the Star from column 7 or others.
 		std::string newStarName = fields[NAME_INDEX6];
 
-		// If column 7's value is "", check columns 2 through 6 for a non-empty string to use as the name
 		if (newStarName == "\"\"")
 		{
 			for (int i = 6; i >= 2; --i)
@@ -95,43 +123,35 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 				if (fields[i] != "\"\"")
 				{
 					newStarName = fields[i];
-					// std::cout << "Found a non blank alternative name to use: " << newStarName << std::endl; // TOO VERBOSE
-					break; // Found a non-empty name, break the loop
+					break;
 				}
 			}
 		}
 
-		// Convert Spectral Type to RGB color using the provided function
-		std::string spectralType = fields[NAME_INDEX15]; // Assuming spectral type is in the 16th column
-		// std::cout << "Spectral Value from CSV: " << fields[NAME_INDEX15] << std::endl; // TOO VERBOSE
-
-		float starAppMagnitude = std::stof(fields[NAME_INDEX13]);
+		std::string spectralType = fields[NAME_INDEX15];
+		float starAppMagnitude = 0.0f;
+		try
+		{
+			starAppMagnitude = std::stof(fields[NAME_INDEX13]);
+		}
+		catch (...) {}
 
 		sf::Color rawStarColor = convertStellarTypeToColor(spectralType);
 		sf::Color adjStarColor = adjustStellarBrightness(rawStarColor, starAppMagnitude);
 
-		// Convert RA to radians (360 degrees = 24 hours)
-		// FACT: answer in radians = value_in_hours x (2 * PI / 24)
-		// FACT: 6.28 radians in a full circle (2*PI)
-		// FACT: 360 degrees = 24 hours)
+		float ra_rad = 0.0f;
+		try
+		{
+			ra_rad = (6.0f - std::stof(fields[NAME_INDEX7])) * (2.0f * M_PI / 24.0f);
+		}
+		catch (...) {}
 
-		// float ra_rad = std::stof(fields[NAME_INDEX7]) * (2.0f * M_PI / 24.0f);
-		// do an 18 hour correction to rotate so we have N at upper display, S at bottom, and E+W associated to Right and left.
-		float ra_rad = (6.0f - std::stof(fields[NAME_INDEX7])) * (2.0f * M_PI / 24.0f);
+		float distance_parsecs = parseDistance(fields);
 
-		// std::cout << "Input hours/mins value of " << fields[NAME_INDEX7] << " for star ID: " << fields[NAME_INDEX0] << " generates radian value of: " << ra_rad << std::endl; // TOO VERBOSE
-		//  Get the distance in parsecs
-		float distance_parsecs = std::stof(fields[NAME_INDEX9]);
-
-		// Calculate x and y based on scaling factor
 		float star_x = center_x + distance_parsecs * std::cos(ra_rad) * scaling_factor_x;
 		float star_y = center_y + distance_parsecs * std::sin(ra_rad) * scaling_factor_y;
 
-		// Create a Star object and add it to the vector
 		stars.emplace_back(newStarID, star_x, star_y, newStarName, adjStarColor);
-
-		// Increment the loadedStars counter
-		loadedStars++;
 	}
 
 	csvFile.close();
