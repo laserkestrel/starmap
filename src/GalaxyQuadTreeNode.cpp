@@ -3,8 +3,8 @@
 #include <iostream>
 #include <string>
 
-GalaxyQuadTreeNode::GalaxyQuadTreeNode(const sf::FloatRect &nodeBoundary, int nodeCapacity)
-	: boundary(nodeBoundary), isLeaf(true), capacity(nodeCapacity)
+GalaxyQuadTreeNode::GalaxyQuadTreeNode(const sf::FloatRect &nodeBoundary, int nodeCapacity, const std::vector<Star> *starVecPtr)
+	: boundary(nodeBoundary), starIndices(), starVec(starVecPtr), isLeaf(true), capacity(nodeCapacity)
 {
 	for (int i = 0; i < 4; ++i)
 	{
@@ -21,16 +21,21 @@ GalaxyQuadTreeNode *GalaxyQuadTreeNode::getChild(int index) const
 	return nullptr;
 }
 
-bool GalaxyQuadTreeNode::insert(const Star &star)
+bool GalaxyQuadTreeNode::insert(size_t starIndex)
 {
+	if (starVec == nullptr)
+		return false;
+
+	const Star &star = (*starVec)[starIndex];
+
 	if (!boundary.contains(star.getX(), star.getY()))
 	{
 		return false;
 	}
 
-	if (isLeaf && stars.size() < capacity)
+	if (isLeaf && starIndices.size() < static_cast<size_t>(capacity))
 	{
-		stars.push_back(star);
+		starIndices.push_back(starIndex);
 		return true;
 	}
 
@@ -41,7 +46,7 @@ bool GalaxyQuadTreeNode::insert(const Star &star)
 
 	for (int i = 0; i < 4; ++i)
 	{
-		if (children[i]->insert(star))
+		if (children[i]->insert(starIndex))
 		{
 			return true;
 		}
@@ -56,25 +61,26 @@ void GalaxyQuadTreeNode::split()
 	float x = boundary.left;
 	float y = boundary.top;
 
-	children[0] = new GalaxyQuadTreeNode(sf::FloatRect(x + subWidth, y, subWidth, subHeight), capacity);
-	children[1] = new GalaxyQuadTreeNode(sf::FloatRect(x, y, subWidth, subHeight), capacity);
-	children[2] = new GalaxyQuadTreeNode(sf::FloatRect(x, y + subHeight, subWidth, subHeight), capacity);
-	children[3] = new GalaxyQuadTreeNode(sf::FloatRect(x + subWidth, y + subHeight, subWidth, subHeight), capacity);
+	children[0] = new GalaxyQuadTreeNode(sf::FloatRect(x + subWidth, y, subWidth, subHeight), capacity, starVec);
+	children[1] = new GalaxyQuadTreeNode(sf::FloatRect(x, y, subWidth, subHeight), capacity, starVec);
+	children[2] = new GalaxyQuadTreeNode(sf::FloatRect(x, y + subHeight, subWidth, subHeight), capacity, starVec);
+	children[3] = new GalaxyQuadTreeNode(sf::FloatRect(x + subWidth, y + subHeight, subWidth, subHeight), capacity, starVec);
 
 	isLeaf = false;
 
-	for (const auto &star : stars)
+	for (const auto &idx : starIndices)
 	{
+		const Star &star = (*starVec)[idx];
 		for (int i = 0; i < 4; ++i)
 		{
 			if (children[i]->boundary.contains(star.getX(), star.getY()))
 			{
-				children[i]->insert(star);
+				children[i]->insert(idx);
 				break;
 			}
 		}
 	}
-	stars.clear();
+	starIndices.clear();
 }
 
 void GalaxyQuadTreeNode::debugPrint(int depth) const
@@ -86,8 +92,9 @@ void GalaxyQuadTreeNode::debugPrint(int depth) const
 
 	if (isLeaf)
 	{
-		for (const auto &star : stars)
+		for (const auto &idx : starIndices)
 		{
+			const Star &star = (*starVec)[idx];
 			std::cout << indent << "  Star: ";
 
 			if (!star.getName().empty())

@@ -14,6 +14,46 @@ Star::Star(uint32_t ID, int x, int y, const std::string &name, const sf::Color &
 	// why does this have to be here?
 }
 
+// Copy constructor
+Star::Star(const Star &other) : ID(other.ID), x(other.x), y(other.y), name(other.name), colour(other.colour), isExplored(other.isExplored.load())
+{
+}
+
+// Copy assignment
+Star &Star::operator=(const Star &other)
+{
+	if (this != &other)
+	{
+		ID = other.ID;
+		x = other.x;
+		y = other.y;
+		name = other.name;
+		colour = other.colour;
+		isExplored.store(other.isExplored.load());
+	}
+	return *this;
+}
+
+// Move constructor
+Star::Star(Star &&other) noexcept : ID(other.ID), x(other.x), y(other.y), name(std::move(other.name)), colour(other.colour), isExplored(other.isExplored.load())
+{
+}
+
+// Move assignment
+Star &Star::operator=(Star &&other) noexcept
+{
+	if (this != &other)
+	{
+		ID = other.ID;
+		x = other.x;
+		y = other.y;
+		name = std::move(other.name);
+		colour = other.colour;
+		isExplored.store(other.isExplored.load());
+	}
+	return *this;
+}
+
 uint32_t Star::getID() const
 {
 	return ID;
@@ -58,7 +98,7 @@ double Star::getFuel() const
 
 bool Star::getIsExplored() const
 {
-	return isExplored;
+	return isExplored.load();
 }
 
 // Setters
@@ -81,5 +121,12 @@ void Star::setFuel(double newFuelValue)
 
 void Star::setIsExplored(bool newIsExploredValue)
 {
-	isExplored = newIsExploredValue;
+	isExplored.store(newIsExploredValue);
+}
+
+bool Star::tryMarkExplored()
+{
+	bool expected = false;
+	// If it was false, set to true and return true; otherwise return false.
+	return isExplored.compare_exchange_strong(expected, true);
 }

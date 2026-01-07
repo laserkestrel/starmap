@@ -9,6 +9,8 @@
 
 #include <SFML/Graphics.hpp>    // Include necessary headers
 #include "GalaxyQuadTreeNode.h" // Include the node structure
+#include "Star.h"
+#include <vector>
 
 // GalaxyQuadTree
 // - Manages the quadtree root node and the spatial boundary used for all
@@ -21,7 +23,10 @@ class GalaxyQuadTree
 {
 public:
 	GalaxyQuadTree(const sf::FloatRect &boundary_, int capacity); // Constructor
-	void insert(const Star &star);                                    // Insert a star into the quadtree
+	// Set pointer to the canonical star vector used by the quadtree nodes.
+	void setStarVector(const std::vector<Star> *sv);
+	// Insert a star by index into the quadtree
+	void insert(size_t starIndex);
 	std::vector<Star> query(const sf::Vector2f &point, float radius);
 	GalaxyQuadTreeNode *getRootNode() const
 	{
@@ -33,4 +38,5 @@ private:
 	GalaxyQuadTreeNode *root; // Pointer to the root node of the quadtree
 	int capacity;              // Maximum capacity of stars in a node before splitting
 	sf::FloatRect boundary;    // Spatial bounds for the entire quadtree
+	const std::vector<Star> *starVec; // Pointer to canonical star storage (set via setStarVector)
 };

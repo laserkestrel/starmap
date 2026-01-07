@@ -10,6 +10,9 @@
 #include <SFML/System/Time.hpp>
 #include <chrono>
 #include <iostream>
+#include <thread>
+#include <algorithm>
+#include "DebugLog.h"
 
 Game::Game(const LoadConfig &config) :
 
@@ -43,15 +46,30 @@ Game::Game(const LoadConfig &config) :
 	// Create a mapping table of star names to their ID values. Used for passing to probe namer.
 	Utilities::populateStarData(galaxyVector);
 
+	DEBUG_LOG("[DEBUG] populateStarData done");
+
+	// Build star ID -> index map for fast lookup when marking explored
+	for (size_t i = 0; i < galaxyVector.size(); ++i)
+	{
+		starIndexMap[galaxyVector[i].getID()] = i;
+	}
+
+	DEBUG_LOG("[DEBUG] starIndexMap built, size=" << starIndexMap.size());
+
 	// Assume gameBounds represent the entire playable area, and pull quadtree depth from config;
 	sf::FloatRect gameBounds(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight());
 	int QuadTreeCapacity = config.getQuadTreeSearchSize();
 
 	// Example population of the quadtree in Game.cpp
-	for (const auto &star : galaxyVector)
+	// Point the quadtree at our canonical star vector so nodes reference up-to-date stars
+	theQuadTreeInstance.setStarVector(&galaxyVector);
+	// Insert stars by index so the quadtree stores indices into the canonical vector
+	for (size_t i = 0; i < galaxyVector.size(); ++i)
 	{
-		theQuadTreeInstance.insert(star); // Use 'quadTree' instance to call the insert method
+		theQuadTreeInstance.insert(i);
 	}
+
+	DEBUG_LOG("[DEBUG] quadtree populated");
 #if defined(_DEBUG)
 	// theQuadTreeInstance.debugPrint(); // This will print the structure of the quadtree and the stars in each node EXTREME VERBOSE!
 #endif
@@ -69,6 +87,8 @@ Game::Game(const LoadConfig &config) :
 	firstProbe.move();		// currently running the actual logic of the probe from its class.
 	// and add it to the probeVector (a list of all probes in simulation)
 	probeVector.push_back(firstProbe);
+
+	DEBUG_LOG("[DEBUG] firstProbe created and pushed, probeVector.size=" << probeVector.size());
 }
 
 void Game::initializeKeyBindings()
@@ -87,7 +107,9 @@ void Game::initializeKeyBindings()
 
 void Game::run()
 {
+	DEBUG_LOG("[DEBUG] Game::run start");
 	initializeKeyBindings();
+	DEBUG_LOG("[DEBUG] initializeKeyBindings done");
 	// Start measuring time before entering the simulation loop
 	auto simulationStartTime = std::chrono::high_resolution_clock::now();
 	int simulationIterations = config.getSimulationIterations(); // Use config received in the constructor
@@ -96,13 +118,23 @@ void Game::run()
 	int iteration = 0;
 
 	// Run the simulation loop for the specified number of iterations
+	DEBUG_LOG("[DEBUG] entering simulation loop, iterations=" << simulationIterations);
+	DEBUG_LOG("[DEBUG] iteration=" << iteration << " window.isOpen()=" << window.isOpen());
 	while (iteration < simulationIterations && window.isOpen())
 	{
 		sf::Time elapsed = clock.restart();
 
+		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - before handleEvents");
 		handleEvents();
+		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - after handleEvents");
+
+		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - before updateGameState");
 		updateGameState();
+		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - after updateGameState");
+
+		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - before render");
 		render();
+		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - after render");
 
 		++iteration;
 
@@ -236,8 +268,11 @@ void Game::updateGameState()
 			// step 1 - to get next target, we need the findNearestUnvisitedStarInQuadTree (FNUSIQT) function
 			// step 2- FNUSIQT needs the probes current quadtree location, and a search radius. (hard code, but setup TODO into config.800 is value from other part doing same.)
 			const GalaxyQuadTreeNode *parentProbeCurrentQuadTreeLocation = probe.getCurrentQuadTreeNode();
-			// step 3 - we dont have implementation for current quadtree location! - we do now.
-			// step 4-  we also dont have anything to set the quadtree location.
+			// If the probe doesn't have a valid current quadtree node, fall back to root
+			if (parentProbeCurrentQuadTreeLocation == nullptr)
+			{
+				parentProbeCurrentQuadTreeLocation = theQuadTreeInstance.getRootNode();
+			}
 			const Star *parentProbeNextTarget = probe.findNearestUnvisitedStarInQuadTree(parentProbeCurrentQuadTreeLocation, config.getProbeSearchRadiusPixels());
 			if (parentProbeNextTarget != nullptr)
 			{
@@ -263,10 +298,60 @@ void Game::updateGameState()
 		probeVector.push_back(newProbe);
 	}
 
-	// Move all probes after handling replication
-	for (auto &probe : probeVector)
+	// --- Parallel probe updates ---
+	// Record previous visited counts so we can detect newly visited stars after moves
+	std::vector<size_t> oldVisitedCounts;
+	oldVisitedCounts.reserve(probeVector.size());
+	for (const auto &probe : probeVector)
 	{
-		probe.move(); // Execute the movement logic for each probe
+		oldVisitedCounts.push_back(probe.getVisitedStarSystems().size());
+	}
+
+	// Partition probes across threads and run move() in parallel. Each probe is updated
+	// only by its assigned thread so internal probe state is safe to mutate.
+	unsigned int threadCount = std::max(1u, std::thread::hardware_concurrency());
+	size_t totalProbes = probeVector.size();
+	size_t chunk = (totalProbes + threadCount - 1) / threadCount;
+
+	std::vector<std::thread> workers;
+	workers.reserve(threadCount);
+
+	for (unsigned int t = 0; t < threadCount; ++t)
+	{
+		size_t start = t * chunk;
+		size_t end = std::min(start + chunk, totalProbes);
+		if (start >= end)
+			continue;
+
+		workers.emplace_back([this, start, end]() {
+			for (size_t i = start; i < end; ++i)
+			{
+				this->probeVector[i].move();
+			}
+		});
+	}
+
+	for (auto &w : workers)
+	{
+		if (w.joinable())
+			w.join();
+	}
+				DEBUG_LOG("[DEBUG] probesToReplicate count=" << probesToReplicate.size());
+
+	// After all probes moved, mark any newly visited stars as explored (atomically)
+	for (size_t i = 0; i < probeVector.size(); ++i)
+	{
+		const auto &visited = probeVector[i].getVisitedStarSystems();
+		size_t oldCount = oldVisitedCounts[i];
+		for (size_t j = oldCount; j < visited.size(); ++j)
+		{
+			uint32_t starID = visited[j].starID;
+			auto it = starIndexMap.find(starID);
+			if (it != starIndexMap.end())
+			{
+				galaxyVector[it->second].tryMarkExplored();
+			}
+		}
 	}
 
 	// Add your game logic for updating the state here
@@ -296,6 +381,7 @@ void Game::generateSummary() const
 			  << "Begin Summary: " << '\n'
 			  << "-----------------" << '\n';
 
+				DEBUG_LOG("[DEBUG] newProbes merged, probeVector.size=" << probeVector.size());
 	if (config.getSummaryShowPerProbe())
 	{
 		for (const auto &probe : probeVector)
@@ -304,6 +390,7 @@ void Game::generateSummary() const
 			{
 				std::cout << "- Probe Name: [" << probe.getProbeName() << "] Traveled [" << probe.getTotalDistanceTraveled() << "], replicated [" << probe.getReplicationCount() << "] times,"
 						  << "visiting ";
+				DEBUG_LOG("[DEBUG] oldVisitedCounts recorded");
 
 				const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
 				for (const auto &visitedSystem : visitedSystems)
@@ -329,6 +416,7 @@ void Game::generateSummary() const
 		if (star.getIsExplored())
 		{
 			totalStarsVisitedByProbes++;
+				DEBUG_LOG("[DEBUG] worker threads joined");
 		}
 	}
 	double maxPossibleEfficiencyScore = 1;

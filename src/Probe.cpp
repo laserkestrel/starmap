@@ -7,6 +7,7 @@
 #include <limits>
 #include <random>
 #include "LoadConfig.h"
+#include "DebugLog.h"
 
 // Constructor (these are things that get set on a new instance)
 // Probe::Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree)
@@ -16,7 +17,8 @@ Probe::Probe(const std::string &probeName, float initialX, float initialY, float
 																													speed(speed),
 																													mode(ProbeMode::Seek),
 																													quadTree(quadTree),
-																													newBorn(true),
+																													 currentQuadTreeNode(nullptr),
+																													 newBorn(true),
 																													totalDistanceTraveled(0.0f),
 																													replicationCount(0),
 																													myConfigInstance(&LoadConfig::getInstance())
@@ -221,19 +223,15 @@ void Probe::move()
 			}
 			else
 			{
-#if defined(_DEBUG)
-				// std::cout << "All stars have been visited by probe and it has no new stars to seek.\n";// TOO VERBOSE
-#endif
+				DEBUG_LOG("All stars have been visited by probe and it has no new stars to seek.");
 				setMode(ProbeMode::Shutdown);
 			}
 		}
 	}
 	else if (mode == ProbeMode::Shutdown)
 	{
-// remove probe from vector for logic processing or set some requiresLogic property to false?
-#if defined(_DEBUG)
-		// std::cout << "Probe has shutdown.\n"; // overly verbose
-#endif
+		// remove probe from vector for logic processing or set some requiresLogic property to false?
+		DEBUG_LOG("Probe has shutdown.");
 	}
 	else
 	{
@@ -320,19 +318,34 @@ const Star *Probe::findNearestUnvisitedStarInQuadTree(const GalaxyQuadTreeNode *
 	{
 		return nullptr;
 	}
+	// Debug: print node boundary to help diagnose occasional corruption
+	DEBUG_LOG("[DEBUG] FNUSIQT node=" << node << " boundary=(" << node->boundary.left << "," << node->boundary.top << "," << node->boundary.width << "," << node->boundary.height << ") isLeaf=" << node->isLeaf << " stars=" << node->starIndices.size());
 
 	const Star *nearestStar = nullptr;
 	float minDistance = std::numeric_limits<float>::max();
 
 	sf::FloatRect searchArea(x - searchRadius, y - searchRadius, searchRadius * 2, searchRadius * 2);
-	if (node->boundary.intersects(searchArea))
+
+	// Manually compute rectangle intersection to avoid potential SFML-side issues
+	float aLeft = node->boundary.left;
+	float aTop = node->boundary.top;
+	float aRight = node->boundary.left + node->boundary.width;
+	float aBottom = node->boundary.top + node->boundary.height;
+
+	float bLeft = searchArea.left;
+	float bTop = searchArea.top;
+	float bRight = searchArea.left + searchArea.width;
+	float bBottom = searchArea.top + searchArea.height;
+
+	bool intersects = !(bLeft > aRight || bRight < aLeft || bTop > aBottom || bBottom < aTop);
+	if (intersects)
 	{
-		for (const auto &star : node->stars)
+		for (const auto &idx : node->starIndices)
 		{
+			const Star &star = (*node->starVec)[idx];
 			if (!star.getIsExplored() && std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
 													  { return visitedSystem.starID == star.getID(); }) == visitedStarSystems.end())
 			{
-
 				float distance = std::sqrt(std::pow(star.getX() - x, 2) + std::pow(star.getY() - y, 2));
 				if (distance <= searchRadius && distance < minDistance)
 				{

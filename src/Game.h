@@ -23,6 +23,7 @@ private:
 	sf::RenderWindow window;
 	RenderSystem renderSystem;
 	std::vector<Star> galaxyVector;
+	std::unordered_map<uint32_t, size_t> starIndexMap; // map star ID -> index in galaxyVector
 	// std::vector<Star> galaxyVector2;
 	std::vector<Probe> probeVector; // used to keep list of all probe objects so they can be looped through and processed for logic/render.
 

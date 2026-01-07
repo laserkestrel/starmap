@@ -1,12 +1,12 @@
 {
   "scaleFactor": 50,
   "window": {
-    "width": 2800,
-    "height": 1000
+    "width": 2048,
+    "height": 768
   },
   "sleepTimeMillis": 0,
   "simulationIterations": 200000,
-  "loadStarsLimit": 2000000,
+  "loadStarsLimit": 50000,
   "quadtreeSearchSize": 128,
   "font": {
     "file": "./content/Oxygen-Light.ttf",
