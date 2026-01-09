@@ -167,6 +167,52 @@ void RenderSystem::renderSummaryText(const std::string &summary)
 	renderWindow.draw(summaryText);	 // Draw the summary text within the game loop
 }
 
+void RenderSystem::renderParameterList(const std::vector<std::pair<std::string, std::string>> &params, int focusedIndex, bool showCaret)
+{
+	const float startX = 20.f;
+	float y = 50.f;
+	const float lineHeight = 26.f;
+
+	for (size_t i = 0; i < params.size(); ++i)
+	{
+		sf::Text keyText(params[i].first + ": ", font, 20);
+		keyText.setPosition(startX, y + i * lineHeight);
+		keyText.setFillColor(sf::Color::White);
+
+		sf::Text valueText(params[i].second, font, 20);
+		valueText.setPosition(startX + 300.f, y + i * lineHeight);
+		valueText.setFillColor(sf::Color::White);
+
+		if (static_cast<int>(i) == focusedIndex)
+		{
+			// draw highlight background
+			sf::RectangleShape bg(sf::Vector2f(700.f, lineHeight));
+			bg.setPosition(startX - 6.f, y + i * lineHeight - 2.f);
+			bg.setFillColor(sf::Color(64, 64, 64, 160));
+			renderWindow.draw(bg);
+			// If caret visible, draw a caret after value
+			if (showCaret)
+			{
+				float caretX = valueText.getPosition().x + valueText.getLocalBounds().width + 4.f;
+				float caretY = valueText.getPosition().y;
+				sf::RectangleShape caret(sf::Vector2f(2.f, valueText.getCharacterSize()));
+				caret.setPosition(caretX, caretY);
+				caret.setFillColor(sf::Color::White);
+				renderWindow.draw(caret);
+			}
+		}
+
+		renderWindow.draw(keyText);
+		renderWindow.draw(valueText);
+	}
+
+	// draw small instructions under the list
+	sf::Text instr("Tab: Next  Shift+Tab: Prev  Type numbers or use Up/Down  Enter: Start", font, 16);
+	instr.setPosition(startX, y + params.size() * lineHeight + 8.f);
+	instr.setFillColor(sf::Color(200, 200, 200));
+	renderWindow.draw(instr);
+}
+
 void RenderSystem::calculateAndDisplayFPS()
 {
 	if (showDebugGraphics) // TODO - change this to have own keybind? maybe like a dev setting

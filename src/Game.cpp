@@ -20,6 +20,7 @@ Game::Game(const LoadConfig &config) :
 									   window(sf::VideoMode(config.getWindowWidth(), config.getWindowHeight()), "Star Map"),
 									   renderSystem(window),
 									   config(config),
+						   probeSearchRadiusPixels(config.getProbeSearchRadiusPixels()),
 									   theQuadTreeInstance(sf::FloatRect(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight()), config.getQuadTreeSearchSize())
 {
 	// Load star systems from CSV file into GalaxyVector
@@ -90,6 +91,13 @@ Game::Game(const LoadConfig &config) :
 	probeVector.push_back(firstProbe);
 
 	DEBUG_LOG("[DEBUG] firstProbe created and pushed, probeVector.size=" << probeVector.size());
+
+	// initialize editable parameters and caret for startup UI
+	editableParams.emplace_back("probeSearchRadiusPixels", std::to_string(probeSearchRadiusPixels));
+	editableParams.emplace_back("probeIndividualReplicationLimit", std::to_string(config.getprobeIndividualReplicationLimit()));
+	focusedParamIndex = 0;
+	caretVisible = true;
+	caretClock.restart();
 }
 
 void Game::initializeKeyBindings()
@@ -111,8 +119,8 @@ void Game::run()
 	DEBUG_LOG("[DEBUG] Game::run start");
 	initializeKeyBindings();
 	DEBUG_LOG("[DEBUG] initializeKeyBindings done");
-	// Show a simple startup summary screen allowing the user to inspect
-	// some config values (e.g. probeSearchRadiusPixels) and start the simulation
+	// Show startup parameter editor: allow Tab/Shift+Tab to focus fields,
+	// type digits/backspace to edit, Up/Down to increment, Enter/click to start.
 	bool started = false;
 	while (!started && window.isOpen())
 	{
@@ -129,6 +137,42 @@ void Game::run()
 				{
 					started = true;
 				}
+				else if (event.key.code == sf::Keyboard::Tab)
+				{
+					int count = static_cast<int>(editableParams.size());
+					if (count > 0)
+					{
+						if (event.key.shift)
+						{
+							focusedParamIndex = (focusedParamIndex - 1 + count) % count;
+						}
+						else
+						{
+							focusedParamIndex = (focusedParamIndex + 1) % count;
+						}
+					}
+				}
+				else if (event.key.code == sf::Keyboard::Up)
+				{
+					// increment numeric focused param by 10
+					try
+					{
+						int v = std::stoi(editableParams[focusedParamIndex].second);
+						v += 10;
+						editableParams[focusedParamIndex].second = std::to_string(v);
+					}
+					catch (...) {}
+				}
+				else if (event.key.code == sf::Keyboard::Down)
+				{
+					try
+					{
+						int v = std::stoi(editableParams[focusedParamIndex].second);
+						v = std::max(1, v - 10);
+						editableParams[focusedParamIndex].second = std::to_string(v);
+					}
+					catch (...) {}
+				}
 				else
 				{
 					auto it = keyBindings.find(event.key.code);
@@ -138,23 +182,54 @@ void Game::run()
 					}
 				}
 			}
+			else if (event.type == sf::Event::TextEntered)
+			{
+				// If focused, allow numeric input and backspace handling
+				unsigned int uni = event.text.unicode;
+				if (uni >= '0' && uni <= '9')
+				{
+					char c = static_cast<char>(uni);
+					// append
+					editableParams[focusedParamIndex].second.push_back(c);
+				}
+				else if (uni == 8) // backspace
+				{
+					if (!editableParams[focusedParamIndex].second.empty())
+					{
+						editableParams[focusedParamIndex].second.pop_back();
+					}
+				}
+			}
 			else if (event.type == sf::Event::MouseButtonPressed)
 			{
+				// clicking starts the simulation (we don't map clicks to fields yet)
 				started = true;
 			}
+		}
+
+		// caret blinking
+		if (caretClock.getElapsedTime().asMilliseconds() > 500)
+		{
+			caretVisible = !caretVisible;
+			caretClock.restart();
 		}
 
 		window.clear();
 		sf::Sprite starsSprite(renderSystem.getStarsTexture());
 		window.draw(starsSprite);
-		std::ostringstream ss;
-		ss << "Probe Search Radius: " << config.getProbeSearchRadiusPixels() << "\n\nPress Enter or Click to Start";
-		renderSystem.renderSummaryText(ss.str());
+		renderSystem.renderParameterList(editableParams, focusedParamIndex, caretVisible);
 		renderSystem.calculateAndDisplayFPS();
 		window.display();
 
 		sf::sleep(sf::milliseconds(50));
 	}
+
+	// Apply edited values to runtime members (example: probeSearchRadiusPixels)
+	try
+	{
+		probeSearchRadiusPixels = std::stoi(editableParams[0].second);
+	}
+	catch (...) { /* ignore parse errors, keep previous value */ }
 	// Start measuring time before entering the simulation loop
 	auto simulationStartTime = std::chrono::high_resolution_clock::now();
 	int simulationIterations = config.getSimulationIterations(); // Use config received in the constructor
@@ -318,7 +393,7 @@ void Game::updateGameState()
 			{
 				parentProbeCurrentQuadTreeLocation = theQuadTreeInstance.getRootNode();
 			}
-			const Star *parentProbeNextTarget = probe.findNearestUnvisitedStarInQuadTree(parentProbeCurrentQuadTreeLocation, config.getProbeSearchRadiusPixels());
+				const Star *parentProbeNextTarget = probe.findNearestUnvisitedStarInQuadTree(parentProbeCurrentQuadTreeLocation, probeSearchRadiusPixels);
 			if (parentProbeNextTarget != nullptr)
 			{
 				// step 5 - need to convert the xy into avector object

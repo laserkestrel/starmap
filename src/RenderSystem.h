@@ -17,6 +17,7 @@ public:
 	void renderStars(const std::vector<Star> &stars);
 	void renderProbe(const Probe &probe); // Declaration for renderProbe
 	void renderSummaryText(const std::string &summary);
+	void renderParameterList(const std::vector<std::pair<std::string, std::string>> &params, int focusedIndex, bool showCaret);
 	void toggleTextLabelsStars(); // Method to toggle text labels visibility
 	void toggleTextLabelsProbes();
 	void toggleProbeTrails();

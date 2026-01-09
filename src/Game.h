@@ -10,6 +10,8 @@
 #include "GalaxyQuadTree.h"
 #include <unordered_map>
 #include <functional>
+#include <vector>
+#include <string>
 
 class Game
 {
@@ -33,6 +35,12 @@ private:
 	void renderProbes();	// will render the probe positions on screen with SFML
 	void generateSummary() const;
 	const LoadConfig &config; // Member variable to hold the LoadConfig object
+	int probeSearchRadiusPixels; // editable value that can be changed on the startup screen
+	// editable parameters shown on the startup screen (name, value)
+	std::vector<std::pair<std::string, std::string>> editableParams;
+	int focusedParamIndex;
+	sf::Clock caretClock;
+	bool caretVisible;
 	double simulationTimeInSeconds;
 	GalaxyQuadTree theQuadTreeInstance;
 	std::unordered_map<sf::Keyboard::Key, std::function<void()>> keyBindings;
