@@ -21,6 +21,12 @@ RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 	fpsCounter.setCharacterSize(20);
 	fpsCounter.setFillColor(sf::Color::White);
 	fpsCounter.setPosition(10.f, 10.f); // Adjust position as needed
+
+	// Configure summary text display
+	summaryText.setFont(font);
+	summaryText.setCharacterSize(20);
+	summaryText.setFillColor(sf::Color::White);
+	summaryText.setPosition(20.f, 50.f);
 }
 
 void RenderSystem::toggleTextLabelsStars()

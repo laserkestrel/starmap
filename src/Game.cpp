@@ -10,6 +10,7 @@
 #include <SFML/System/Time.hpp>
 #include <chrono>
 #include <iostream>
+#include <sstream>
 #include <thread>
 #include <algorithm>
 #include "DebugLog.h"
@@ -110,6 +111,50 @@ void Game::run()
 	DEBUG_LOG("[DEBUG] Game::run start");
 	initializeKeyBindings();
 	DEBUG_LOG("[DEBUG] initializeKeyBindings done");
+	// Show a simple startup summary screen allowing the user to inspect
+	// some config values (e.g. probeSearchRadiusPixels) and start the simulation
+	bool started = false;
+	while (!started && window.isOpen())
+	{
+		sf::Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == sf::Event::Closed)
+			{
+				window.close();
+			}
+			else if (event.type == sf::Event::KeyPressed)
+			{
+				if (event.key.code == sf::Keyboard::Enter)
+				{
+					started = true;
+				}
+				else
+				{
+					auto it = keyBindings.find(event.key.code);
+					if (it != keyBindings.end())
+					{
+						it->second();
+					}
+				}
+			}
+			else if (event.type == sf::Event::MouseButtonPressed)
+			{
+				started = true;
+			}
+		}
+
+		window.clear();
+		sf::Sprite starsSprite(renderSystem.getStarsTexture());
+		window.draw(starsSprite);
+		std::ostringstream ss;
+		ss << "Probe Search Radius: " << config.getProbeSearchRadiusPixels() << "\n\nPress Enter or Click to Start";
+		renderSystem.renderSummaryText(ss.str());
+		renderSystem.calculateAndDisplayFPS();
+		window.display();
+
+		sf::sleep(sf::milliseconds(50));
+	}
 	// Start measuring time before entering the simulation loop
 	auto simulationStartTime = std::chrono::high_resolution_clock::now();
 	int simulationIterations = config.getSimulationIterations(); // Use config received in the constructor

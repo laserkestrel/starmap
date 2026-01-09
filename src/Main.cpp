@@ -18,4 +18,4 @@ DEBUG_LOG("Compiled on " << __DATE__ << " at " << __TIME__);
 	DEBUG_LOG("[DEBUG] after Game ctor");
 	myGame.run();
 	return 0;
-}
+} 
