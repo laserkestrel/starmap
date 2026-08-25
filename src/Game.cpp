@@ -1,145 +1,140 @@
-// game.cpp
+// Game.cpp
 #include "Game.h"
-#include "LoadConfig.h"
+#include "DebugLog.h"
 #include "LoadCSVData.h"
-#include "Probe.h"
-#include "RenderSystem.h"
 #include "Utilities.h"
-#include "GalaxyQuadTree.h"
 #include <SFML/System/Clock.hpp>
 #include <SFML/System/Time.hpp>
-#include <chrono>
-#include <iostream>
-#include <sstream>
-#include <thread>
 #include <algorithm>
-#include "DebugLog.h"
+#include <chrono>
+#include <cmath>
+#include <iostream>
+#include <limits>
+#include <thread>
 
-Game::Game(const LoadConfig &config) :
-
-									   window(sf::VideoMode(config.getWindowWidth(), config.getWindowHeight()), "Star Map"),
-									   renderSystem(window),
-									   config(config),
-						   probeSearchRadiusPixels(config.getProbeSearchRadiusPixels()),
-									   theQuadTreeInstance(sf::FloatRect(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight()), config.getQuadTreeSearchSize())
+namespace
 {
-	// Load star systems from CSV file into GalaxyVector
-	LoadCSVData dataLoader2;
-	galaxyVector = dataLoader2.loadStarsFromCsv("./content/hygdata_v40.csv", window, config);
-	if (!galaxyVector.empty())
+	const float PARAM_STEP_RADIUS = 1.0f;
+	const int PARAM_STEP_LIMIT = 1;
+	// A little slack so a star sitting exactly on the maximum extent is still
+	// inside the tree -- sf::FloatRect::contains treats the far edge as outside.
+	const float BOUNDS_PADDING_PARSECS = 1.0f;
+} // namespace
+
+Game::Game(const LoadConfig &config)
+	: config(config),
+	  window(sf::VideoMode(config.getWindowWidth(), config.getWindowHeight()), "Star Map"),
+	  renderSystem(window, projection)
+{
+	settings.probeSearchRadiusParsecs = config.getProbeSearchRadiusParsecs();
+	settings.probeSpeedParsecsPerTick = config.getProbeSpeedParsecsPerTick();
+	settings.probeIndividualReplicationLimit = config.getprobeIndividualReplicationLimit();
+
+	// scaleFactor is how many parsecs span the window's width.
+	const float scaleFactor = std::max(1.0f, static_cast<float>(config.getScaleFactor()));
+	projection.setPixelsPerParsec(static_cast<float>(config.getWindowWidth()) / scaleFactor);
+	projection.setTiltDegrees(config.getViewTiltDegrees());
+	projection.setViewDepthParsecs(config.getViewDepthParsecs());
+	projection.setCentre(sf::Vector2f(config.getWindowWidth() / 2.0f, config.getWindowHeight() / 2.0f));
+
+	LoadCSVData dataLoader;
+	galaxyVector = dataLoader.loadStarsFromCsv("./content/hygdata_v40.csv", config);
+	if (galaxyVector.empty())
 	{
-		std::cout << "galaxyVector2 vector is populated with " << galaxyVector.size() << " stars." << std::endl;
+		std::cerr << "No stars loaded -- check ./content/hygdata_v40.csv" << std::endl;
 	}
 	else
 	{
-		std::cout << "galaxyVector vector is empty." << std::endl;
+		std::cout << "Loaded " << galaxyVector.size() << " stars." << std::endl;
 	}
 
-	sf::Vector2u windowSize = window.getSize();
-
-	// Calculate the center coordinates
-	int centerX = windowSize.x / 2;
-	int centerY = windowSize.y / 2;
-
-	// build a texture of all the stars which can be reused each frame
-	// renderSystem.initializeStarsTexture(galaxyVector); //comment out while implementing galaxyVector2 (new csv)
-	renderSystem.initializeStarsTexture(galaxyVector);
-
-	// Create a mapping table of star names to their ID values. Used for passing to probe namer.
 	Utilities::populateStarData(galaxyVector);
 
-	DEBUG_LOG("[DEBUG] populateStarData done");
-
-	// Build star ID -> index map for fast lookup when marking explored
+	starIndexMap.reserve(galaxyVector.size());
 	for (size_t i = 0; i < galaxyVector.size(); ++i)
 	{
 		starIndexMap[galaxyVector[i].getID()] = i;
 	}
 
-	DEBUG_LOG("[DEBUG] starIndexMap built, size=" << starIndexMap.size());
+	// Quadtree bounded by the data, not the viewport.
+	const sf::FloatRect bounds = computeCatalogueBounds();
+	quadTree = std::make_unique<GalaxyQuadTree>(bounds, config.getQuadTreeSearchSize());
+	quadTree->setStarVector(&galaxyVector);
 
-	// Assume gameBounds represent the entire playable area, and pull quadtree depth from config;
-	sf::FloatRect gameBounds(0.f, 0.f, config.getWindowWidth(), config.getWindowHeight());
-	int QuadTreeCapacity = config.getQuadTreeSearchSize();
-
-	// Example population of the quadtree in Game.cpp
-	// Point the quadtree at our canonical star vector so nodes reference up-to-date stars
-	theQuadTreeInstance.setStarVector(&galaxyVector);
-	// Insert stars by index so the quadtree stores indices into the canonical vector.
-	// insert() returns false for any star outside the tree boundary -- which is the
-	// window rectangle -- so a star that falls off-screen is silently absent from the
-	// tree and no probe can ever find it. Count and report those rather than ignoring
-	// the return value.
-	size_t starsRejectedByQuadTree = 0;
+	size_t rejected = 0;
 	for (size_t i = 0; i < galaxyVector.size(); ++i)
 	{
-		if (!theQuadTreeInstance.insert(i))
+		if (!quadTree->insert(i))
 		{
-			++starsRejectedByQuadTree;
+			++rejected;
 		}
 	}
-
-	if (starsRejectedByQuadTree > 0)
+	std::cout << "Quadtree spans " << bounds.width << " x " << bounds.height
+			  << " pc; " << (galaxyVector.size() - rejected) << " of " << galaxyVector.size()
+			  << " stars indexed";
+	if (rejected > 0)
 	{
-		const double rejectedPercent =
-			100.0 * static_cast<double>(starsRejectedByQuadTree) / static_cast<double>(galaxyVector.size());
-		std::cout << "WARNING: " << starsRejectedByQuadTree << " of " << galaxyVector.size()
-				  << " stars (" << rejectedPercent << "%) fell outside the quadtree boundary of "
-				  << config.getWindowWidth() << "x" << config.getWindowHeight()
-				  << " and are unreachable by probes. Lower scaleFactor or loadStarsLimit to fit more of the catalogue on screen."
-				  << std::endl;
+		std::cout << " (" << rejected << " REJECTED -- this should be zero)";
 	}
+	std::cout << "." << std::endl;
 
-	DEBUG_LOG("[DEBUG] quadtree populated");
-#if defined(_DEBUG)
-	// theQuadTreeInstance.debugPrint(); // This will print the structure of the quadtree and the stars in each node EXTREME VERBOSE!
-#endif
-	// create a mapping of starID values to star names.
+	renderSystem.initializeStarsTexture(galaxyVector);
 
-	// Instantiate a probe class called firstProbe - galaxyVector as argument so data is shared between probe instances.
-	// Probe firstProbe("SOL-SOL-AAA", centerX, centerY, 0.0f, galaxyVector, theQuadTreeInstance); // Example coordinates and speed
-	Probe firstProbe("SOL-SOL-AAA", centerX, centerY, 0.0f, theQuadTreeInstance); // Example coordinates and speed
+	// The first probe starts at Sol, which is the origin of world space.
+	Probe firstProbe("SOL-SOL-AAA", 0.0f, 0.0f, 0.0f, settings.probeSpeedParsecsPerTick, *quadTree, settings);
 	firstProbe.setMode(ProbeMode::Seek);
 	firstProbe.setNewBorn(false);
 	firstProbe.setRandomTrailColor();
-	sf::Vector2f SolCoordinates(centerX, centerY); // Replace these values with actual coordinates
-	firstProbe.addVisitedStarSystem(0, SolCoordinates, true);
-	firstProbe.setSpeed(1); // make sure starter system is set
-	firstProbe.move();		// currently running the actual logic of the probe from its class.
-	// and add it to the probeVector (a list of all probes in simulation)
-	probeVector.push_back(firstProbe);
+	firstProbe.addVisitedStarSystem(0, sf::Vector3f(0.0f, 0.0f, 0.0f), true);
+	probeVector.push_back(std::move(firstProbe));
 
-	DEBUG_LOG("[DEBUG] firstProbe created and pushed, probeVector.size=" << probeVector.size());
+	editableParams.emplace_back("probeSearchRadiusParsecs", std::to_string(settings.probeSearchRadiusParsecs));
+	editableParams.emplace_back("probeIndividualReplicationLimit", std::to_string(settings.probeIndividualReplicationLimit));
+}
 
-	// initialize editable parameters and caret for startup UI
-	editableParams.emplace_back("probeSearchRadiusPixels", std::to_string(probeSearchRadiusPixels));
-	editableParams.emplace_back("probeIndividualReplicationLimit", std::to_string(config.getprobeIndividualReplicationLimit()));
-	focusedParamIndex = 0;
-	caretVisible = true;
-	caretClock.restart();
+sf::FloatRect Game::computeCatalogueBounds() const
+{
+	if (galaxyVector.empty())
+	{
+		return sf::FloatRect(-1.0f, -1.0f, 2.0f, 2.0f);
+	}
+
+	float minX = std::numeric_limits<float>::max(), maxX = std::numeric_limits<float>::lowest();
+	float minY = std::numeric_limits<float>::max(), maxY = std::numeric_limits<float>::lowest();
+	for (const auto &star : galaxyVector)
+	{
+		minX = std::min(minX, star.getWorldX());
+		maxX = std::max(maxX, star.getWorldX());
+		minY = std::min(minY, star.getWorldY());
+		maxY = std::max(maxY, star.getWorldY());
+	}
+	minX -= BOUNDS_PADDING_PARSECS;
+	minY -= BOUNDS_PADDING_PARSECS;
+	maxX += BOUNDS_PADDING_PARSECS;
+	maxY += BOUNDS_PADDING_PARSECS;
+	return sf::FloatRect(minX, minY, maxX - minX, maxY - minY);
 }
 
 void Game::initializeKeyBindings()
 {
-	keyBindings[sf::Keyboard::Escape] = [this]()
-	{ window.close(); };
-	keyBindings[sf::Keyboard::F1] = [this]()
-	{ renderSystem.toggleTextLabelsStars(); renderSystem.initializeStarsTexture(galaxyVector); };
-	keyBindings[sf::Keyboard::F2] = [this]()
-	{ renderSystem.toggleTextLabelsProbes(); renderSystem.initializeStarsTexture(galaxyVector); };
-	keyBindings[sf::Keyboard::F3] = [this]()
-	{ renderSystem.toggleProbeTrails(); };
-	keyBindings[sf::Keyboard::F12] = [this]()
-	{ renderSystem.toggleDebugGraphics(); };
+	keyBindings[sf::Keyboard::Escape] = [this]() { window.close(); };
+	// Only the toggles that change the starfield rebuild its texture. F2 flips
+	// probe labels, which has nothing to do with the stars.
+	keyBindings[sf::Keyboard::F1] = [this]() {
+		renderSystem.toggleTextLabelsStars();
+		renderSystem.initializeStarsTexture(galaxyVector);
+	};
+	keyBindings[sf::Keyboard::F2] = [this]() { renderSystem.toggleTextLabelsProbes(); };
+	keyBindings[sf::Keyboard::F3] = [this]() { renderSystem.toggleProbeTrails(); };
+	keyBindings[sf::Keyboard::F4] = [this]() {
+		renderSystem.toggleStarStalks();
+		renderSystem.initializeStarsTexture(galaxyVector);
+	};
+	keyBindings[sf::Keyboard::F12] = [this]() { renderSystem.toggleDebugGraphics(); };
 }
 
-void Game::run()
+void Game::runStartupScreen()
 {
-	DEBUG_LOG("[DEBUG] Game::run start");
-	initializeKeyBindings();
-	DEBUG_LOG("[DEBUG] initializeKeyBindings done");
-	// Show startup parameter editor: allow Tab/Shift+Tab to focus fields,
-	// type digits/backspace to edit, Up/Down to increment, Enter/click to start.
 	bool started = false;
 	while (!started && window.isOpen())
 	{
@@ -152,43 +147,31 @@ void Game::run()
 			}
 			else if (event.type == sf::Event::KeyPressed)
 			{
+				const int count = static_cast<int>(editableParams.size());
 				if (event.key.code == sf::Keyboard::Enter)
 				{
 					started = true;
 				}
-				else if (event.key.code == sf::Keyboard::Tab)
+				else if (event.key.code == sf::Keyboard::Tab && count > 0)
 				{
-					int count = static_cast<int>(editableParams.size());
-					if (count > 0)
+					focusedParamIndex = event.key.shift ? (focusedParamIndex - 1 + count) % count
+														: (focusedParamIndex + 1) % count;
+				}
+				else if (event.key.code == sf::Keyboard::Up || event.key.code == sf::Keyboard::Down)
+				{
+					const float direction = (event.key.code == sf::Keyboard::Up) ? 1.0f : -1.0f;
+					try
 					{
-						if (event.key.shift)
+						if (focusedParamIndex == 0)
 						{
-							focusedParamIndex = (focusedParamIndex - 1 + count) % count;
+							float v = std::stof(editableParams[0].second) + direction * PARAM_STEP_RADIUS;
+							editableParams[0].second = std::to_string(std::max(0.1f, v));
 						}
 						else
 						{
-							focusedParamIndex = (focusedParamIndex + 1) % count;
+							int v = std::stoi(editableParams[1].second) + static_cast<int>(direction) * PARAM_STEP_LIMIT;
+							editableParams[1].second = std::to_string(std::max(0, v));
 						}
-					}
-				}
-				else if (event.key.code == sf::Keyboard::Up)
-				{
-					// increment numeric focused param by 10
-					try
-					{
-						int v = std::stoi(editableParams[focusedParamIndex].second);
-						v += 10;
-						editableParams[focusedParamIndex].second = std::to_string(v);
-					}
-					catch (...) {}
-				}
-				else if (event.key.code == sf::Keyboard::Down)
-				{
-					try
-					{
-						int v = std::stoi(editableParams[focusedParamIndex].second);
-						v = std::max(1, v - 10);
-						editableParams[focusedParamIndex].second = std::to_string(v);
 					}
 					catch (...) {}
 				}
@@ -203,30 +186,23 @@ void Game::run()
 			}
 			else if (event.type == sf::Event::TextEntered)
 			{
-				// If focused, allow numeric input and backspace handling
-				unsigned int uni = event.text.unicode;
-				if (uni >= '0' && uni <= '9')
+				const unsigned int uni = event.text.unicode;
+				std::string &value = editableParams[focusedParamIndex].second;
+				if ((uni >= '0' && uni <= '9') || uni == '.')
 				{
-					char c = static_cast<char>(uni);
-					// append
-					editableParams[focusedParamIndex].second.push_back(c);
+					value.push_back(static_cast<char>(uni));
 				}
-				else if (uni == 8) // backspace
+				else if (uni == 8 && !value.empty()) // backspace
 				{
-					if (!editableParams[focusedParamIndex].second.empty())
-					{
-						editableParams[focusedParamIndex].second.pop_back();
-					}
+					value.pop_back();
 				}
 			}
 			else if (event.type == sf::Event::MouseButtonPressed)
 			{
-				// clicking starts the simulation (we don't map clicks to fields yet)
 				started = true;
 			}
 		}
 
-		// caret blinking
 		if (caretClock.getElapsedTime().asMilliseconds() > 500)
 		{
 			caretVisible = !caretVisible;
@@ -234,8 +210,7 @@ void Game::run()
 		}
 
 		window.clear();
-		sf::Sprite starsSprite(renderSystem.getStarsTexture());
-		window.draw(starsSprite);
+		window.draw(sf::Sprite(renderSystem.getStarsTexture()));
 		renderSystem.renderParameterList(editableParams, focusedParamIndex, caretVisible);
 		renderSystem.calculateAndDisplayFPS();
 		window.display();
@@ -243,72 +218,61 @@ void Game::run()
 		sf::sleep(sf::milliseconds(50));
 	}
 
-	// Apply edited values to runtime members (example: probeSearchRadiusPixels)
-	try
-	{
-		probeSearchRadiusPixels = std::stoi(editableParams[0].second);
-	}
-	catch (...) { /* ignore parse errors, keep previous value */ }
-	// Start measuring time before entering the simulation loop
-	auto simulationStartTime = std::chrono::high_resolution_clock::now();
-	int simulationIterations = config.getSimulationIterations(); // Use config received in the constructor
-	int sleepTimeMillis = config.getSleepTimeMillis();			 // Retrieve sleep time from the received config
+	// Apply BOTH edited values. Previously only editableParams[0] was read back,
+	// and even that went into a Game member the probes never looked at.
+	try { settings.probeSearchRadiusParsecs = std::max(0.1f, std::stof(editableParams[0].second)); }
+	catch (...) {}
+	try { settings.probeIndividualReplicationLimit = std::max(0, std::stoi(editableParams[1].second)); }
+	catch (...) {}
+
+	std::cout << "Starting with search radius " << settings.probeSearchRadiusParsecs
+			  << " pc, replication limit " << settings.probeIndividualReplicationLimit << "." << std::endl;
+}
+
+void Game::run()
+{
+	initializeKeyBindings();
+	runStartupScreen();
+
+	const auto simulationStartTime = std::chrono::high_resolution_clock::now();
+	const int simulationIterations = config.getSimulationIterations();
+	const int sleepTimeMillis = config.getSleepTimeMillis();
 	sf::Clock clock;
 	int iteration = 0;
 
-	// Run the simulation loop for the specified number of iterations
-	DEBUG_LOG("[DEBUG] entering simulation loop, iterations=" << simulationIterations);
-	DEBUG_LOG("[DEBUG] iteration=" << iteration << " window.isOpen()=" << window.isOpen());
 	while (iteration < simulationIterations && window.isOpen())
 	{
-		sf::Time elapsed = clock.restart();
+		const sf::Time elapsed = clock.restart();
 
-		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - before handleEvents");
 		handleEvents();
-		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - after handleEvents");
-
-		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - before updateGameState");
 		updateGameState();
-		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - after updateGameState");
-
-		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - before render");
 		render();
-		DEBUG_LOG("[DEBUG] loop iteration " << iteration << " - after render");
-
 		++iteration;
 
-		sf::Time sleepTime = sf::milliseconds(sleepTimeMillis); // Convert sleepTimeMillis to sf::Time
-
-		// Check if elapsed time is less than sleepTime, then sleep for the remaining time
+		const sf::Time sleepTime = sf::milliseconds(sleepTimeMillis);
 		if (elapsed < sleepTime)
 		{
 			sf::sleep(sleepTime - elapsed);
 		}
 	}
-	// Generate summary after simulation iterations
-	// Calculate the elapsed time after the simulation completes
-	auto simulationEndTime = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> simulationDuration = simulationEndTime - simulationStartTime;
 
-	double simulationTimeInSeconds = simulationDuration.count();
-	this->simulationTimeInSeconds = simulationTimeInSeconds; // Assign value
+	const auto simulationEndTime = std::chrono::high_resolution_clock::now();
+	const std::chrono::duration<double> simulationDuration = simulationEndTime - simulationStartTime;
+	simulationTimeInSeconds = simulationDuration.count();
 	std::cout << "Simulation took " << simulationTimeInSeconds << " seconds." << std::endl;
-	Game::generateSummary();
+	generateSummary();
 
-	// After the simulation finishes, keep the window open for user interactions
 	while (window.isOpen())
 	{
 		handleEvents();
 		render();
 		sf::sleep(sf::milliseconds(200));
-		// Add other relevant operations for the window here
 	}
 }
 
 void Game::handleEvents()
 {
 	sf::Event event;
-
 	while (window.pollEvent(event))
 	{
 		if (event.type == sf::Event::Closed)
@@ -323,122 +287,73 @@ void Game::handleEvents()
 				it->second();
 			}
 		}
-		else if (event.type == sf::Event::MouseWheelScrolled)
-		{
-			if (event.mouseWheelScroll.delta > 0)
-			{
-				// Zoom in
-				// view.zoom(0.8f);
-				std::cout << "Do some Zoom In" << '\n';
-			}
-			else
-			{
-				// Zoom out
-				std::cout << "Do some Zoom Out" << '\n';
-				// view.zoom(1.2f);
-			}
-		}
 	}
 }
 
 void Game::updateGameState()
 {
-	std::vector<Probe> newProbes;		   // Store new probes to add later
-	std::vector<size_t> probesToReplicate; // Store indices of probes to replicate
-
-	// Find probes that need to replicate
+	// --- replication -----------------------------------------------------------
+	std::vector<size_t> probesToReplicate;
 	for (size_t i = 0; i < probeVector.size(); ++i)
 	{
 		if (probeVector[i].getMode() == ProbeMode::Replicate)
 		{
-			// Store the index of the probe that needs replication
 			probesToReplicate.push_back(i);
 		}
 	}
 
-	// Estimate the required capacity for new probes (adjust as needed)
-	size_t estimatedReplicationCount = probesToReplicate.size();
-	newProbes.reserve(estimatedReplicationCount);
-
-	// TODO: Can we move logic together into probe class itself?
-	// Create new probes based on probesToReplicate
+	std::vector<Probe> newProbes;
+	newProbes.reserve(probesToReplicate.size());
 
 	for (const auto &index : probesToReplicate)
 	{
-		// Run specific logic when the mode is "Replicate"
-
 		Probe &probe = probeVector[index];
 
-		// int probereplimit;
-		// probereplimit = config.getprobeIndividualReplicationLimit();
-		// so if replication count is 0, and our limit is 0 (do not replicate EQUAL TO OR GTR THAN)
-		// if replication count is 0 and our limit is 1 - replicate
-		// if replication count is 1 and our limit is 1 - do not replicate (EQUAL TO OR GTR THAN)
-
-		if (probe.getReplicationCount() >= config.getprobeIndividualReplicationLimit())
+		if (probe.getReplicationCount() >= settings.probeIndividualReplicationLimit)
 		{
 			probe.setMode(ProbeMode::Shutdown);
+			continue;
 		}
-		else
-		{ // if probe hasnt reached its replication limit, do some replicating. shouldnt we be doing this before a probe goes into replication mode?!
-			// Create a new replicated probe
-			// must be using targetStar name to generate the child probe name string.
-			// first arg is used as parent name, second string as replication location.
 
-			// Need to convert current location ID to string name. use utility class.
-			uint32_t replicationLocationID;															   // declare new varaible
-			replicationLocationID = probe.getTargetStar();											   // get the probes current target ID
-			std::string replicationLocationName = Utilities::getStarNameFromID(replicationLocationID); // pass target ID into lookup utility, returns string of system name.
+		const std::string replicationLocationName = Utilities::getStarNameFromID(probe.getTargetStar());
+		const std::string newName = Utilities::probeNamer(probe.getProbeName(), replicationLocationName);
 
-			std::string newName = Utilities::probeNamer((probe.getProbeName()), replicationLocationName);
-			Probe replicatedProbe(newName, probe.getX(), probe.getY(), probe.getSpeed(), theQuadTreeInstance);
+		Probe replicatedProbe(newName, probe.getWorldX(), probe.getWorldY(), probe.getWorldZ(),
+							  settings.probeSpeedParsecsPerTick, *quadTree, settings);
+		replicatedProbe.setRandomTrailColor();
 
-			replicatedProbe.setRandomTrailColor();
-
-			// Iterate through visited star systems of the original probe and add to replicated probe
-			const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
-			for (const auto &visitedSystem : visitedSystems)
-			{
-				// Set the visitedByProbe to false for this one as the child probe hasn't visited by itself.
-				replicatedProbe.addVisitedStarSystem(visitedSystem.starID, visitedSystem.coordinates, false);
-			}
-
-			// TODO: Get next target Star for current probe, pass this as a visted system to child.
-			// step 1 - to get next target, we need the findNearestUnvisitedStarInQuadTree (FNUSIQT) function
-			// step 2- FNUSIQT needs the probes current quadtree location, and a search radius. (hard code, but setup TODO into config.800 is value from other part doing same.)
-			const GalaxyQuadTreeNode *parentProbeCurrentQuadTreeLocation = probe.getCurrentQuadTreeNode();
-			// If the probe doesn't have a valid current quadtree node, fall back to root
-			if (parentProbeCurrentQuadTreeLocation == nullptr)
-			{
-				parentProbeCurrentQuadTreeLocation = theQuadTreeInstance.getRootNode();
-			}
-				const Star *parentProbeNextTarget = probe.findNearestUnvisitedStarInQuadTree(parentProbeCurrentQuadTreeLocation, probeSearchRadiusPixels);
-			if (parentProbeNextTarget != nullptr)
-			{
-				// step 5 - need to convert the xy into avector object
-				replicatedProbe.addVisitedStarSystem(parentProbeNextTarget->getID(), sf::Vector2f(parentProbeNextTarget->getX(), parentProbeNextTarget->getY()), false);
-
-				// debug here
-			}
-			else
-			{
-				// Handle the case where no nearest unvisited star was found
-			}
-
-			// TODO: Logic for updating star isExplored property
-
-			newProbes.emplace_back(replicatedProbe);
+		// The child inherits its parent's knowledge, but not the credit for it.
+		for (const auto &visitedSystem : probe.getVisitedStarSystems())
+		{
+			replicatedProbe.addVisitedStarSystem(visitedSystem.starID, visitedSystem.coordinates, false);
 		}
+
+		// Tell the child where its parent is headed next, so the two do not both
+		// set off for the same star.
+		const GalaxyQuadTreeNode *searchRoot = probe.getCurrentQuadTreeNode();
+		if (searchRoot == nullptr)
+		{
+			searchRoot = quadTree->getRootNode();
+		}
+		const Star *parentNextTarget = probe.findNearestUnvisitedStar(searchRoot, settings.probeSearchRadiusParsecs);
+		if (parentNextTarget != nullptr)
+		{
+			replicatedProbe.addVisitedStarSystem(parentNextTarget->getID(),
+												 sf::Vector3f(parentNextTarget->getWorldX(),
+															  parentNextTarget->getWorldY(),
+															  parentNextTarget->getWorldZ()),
+												 false);
+		}
+
+		newProbes.push_back(std::move(replicatedProbe));
 	}
 
-	// Add new probes created during replication mode to the main probe vector
-	for (const auto &newProbe : newProbes)
+	for (auto &newProbe : newProbes)
 	{
-		probeVector.push_back(newProbe);
+		probeVector.push_back(std::move(newProbe));
 	}
 
-	// --- Parallel probe updates ---
-	// Record previous visited counts so we can detect newly visited stars after moves
+	// --- parallel probe updates -------------------------------------------------
 	std::vector<size_t> oldVisitedCounts;
 	oldVisitedCounts.reserve(probeVector.size());
 	for (const auto &probe : probeVector)
@@ -446,93 +361,73 @@ void Game::updateGameState()
 		oldVisitedCounts.push_back(probe.getVisitedStarSystems().size());
 	}
 
-	// Partition probes across threads and run move() in parallel. Each probe is updated
-	// only by its assigned thread so internal probe state is safe to mutate.
-	unsigned int threadCount = std::max(1u, std::thread::hardware_concurrency());
-	size_t totalProbes = probeVector.size();
-	size_t chunk = (totalProbes + threadCount - 1) / threadCount;
+	const unsigned int threadCount = std::max(1u, std::thread::hardware_concurrency());
+	const size_t totalProbes = probeVector.size();
+	const size_t chunk = (totalProbes + threadCount - 1) / threadCount;
 
 	std::vector<std::thread> workers;
 	workers.reserve(threadCount);
-
 	for (unsigned int t = 0; t < threadCount; ++t)
 	{
-		size_t start = t * chunk;
-		size_t end = std::min(start + chunk, totalProbes);
+		const size_t start = t * chunk;
+		const size_t end = std::min(start + chunk, totalProbes);
 		if (start >= end)
 			continue;
 
 		workers.emplace_back([this, start, end]() {
 			for (size_t i = start; i < end; ++i)
 			{
-				this->probeVector[i].move();
+				probeVector[i].move();
 			}
 		});
 	}
-
 	for (auto &w : workers)
 	{
 		if (w.joinable())
 			w.join();
 	}
-				DEBUG_LOG("[DEBUG] probesToReplicate count=" << probesToReplicate.size());
 
-	// After all probes moved, mark any newly visited stars as explored (atomically)
-	for (size_t i = 0; i < probeVector.size(); ++i)
+	// Mark newly visited stars explored.
+	for (size_t i = 0; i < probeVector.size() && i < oldVisitedCounts.size(); ++i)
 	{
 		const auto &visited = probeVector[i].getVisitedStarSystems();
-		size_t oldCount = oldVisitedCounts[i];
-		for (size_t j = oldCount; j < visited.size(); ++j)
+		for (size_t j = oldVisitedCounts[i]; j < visited.size(); ++j)
 		{
-			uint32_t starID = visited[j].starID;
-			auto it = starIndexMap.find(starID);
+			auto it = starIndexMap.find(visited[j].starID);
 			if (it != starIndexMap.end())
 			{
 				galaxyVector[it->second].tryMarkExplored();
 			}
 		}
 	}
-
-	// Add your game logic for updating the state here
 }
 
 void Game::render()
 {
 	window.clear();
-
-	sf::Sprite starsSprite(renderSystem.getStarsTexture()); // Draw the pre-rendered stars texture
-	window.draw(starsSprite);
-	renderSystem.renderQuadtree(window, theQuadTreeInstance.getRootNode());
-
-	// render any probes that may exist in probeVector
-	for (const auto &probe : probeVector)
-	{
-		renderSystem.renderProbe(probe);
-	}
+	window.draw(sf::Sprite(renderSystem.getStarsTexture()));
+	renderSystem.renderQuadtree(window, quadTree->getRootNode());
+	renderSystem.renderProbes(probeVector);
 	renderSystem.calculateAndDisplayFPS();
 	window.display();
 }
 
 void Game::generateSummary() const
 {
-	// Collect and display header summary statistics here
 	std::cout << "-----------------" << '\n'
 			  << "Begin Summary: " << '\n'
 			  << "-----------------" << '\n';
 
-				DEBUG_LOG("[DEBUG] newProbes merged, probeVector.size=" << probeVector.size());
 	if (config.getSummaryShowPerProbe())
 	{
 		for (const auto &probe : probeVector)
 		{
 			if (probe.getTotalDistanceTraveled() > 0 && probe.getReplicationCount() > 0)
 			{
-				std::cout << "- Probe Name: [" << probe.getProbeName() << "] Traveled [" << probe.getTotalDistanceTraveled() << "], replicated [" << probe.getReplicationCount() << "] times,"
-						  << "visiting ";
-				DEBUG_LOG("[DEBUG] oldVisitedCounts recorded");
-
-				const std::vector<VisitedStarSystem> &visitedSystems = probe.getVisitedStarSystems();
-				for (const auto &visitedSystem : visitedSystems)
+				std::cout << "- Probe [" << probe.getProbeName() << "] travelled ["
+						  << probe.getTotalDistanceTraveled() << " pc], replicated ["
+						  << probe.getReplicationCount() << "] times, visiting ";
+				for (const auto &visitedSystem : probe.getVisitedStarSystems())
 				{
 					if (visitedSystem.visitedByProbe)
 					{
@@ -543,36 +438,36 @@ void Game::generateSummary() const
 			}
 		}
 	}
-	// Footer statistics if needed (total distance, total replications, etc.)
-
-	int summaryIterations = config.getSimulationIterations();
-	size_t probeCount = probeVector.size();
 
 	size_t totalStarsVisitedByProbes = 0;
-
 	for (const auto &star : galaxyVector)
 	{
 		if (star.getIsExplored())
 		{
-			totalStarsVisitedByProbes++;
-				DEBUG_LOG("[DEBUG] worker threads joined");
+			++totalStarsVisitedByProbes;
 		}
 	}
-	double maxPossibleEfficiencyScore = 1;
-	double efficiencyScore = totalStarsVisitedByProbes / (simulationTimeInSeconds * probeCount);
-	double efficiencyPercentage = (efficiencyScore / maxPossibleEfficiencyScore) * 100.0;
 
 	if (config.getSummaryShowFooter())
 	{
-		// show summary footer is true
+		const size_t probeCount = probeVector.size();
+		// Guarded: this used to divide by probeCount and elapsed time without
+		// checking either.
+		const double denominator = simulationTimeInSeconds * static_cast<double>(probeCount);
+		const double starsPerProbeSecond = (denominator > 0.0)
+											   ? static_cast<double>(totalStarsVisitedByProbes) / denominator
+											   : 0.0;
+		const double coverage = galaxyVector.empty()
+									? 0.0
+									: 100.0 * static_cast<double>(totalStarsVisitedByProbes) / static_cast<double>(galaxyVector.size());
+
 		std::cout << "Simulation Summary:" << '\n'
-			  << "Simulation limited to [" << summaryIterations << "] epochs" << '\n'
+				  << "Simulation limited to [" << config.getSimulationIterations() << "] epochs" << '\n'
 				  << "Total number of stars: " << galaxyVector.size() << '\n'
 				  << "Total number of probes: " << probeCount << '\n'
+				  << "Stars explored: " << totalStarsVisitedByProbes << " (" << coverage << "% of catalogue)" << '\n'
 				  << "Total Simulation Time: " << simulationTimeInSeconds << " seconds." << '\n'
-				  // TODO - FIX and workout what a perfect score is on this. aparantly min number for 7 stars is 3 probes.
-				  << "Efficiency Ratio: " << efficiencyScore << '\n'
-				  << "Efficiency Percent: " << efficiencyPercentage << '\n'
+				  << "Stars per probe-second: " << starsPerProbeSecond << '\n'
 				  << "-----------------" << std::endl;
 	}
 }

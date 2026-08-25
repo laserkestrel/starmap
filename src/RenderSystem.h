@@ -3,45 +3,55 @@
 #define RENDERSYSTEM_H
 
 #include "Probe.h"
-#include "Star.h" // Assuming Star class is used for rendering
-#include <SFML/Graphics.hpp>
-#include <sstream>
+#include "Projection.h"
+#include "Star.h"
 #include "GalaxyQuadTree.h"
 #include "GalaxyQuadTreeNode.h"
+#include <SFML/Graphics.hpp>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 class RenderSystem
 {
 public:
-	RenderSystem(sf::RenderWindow &window);
+	RenderSystem(sf::RenderWindow &window, const Projection &projection);
 
-	void renderStars(const std::vector<Star> &stars);
-	void renderProbe(const Probe &probe); // Declaration for renderProbe
+	// Redraws the whole starfield into an off-screen texture: the reference grid
+	// on the z = 0 plane, one stalk per star showing its height above or below
+	// that plane, then the stars themselves painted far-to-near.
+	void initializeStarsTexture(const std::vector<Star> &stars);
+
+	void renderProbes(const std::vector<Probe> &probes);
 	void renderSummaryText(const std::string &summary);
 	void renderParameterList(const std::vector<std::pair<std::string, std::string>> &params, int focusedIndex, bool showCaret);
-	void toggleTextLabelsStars(); // Method to toggle text labels visibility
+	void renderQuadtree(sf::RenderWindow &window, const GalaxyQuadTreeNode *node);
+	void calculateAndDisplayFPS();
+
+	void toggleTextLabelsStars();
 	void toggleTextLabelsProbes();
 	void toggleProbeTrails();
-	void toggleDebugGraphics();									 // Method to toggle probe trails visibility
-	void initializeStarsTexture(const std::vector<Star> &stars); // Draw stars on a texture, then render that
-	const sf::Texture &getStarsTexture() const
-	{
-		return starsTexture;
-	}
-	void calculateAndDisplayFPS();
-	void renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *node);
+	void toggleDebugGraphics();
+	void toggleStarStalks();
+
+	bool getShowTextLabelsStars() const { return showTextLabelsStars; }
+	const sf::Texture &getStarsTexture() const { return starsTexture; }
 
 private:
 	sf::RenderWindow &renderWindow;
-	sf::Text summaryText; // Text object to display the summary
+	const Projection &projection;
+	sf::Text summaryText;
 	sf::Font font;
 	sf::Texture starsTexture;
 	sf::Text fpsCounter;
 	sf::Clock fpsClock;
-	// void renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *node);
-	bool showTextLabelsStars; // Flag to control visibility of text labels
-	bool showTextLabelsProbes;
-	bool showProbeTrails;	// Flag to control visibility of text labels
-	bool showDebugGraphics; // Flag to control visibility of FPS counter, and Quadtree boundaries
+
+	bool showTextLabelsStars = false;
+	bool showTextLabelsProbes = false;
+	bool showProbeTrails = false;
+	bool showDebugGraphics = false;
+	bool showStarStalks = true; // the stalks are the whole point of the tilted view
 };
 
 #endif // RENDERSYSTEM_H

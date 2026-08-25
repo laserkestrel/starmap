@@ -3,22 +3,31 @@
 #include <iostream>
 #include <string>
 
-GalaxyQuadTreeNode::GalaxyQuadTreeNode(const sf::FloatRect &nodeBoundary, int nodeCapacity, const std::vector<Star> *starVecPtr)
-	: boundary(nodeBoundary), starIndices(), starVec(starVecPtr), isLeaf(true), capacity(nodeCapacity)
+GalaxyQuadTreeNode::GalaxyQuadTreeNode(const sf::FloatRect &nodeBoundary, int nodeCapacity,
+									   const std::vector<Star> *starVecPtr, int nodeDepth)
+	: boundary(nodeBoundary), starVec(starVecPtr), capacity(nodeCapacity), depth(nodeDepth)
 {
-	for (int i = 0; i < 4; ++i)
-	{
-		children[i] = nullptr;
-	}
 }
 
-GalaxyQuadTreeNode *GalaxyQuadTreeNode::getChild(int index) const
+const GalaxyQuadTreeNode *GalaxyQuadTreeNode::getChild(int index) const
 {
 	if (index >= 0 && index < 4)
 	{
-		return children[index];
+		return children[index].get();
 	}
 	return nullptr;
+}
+
+void GalaxyQuadTreeNode::setStarVector(const std::vector<Star> *sv)
+{
+	starVec = sv;
+	for (auto &child : children)
+	{
+		if (child)
+		{
+			child->setStarVector(sv);
+		}
+	}
 }
 
 bool GalaxyQuadTreeNode::insert(size_t starIndex)
@@ -28,12 +37,14 @@ bool GalaxyQuadTreeNode::insert(size_t starIndex)
 
 	const Star &star = (*starVec)[starIndex];
 
-	if (!boundary.contains(star.getX(), star.getY()))
+	if (!boundary.contains(star.getWorldX(), star.getWorldY()))
 	{
 		return false;
 	}
 
-	if (isLeaf && starIndices.size() < static_cast<size_t>(capacity))
+	// At the depth limit the leaf simply grows past its capacity. Dropping the
+	// star instead would be worse: a lost star is invisible to every probe.
+	if (isLeaf && (starIndices.size() < static_cast<size_t>(capacity) || depth >= MAX_DEPTH))
 	{
 		starIndices.push_back(starIndex);
 		return true;
@@ -44,78 +55,68 @@ bool GalaxyQuadTreeNode::insert(size_t starIndex)
 		split();
 	}
 
-	for (int i = 0; i < 4; ++i)
+	for (auto &child : children)
 	{
-		if (children[i]->insert(starIndex))
+		if (child->insert(starIndex))
 		{
 			return true;
 		}
 	}
-	return false;
+
+	// Inside this node but rejected by all four children -- only reachable
+	// through floating point edge cases. Keep it here rather than lose it.
+	starIndices.push_back(starIndex);
+	return true;
 }
 
 void GalaxyQuadTreeNode::split()
 {
-	float subWidth = boundary.width / 2.0f;
-	float subHeight = boundary.height / 2.0f;
-	float x = boundary.left;
-	float y = boundary.top;
+	const float subWidth = boundary.width / 2.0f;
+	const float subHeight = boundary.height / 2.0f;
+	const float x = boundary.left;
+	const float y = boundary.top;
 
-	children[0] = new GalaxyQuadTreeNode(sf::FloatRect(x + subWidth, y, subWidth, subHeight), capacity, starVec);
-	children[1] = new GalaxyQuadTreeNode(sf::FloatRect(x, y, subWidth, subHeight), capacity, starVec);
-	children[2] = new GalaxyQuadTreeNode(sf::FloatRect(x, y + subHeight, subWidth, subHeight), capacity, starVec);
-	children[3] = new GalaxyQuadTreeNode(sf::FloatRect(x + subWidth, y + subHeight, subWidth, subHeight), capacity, starVec);
+	children[0] = std::make_unique<GalaxyQuadTreeNode>(sf::FloatRect(x + subWidth, y, subWidth, subHeight), capacity, starVec, depth + 1);
+	children[1] = std::make_unique<GalaxyQuadTreeNode>(sf::FloatRect(x, y, subWidth, subHeight), capacity, starVec, depth + 1);
+	children[2] = std::make_unique<GalaxyQuadTreeNode>(sf::FloatRect(x, y + subHeight, subWidth, subHeight), capacity, starVec, depth + 1);
+	children[3] = std::make_unique<GalaxyQuadTreeNode>(sf::FloatRect(x + subWidth, y + subHeight, subWidth, subHeight), capacity, starVec, depth + 1);
 
 	isLeaf = false;
 
-	for (const auto &idx : starIndices)
+	std::vector<size_t> toRedistribute;
+	toRedistribute.swap(starIndices);
+	for (const auto &idx : toRedistribute)
 	{
-		const Star &star = (*starVec)[idx];
-		for (int i = 0; i < 4; ++i)
+		bool placed = false;
+		for (auto &child : children)
 		{
-			if (children[i]->boundary.contains(star.getX(), star.getY()))
+			if (child->insert(idx))
 			{
-				children[i]->insert(idx);
+				placed = true;
 				break;
 			}
 		}
-	}
-	starIndices.clear();
-}
-
-void GalaxyQuadTreeNode::debugPrint(int depth) const
-{
-	std::string indent(depth * 2, ' '); // Create an indent based on the depth
-
-	std::cout << indent << "Node Boundary: " << boundary.left << ", " << boundary.top << ", "
-			  << boundary.width << ", " << boundary.height << std::endl;
-
-	if (isLeaf)
-	{
-		for (const auto &idx : starIndices)
+		if (!placed)
 		{
-			const Star &star = (*starVec)[idx];
-			std::cout << indent << "  Star: ";
-
-			if (!star.getName().empty())
-			{
-				std::cout << star.getName();
-			}
-			else
-			{
-				std::cout << "Unnamed";
-			}
-
-			std::cout << " (" << star.getX() << ", " << star.getY() << ")" << std::endl;
+			starIndices.push_back(idx); // keep it at this level rather than lose it
 		}
 	}
-	else
+}
+
+void GalaxyQuadTreeNode::debugPrint(int indentDepth) const
+{
+	const std::string indent(indentDepth * 2, ' ');
+
+	std::cout << indent << "Node boundary (pc): " << boundary.left << ", " << boundary.top << ", "
+			  << boundary.width << ", " << boundary.height << " [" << starIndices.size() << " stars]" << std::endl;
+
+	if (!isLeaf)
 	{
-		for (int i = 0; i < 4; ++i)
+		for (const auto &child : children)
 		{
-			if (children[i])
+			if (child)
 			{
-				children[i]->debugPrint(depth + 1);
+				child->debugPrint(indentDepth + 1);
 			}
 		}
 	}

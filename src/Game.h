@@ -1,48 +1,60 @@
-// game.h
+// Game.h
 #ifndef GAME_H
 #define GAME_H
 
-#include "LoadConfig.h"
-#include "LoadCSVData.h"
-#include "Probe.h"
-#include "RenderSystem.h"
-#include <SFML/Graphics.hpp>
 #include "GalaxyQuadTree.h"
-#include <unordered_map>
+#include "LoadConfig.h"
+#include "Probe.h"
+#include "Projection.h"
+#include "RenderSystem.h"
+#include "SimSettings.h"
+#include "Star.h"
+#include <SFML/Graphics.hpp>
 #include <functional>
-#include <vector>
+#include <memory>
 #include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 class Game
 {
 public:
 	Game(const LoadConfig &config);
-	void printProbeVectorContents() const; // Function declaration for printing probeVector contents
 	void initializeKeyBindings();
 	void run();
 
 private:
+	void runStartupScreen();
+	void handleEvents();
+	void updateGameState();
+	void render();
+	void generateSummary() const;
+	// World-space bounding box of the loaded catalogue, used as the quadtree's
+	// boundary. Previously this was the window rectangle, which is why almost
+	// every star fell outside the tree and no probe could ever reach it.
+	sf::FloatRect computeCatalogueBounds() const;
+
+	const LoadConfig &config;
+	SimSettings settings;   // mutable copy the startup screen edits and probes read
+	Projection projection;  // the one world -> screen transform
+
 	sf::RenderWindow window;
 	RenderSystem renderSystem;
-	std::vector<Star> galaxyVector;
-	std::unordered_map<uint32_t, size_t> starIndexMap; // map star ID -> index in galaxyVector
-	// std::vector<Star> galaxyVector2;
-	std::vector<Probe> probeVector; // used to keep list of all probe objects so they can be looped through and processed for logic/render.
 
-	void handleEvents();	// will be for reading user input
-	void updateGameState(); // will be for running logic of probes and updating star system resources etc.
-	void render();			// will render the star objects from galaxyVector
-	void renderProbes();	// will render the probe positions on screen with SFML
-	void generateSummary() const;
-	const LoadConfig &config; // Member variable to hold the LoadConfig object
-	int probeSearchRadiusPixels; // editable value that can be changed on the startup screen
-	// editable parameters shown on the startup screen (name, value)
+	std::vector<Star> galaxyVector;
+	std::unordered_map<uint32_t, size_t> starIndexMap; // star ID -> index in galaxyVector
+	std::vector<Probe> probeVector;
+
+	// Built after the catalogue is loaded, since its bounds come from the data.
+	std::unique_ptr<GalaxyQuadTree> quadTree;
+
 	std::vector<std::pair<std::string, std::string>> editableParams;
-	int focusedParamIndex;
+	int focusedParamIndex = 0;
 	sf::Clock caretClock;
-	bool caretVisible;
-	double simulationTimeInSeconds;
-	GalaxyQuadTree theQuadTreeInstance;
+	bool caretVisible = true;
+	double simulationTimeInSeconds = 0.0;
+
 	std::unordered_map<sf::Keyboard::Key, std::function<void()>> keyBindings;
 };
 

@@ -3,12 +3,14 @@
 #define PROBE_H
 
 #include "Star.h"
-#include <SFML/Graphics.hpp>	   // Include SFML for colors
-#include <SFML/System/Vector2.hpp> // Include SFML for Vector2f
-#include <string>
-#include <vector>
 #include "GalaxyQuadTree.h"
-#include "LoadConfig.h"
+#include "SimSettings.h"
+#include <SFML/Graphics/Color.hpp>
+#include <SFML/System/Vector3.hpp>
+#include <cstdint>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
 enum class ProbeMode
 {
@@ -18,82 +20,86 @@ enum class ProbeMode
 	Shutdown
 };
 
-struct VisitedStarSystem // Probes own private memory of visited systems.
+// A probe's own record of a system it knows about. Coordinates are world
+// parsecs, so a trail can be projected through the current view like anything else.
+struct VisitedStarSystem
 {
-	// std::string systemName;
 	uint32_t starID;
-	sf::Vector2f coordinates; // Coordinates of the star system
-	bool visitedByProbe;	  // Indicator to differentiate direct visitation by probe (true) or parent (false)
+	sf::Vector3f coordinates;
+	bool visitedByProbe; // true = this probe went there, false = inherited from its parent
 };
 
-// The constructor for any class .h file is defined in the class under the "public" section. In C++, the constructor is a special member function with the same name as the class, and it is used for initializing the object's state when an instance of the class is created.
 class Probe
 {
 public:
-	Probe(const std::string &probeName, float initialX, float initialY, float speed, GalaxyQuadTree &quadTree); // Probes require access to the same shared galaxyVector object to update resources there.
+	Probe(const std::string &probeName, float startX, float startY, float startZ,
+		  float speedParsecsPerTick, GalaxyQuadTree &quadTree, const SimSettings &settings);
 
 	// NOTE: deliberately no destructor. Declaring one -- even an empty one -- suppresses
 	// the implicit move constructor, which forces std::vector<Probe> to *copy* every probe
-	// (including its whole visitedStarSystems history) on each reallocation. There is
-	// nothing to clean up here, so letting the compiler generate the special members keeps
-	// the move constructor noexcept and vector growth cheap.
+	// (including its whole visitedStarSystems history) on each reallocation.
 
 	std::string visitedStarSystemsToString() const;
 
 	// Setters
-	void setCoordinates(float x, float y);
-	void setSpeed(float speed);
+	void setWorldPosition(float x, float y, float z);
+	void setTargetPosition(float x, float y, float z);
+	void setSpeed(float parsecsPerTick);
 	void setMode(ProbeMode mode);
-	void setTargetCoordinates(float newX, float newY);
 	void setNewBorn(bool status);
-	void addVisitedStarSystem(const uint32_t &starID, const sf::Vector2f &coordinates, bool visitedByProbe);
+	void setTargetStar(uint32_t starID);
+	void addVisitedStarSystem(uint32_t starID, const sf::Vector3f &coordinates, bool visitedByProbe);
 	void setRandomTrailColor();
 	void setBlackTrailColor();
-	void setTargetStar(uint32_t &setTargetStar);
 
 	// Getters
-	std::string getProbeName() const;
-	float getX() const;
-	float getY() const;
+	const std::string &getProbeName() const;
+	float getWorldX() const;
+	float getWorldY() const;
+	float getWorldZ() const;
 	float getSpeed() const;
 	uint32_t getTargetStar() const;
 	ProbeMode getMode() const;
 	bool isNewBorn() const;
 	float getTotalDistanceTraveled() const;
 	int getReplicationCount() const;
-	// int getVisitedStarCount() const;
 	const std::vector<VisitedStarSystem> &getVisitedStarSystems() const;
-	sf::Color getTrailColor() const; // Declaration of getTrailColor method
+	sf::Color getTrailColor() const;
 
-	// Other methods
-	void move(); // Example method representing movement logic
-	const Star *findNearestUnvisitedStarInQuadTree(const GalaxyQuadTreeNode *node, float searchRadius) const;
-	const GalaxyQuadTreeNode *getCurrentQuadTreeNode() const
-	{
-		return currentQuadTreeNode;
-	}
+	void move();
+
+	// Nearest unvisited star by TRUE 3D distance. The quadtree prunes in x/y
+	// only, which is safe -- see the note in GalaxyQuadTreeNode.h.
+	const Star *findNearestUnvisitedStar(const GalaxyQuadTreeNode *node, float searchRadiusParsecs) const;
+
+	const GalaxyQuadTreeNode *getCurrentQuadTreeNode() const { return currentQuadTreeNode; }
 
 private:
-	// Every member has a default here so that no constructor -- present or future -- can
-	// leave one indeterminate. targetX/targetY/targetStar/trailColor in particular were
-	// previously read before ever being written (Game::updateGameState calls getTargetStar()
-	// on any probe in Replicate mode, including one that never completed a Travel leg).
+	bool hasVisited(uint32_t starID) const { return visitedStarIDs.count(starID) != 0; }
+
 	std::string probeName;
 	float x = 0.0f;
 	float y = 0.0f;
+	float z = 0.0f;
 	float targetX = 0.0f;
 	float targetY = 0.0f;
+	float targetZ = 0.0f;
 	uint32_t targetStar = 0;
-	float speed = 0.0f;
+	float speed = 0.0f; // parsecs per tick
 	ProbeMode mode = ProbeMode::Seek;
-	std::vector<VisitedStarSystem> visitedStarSystems; // a vector named visitedStarSystems that contains elements of type VisitedStarSystem
-	GalaxyQuadTree &quadTree;
+
+	std::vector<VisitedStarSystem> visitedStarSystems; // ordered record, used for trails
+	// Same contents keyed for lookup. The search used to scan the vector linearly
+	// for every candidate star, which got slower the longer a probe lived.
+	std::unordered_set<uint32_t> visitedStarIDs;
+
+	GalaxyQuadTree *quadTree = nullptr;
+	const SimSettings *settings = nullptr;
 	const GalaxyQuadTreeNode *currentQuadTreeNode = nullptr;
 	bool newBorn = true;
 	float totalDistanceTraveled = 0.0f;
 	int replicationCount = 0;
-	sf::Color trailColor = sf::Color::White; // Declaration of trailColor within the class
-	LoadConfig *myConfigInstance = nullptr;
+	sf::Color trailColor = sf::Color::White;
 };
 
 #endif // PROBE_H

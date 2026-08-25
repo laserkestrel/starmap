@@ -1,234 +1,169 @@
 // Probe.cpp
 #include "Probe.h"
 #include "Star.h"
-#include <algorithm> // For std::find
-#include <cmath>	 // For std::sqrt
+#include "DebugLog.h"
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <random>
-#include "LoadConfig.h"
-#include "DebugLog.h"
 
-// Constructor (these are things that get set on a new instance)
-// Probe::Probe(const std::string &probeName, float initialX, float initialY, float speed, const std::vector<Star> &galaxyVector, GalaxyQuadTree &quadTree)
-Probe::Probe(const std::string &probeName, float initialX, float initialY, float speed, GalaxyQuadTree &quadTree) : probeName(probeName),
-																													x(initialX),
-																													y(initialY),
-																													speed(speed),
-																													mode(ProbeMode::Seek),
-																													quadTree(quadTree),
-																													 currentQuadTreeNode(nullptr),
-																													 newBorn(true),
-																													totalDistanceTraveled(0.0f),
-																													replicationCount(0),
-																													myConfigInstance(&LoadConfig::getInstance())
-
-// visitedStarCount(0)
+namespace
 {
-	// Additional setup if needed
+	// Seeded once per thread rather than once per call. The old code built a
+	// std::random_device and a fresh std::mt19937 -- about 2.5 KB of state --
+	// every time a newborn probe moved, and used the non-thread-safe std::rand()
+	// for trail colours while probes were being updated in parallel.
+	std::mt19937 &rng()
+	{
+		static thread_local std::mt19937 generator{std::random_device{}()};
+		return generator;
+	}
+
+	float distance3D(float ax, float ay, float az, float bx, float by, float bz)
+	{
+		const float dx = ax - bx, dy = ay - by, dz = az - bz;
+		return std::sqrt(dx * dx + dy * dy + dz * dz);
+	}
+
+	// Squared distance, for comparisons where the square root is wasted work.
+	float distanceSquared3D(float ax, float ay, float az, float bx, float by, float bz)
+	{
+		const float dx = ax - bx, dy = ay - by, dz = az - bz;
+		return dx * dx + dy * dy + dz * dz;
+	}
+} // namespace
+
+Probe::Probe(const std::string &probeName, float startX, float startY, float startZ,
+			 float speedParsecsPerTick, GalaxyQuadTree &quadTree, const SimSettings &settings)
+	: probeName(probeName), x(startX), y(startY), z(startZ),
+	  targetX(startX), targetY(startY), targetZ(startZ),
+	  speed(speedParsecsPerTick), mode(ProbeMode::Seek),
+	  quadTree(&quadTree), settings(&settings)
+{
 }
 
 std::string Probe::visitedStarSystemsToString() const
 {
 	std::string result;
-
 	for (const auto &visitedSystem : visitedStarSystems)
 	{
-		// NB: this line previously read `result += A + result += B`, which parses as
-		// `result += (A + (result += B))` and folds the accumulated string back into
-		// itself on every iteration. Split into two statements.
 		result += "Star ID: " + std::to_string(visitedSystem.starID);
-		result += " Coordinates: (" + std::to_string(visitedSystem.coordinates.x) + ", " + std::to_string(visitedSystem.coordinates.y) + ")\n";
-		// result += "Visited by Probe: " + (visitedSystem.visitedByProbe ? "Yes" : "No") + "\n\n";
+		result += " at (" + std::to_string(visitedSystem.coordinates.x) + ", " +
+				  std::to_string(visitedSystem.coordinates.y) + ", " +
+				  std::to_string(visitedSystem.coordinates.z) + ") pc\n";
 	}
-
 	return result;
 }
 
-// Setters
-void Probe::setCoordinates(float x, float y)
+void Probe::setWorldPosition(float newX, float newY, float newZ) { x = newX; y = newY; z = newZ; }
+void Probe::setTargetPosition(float newX, float newY, float newZ) { targetX = newX; targetY = newY; targetZ = newZ; }
+void Probe::setSpeed(float parsecsPerTick) { speed = parsecsPerTick; }
+void Probe::setMode(ProbeMode newMode) { mode = newMode; }
+void Probe::setNewBorn(bool status) { newBorn = status; }
+void Probe::setTargetStar(uint32_t starID) { targetStar = starID; }
+
+void Probe::addVisitedStarSystem(uint32_t starID, const sf::Vector3f &coordinates, bool visitedByProbe)
 {
-	this->x = x;
-	this->y = y;
+	visitedStarSystems.push_back(VisitedStarSystem{starID, coordinates, visitedByProbe});
+	visitedStarIDs.insert(starID);
 }
 
-void Probe::setTargetStar(uint32_t &targetStar)
-{
-	this->targetStar = targetStar;
-}
-
-void Probe::setSpeed(float speed)
-{
-	this->speed = speed;
-}
-
-void Probe::setMode(ProbeMode mode)
-{
-	this->mode = mode;
-	// std::cout << "setMode has been invoked\n";
-}
-
-void Probe::setTargetCoordinates(float newX, float newY)
-{
-	targetX = newX;
-	targetY = newY;
-}
-
-void Probe::addVisitedStarSystem(const uint32_t &starID, const sf::Vector2f &coordinates, bool visitedByProbe)
-{
-	VisitedStarSystem visitedSystem = {starID, coordinates, visitedByProbe};
-	visitedStarSystems.push_back(visitedSystem);
-}
-
-// Getters
-std::string Probe::getProbeName() const
-{
-	return probeName;
-}
-
-float Probe::getX() const
-{
-	return x;
-}
-
-float Probe::getY() const
-{
-	return y;
-}
-
-float Probe::getSpeed() const
-{
-	return speed;
-}
-
-uint32_t Probe::getTargetStar() const
-{
-	return targetStar;
-}
-
-ProbeMode Probe::getMode() const
-{
-	return mode;
-}
+const std::string &Probe::getProbeName() const { return probeName; }
+float Probe::getWorldX() const { return x; }
+float Probe::getWorldY() const { return y; }
+float Probe::getWorldZ() const { return z; }
+float Probe::getSpeed() const { return speed; }
+uint32_t Probe::getTargetStar() const { return targetStar; }
+ProbeMode Probe::getMode() const { return mode; }
+bool Probe::isNewBorn() const { return newBorn; }
+float Probe::getTotalDistanceTraveled() const { return totalDistanceTraveled; }
+int Probe::getReplicationCount() const { return replicationCount; }
+const std::vector<VisitedStarSystem> &Probe::getVisitedStarSystems() const { return visitedStarSystems; }
+sf::Color Probe::getTrailColor() const { return trailColor; }
 
 void Probe::move()
 {
 	if (mode == ProbeMode::Travel)
 	{
-		// Calculate the direction from current position to the target position
-		float deltaX = targetX - x;
-		float deltaY = targetY - y;
-		float distanceToTarget = sqrt(deltaX * deltaX + deltaY * deltaY);
+		const float distanceToTarget = distance3D(targetX, targetY, targetZ, x, y, z);
 
-		// Calculate the movement step size based on speed
-		float stepSize = speed; // Adjust this based on your needs
-
-		if (distanceToTarget <= stepSize)
+		if (distanceToTarget <= speed)
 		{
-			// If the distance to the target is smaller than or equal to the step size, move directly to the target position
-			setCoordinates(targetX, targetY);
-			// Probe has arrived!
-
-			// Update distance traveled
+			// Close enough to land this tick.
+			setWorldPosition(targetX, targetY, targetZ);
 			totalDistanceTraveled += distanceToTarget;
-			// update probe memory with newly arrived star, before finding next target.
-			addVisitedStarSystem(this->getTargetStar(), sf::Vector2f(this->getX(), this->getY()), true);
+			addVisitedStarSystem(targetStar, sf::Vector3f(x, y, z), true);
 
-			// TODO - need to set this probes current quadtree location so that we can use it as a search parameter from game class, so we can establish next valid target and stop child probe going there. phew.
-			// Determine the current quadtree node based on the probe's position
-			// ...
-
-			// Update currentQuadTreeNode with the new node
-			// currentQuadTreeNode = // ... the new node
-
-			if (this->isNewBorn())
+			if (isNewBorn())
 			{
-				this->setNewBorn(false);
+				setNewBorn(false);
 				setMode(ProbeMode::Seek);
+			}
+			else if (replicationCount >= settings->probeIndividualReplicationLimit)
+			{
+				setMode(ProbeMode::Shutdown);
 			}
 			else
 			{
-				// if (this->getReplicationCount() >= config.getprobeIndividualReplicationLimit()){
-				// int globalSetting = myConfigInstance.getprobeIndividualReplicationLimit();
-				// int globalSetting = LoadConfig::getInstance().getprobeIndividualReplicationLimit();
-
-				if (this->getReplicationCount() >= myConfigInstance->getprobeIndividualReplicationLimit())
-				{
-					// do what we like here, keep seeking if cant replicate.
-					// setMode(ProbeMode::Seek);
-					setMode(ProbeMode::Shutdown);
-				}
-				else
-				{
-					// Set mode to Seek (to have one probe just move around) or replicate to start spreading.(ONLY IF NOT NEWBORN)
-					setMode(ProbeMode::Replicate);
-				}
+				setMode(ProbeMode::Replicate);
 			}
 		}
 		else
 		{
-			// Calculate the normalized direction vector
-			float directionX = deltaX / distanceToTarget;
-			float directionY = deltaY / distanceToTarget;
-
-			// Move towards the target position by the step size in the direction of the target
-			setCoordinates(x + directionX * stepSize, y + directionY * stepSize);
+			// Step towards the target along the unit vector to it.
+			const float inv = 1.0f / distanceToTarget;
+			setWorldPosition(x + (targetX - x) * inv * speed,
+							 y + (targetY - y) * inv * speed,
+							 z + (targetZ - z) * inv * speed);
+			totalDistanceTraveled += speed;
 		}
 	}
 	else if (mode == ProbeMode::Replicate)
 	{
-		// This now does nothing, because replicate is checked in game.cpp
+		// The actual replication happens in Game::updateGameState, which can add
+		// to the probe vector safely; this just records that it happened.
 		replicationCount++;
 		setMode(ProbeMode::Seek);
 	}
 	else if (mode == ProbeMode::Seek)
 	{
-		if (this->isNewBorn() && !visitedStarSystems.empty())
+		if (isNewBorn() && !visitedStarSystems.empty())
 		{
-			// Probe is newborn
-			// Define an offset range from the parent's position
-			std::uniform_real_distribution<float> disAngle(0.0f, 2.0f * 3.14159f); // Angle range for full circle
-			std::uniform_real_distribution<float> disDistance(30.0f, 60.0f);	   // Distance range from 50 to 100 pixels
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			float randomAngle = disAngle(gen);		 // Random angle in radians
-			float randomDistance = disDistance(gen); // Random distance
+			// Drift a short way from the parent in a random 3D direction before
+			// starting to seek, so siblings do not all set off along one line.
+			std::uniform_real_distribution<float> azimuth(0.0f, 2.0f * 3.14159265f);
+			std::uniform_real_distribution<float> cosPolar(-1.0f, 1.0f);
+			std::uniform_real_distribution<float> hop(0.5f, 1.5f); // parsecs
 
-			// Calculate new coordinates based on random angle and distance from the parent's position
-			float offsetX = randomDistance * std::cos(randomAngle);
-			float offsetY = randomDistance * std::sin(randomAngle);
+			const float phi = azimuth(rng());
+			const float cosTheta = cosPolar(rng());
+			const float sinTheta = std::sqrt(std::max(0.0f, 1.0f - cosTheta * cosTheta));
+			const float r = hop(rng());
 
-			// Update target coordinates within a range from the parent's position
-			setTargetCoordinates(this->getX() + offsetX, this->getY() + offsetY);
-
+			setTargetPosition(x + r * sinTheta * std::cos(phi),
+							  y + r * sinTheta * std::sin(phi),
+							  z + r * cosTheta);
 			setMode(ProbeMode::Travel);
-			setSpeed(10);
 			return;
+		}
+
+		const Star *nearestStar = findNearestUnvisitedStar(quadTree->getRootNode(),
+														  settings->probeSearchRadiusParsecs);
+		if (nearestStar != nullptr)
+		{
+			setTargetPosition(nearestStar->getWorldX(), nearestStar->getWorldY(), nearestStar->getWorldZ());
+			setTargetStar(nearestStar->getID());
+			setMode(ProbeMode::Travel);
 		}
 		else
 		{
-			// const Star *nearestStar = findNearestUnvisitedStarByRadius();
-			// setup a pointer (called nearestStar) to a star object returned by the finding method.
-			const Star *nearestStar = findNearestUnvisitedStarInQuadTree(quadTree.getRootNode(), myConfigInstance->getProbeSearchRadiusPixels());
-
-			if (nearestStar)
-			{
-				this->setTargetCoordinates(nearestStar->getX(), nearestStar->getY());
-				uint32_t newTarget = (nearestStar->getID()); // NOTE:have to create intermediate variable for star ID to then pass into setTargetStar. Complains if done directly.
-				this->setTargetStar(newTarget);
-				setMode(ProbeMode::Travel);
-				this->setSpeed(10);
-			}
-			else
-			{
-				DEBUG_LOG("All stars have been visited by probe and it has no new stars to seek.");
-				setMode(ProbeMode::Shutdown);
-			}
+			DEBUG_LOG("Probe found no unvisited star within its search radius.");
+			setMode(ProbeMode::Shutdown);
 		}
 	}
 	else if (mode == ProbeMode::Shutdown)
 	{
-		// remove probe from vector for logic processing or set some requiresLogic property to false?
 		DEBUG_LOG("Probe has shutdown.");
 	}
 	else
@@ -237,135 +172,89 @@ void Probe::move()
 	}
 }
 
-// Implementation of setNewBorn method
-void Probe::setNewBorn(bool status)
-{
-	newBorn = status;
-}
-
-// Implementation of isNewBorn method
-bool Probe::isNewBorn() const
-{
-	return newBorn;
-}
-
-float Probe::getTotalDistanceTraveled() const
-{
-	return totalDistanceTraveled;
-}
-
-int Probe::getReplicationCount() const
-{
-	return replicationCount;
-}
-
-/*int Probe::getVisitedStarCount() const
-{
-	return visitedStarCount;
-}
-*/
-
-const std::vector<VisitedStarSystem> &Probe::getVisitedStarSystems() const
-{
-	return visitedStarSystems;
-}
-
-sf::Color Probe::getTrailColor() const
-{
-	return trailColor; // Return the trailColor
-}
-
 void Probe::setBlackTrailColor()
 {
-	// Generate RGB values
-	sf::Uint8 red = 0;
-	sf::Uint8 green = 0;
-	sf::Uint8 blue = 0;
-	// Set the trail color
-	trailColor = sf::Color(red, green, blue);
+	trailColor = sf::Color(0, 0, 0);
 }
 
 void Probe::setRandomTrailColor()
 {
-	const int minBrightness = 100; // Minimum brightness value to ensure the color is visible
+	const float minBrightness = 100.0f; // keep trails readable against the background
+	std::uniform_int_distribution<int> channel(0, 255);
 
-	// Generate random RGB values
-	sf::Uint8 red = static_cast<sf::Uint8>(std::rand() % 256);
-	sf::Uint8 green = static_cast<sf::Uint8>(std::rand() % 256);
-	sf::Uint8 blue = static_cast<sf::Uint8>(std::rand() % 256);
+	float red = static_cast<float>(channel(rng()));
+	float green = static_cast<float>(channel(rng()));
+	float blue = static_cast<float>(channel(rng()));
 
-	// Calculate brightness of the color
-	float brightness = (0.299f * red + 0.587f * green + 0.114f * blue);
-
-	// Check if brightness is too low, adjust if necessary
-	if (brightness < minBrightness)
+	const float brightness = 0.299f * red + 0.587f * green + 0.114f * blue;
+	if (brightness > 0.0f && brightness < minBrightness)
 	{
-		float ratio = minBrightness / brightness;
-		red = static_cast<sf::Uint8>(std::min(255, static_cast<int>(red * ratio)));
-		green = static_cast<sf::Uint8>(std::min(255, static_cast<int>(green * ratio)));
-		blue = static_cast<sf::Uint8>(std::min(255, static_cast<int>(blue * ratio)));
+		// Guarded: an all-zero colour used to divide by zero here, producing inf
+		// and then undefined behaviour on the cast back to an integer.
+		const float ratio = minBrightness / brightness;
+		red = std::min(255.0f, red * ratio);
+		green = std::min(255.0f, green * ratio);
+		blue = std::min(255.0f, blue * ratio);
+	}
+	else if (brightness <= 0.0f)
+	{
+		red = green = blue = minBrightness;
 	}
 
-	// Set the trail color
-	trailColor = sf::Color(red, green, blue);
+	trailColor = sf::Color(static_cast<sf::Uint8>(red), static_cast<sf::Uint8>(green), static_cast<sf::Uint8>(blue));
 }
 
-const Star *Probe::findNearestUnvisitedStarInQuadTree(const GalaxyQuadTreeNode *node, float searchRadius) const
+const Star *Probe::findNearestUnvisitedStar(const GalaxyQuadTreeNode *node, float searchRadiusParsecs) const
 {
-	if (node == nullptr)
+	if (node == nullptr || node->starVec == nullptr)
 	{
 		return nullptr;
 	}
-	// Debug: print node boundary to help diagnose occasional corruption
-	DEBUG_LOG("[DEBUG] FNUSIQT node=" << node << " boundary=(" << node->boundary.left << "," << node->boundary.top << "," << node->boundary.width << "," << node->boundary.height << ") isLeaf=" << node->isLeaf << " stars=" << node->starIndices.size());
+
+	// Prune in x/y. A star within 3D radius r has an x/y separation of at most r,
+	// so this box can never exclude a star the 3D test would have accepted.
+	const float aLeft = node->boundary.left;
+	const float aTop = node->boundary.top;
+	const float aRight = node->boundary.left + node->boundary.width;
+	const float aBottom = node->boundary.top + node->boundary.height;
+
+	if (x + searchRadiusParsecs < aLeft || x - searchRadiusParsecs > aRight ||
+		y + searchRadiusParsecs < aTop || y - searchRadiusParsecs > aBottom)
+	{
+		return nullptr;
+	}
 
 	const Star *nearestStar = nullptr;
-	float minDistance = std::numeric_limits<float>::max();
+	float minDistanceSquared = searchRadiusParsecs * searchRadiusParsecs;
 
-	sf::FloatRect searchArea(x - searchRadius, y - searchRadius, searchRadius * 2, searchRadius * 2);
-
-	// Manually compute rectangle intersection to avoid potential SFML-side issues
-	float aLeft = node->boundary.left;
-	float aTop = node->boundary.top;
-	float aRight = node->boundary.left + node->boundary.width;
-	float aBottom = node->boundary.top + node->boundary.height;
-
-	float bLeft = searchArea.left;
-	float bTop = searchArea.top;
-	float bRight = searchArea.left + searchArea.width;
-	float bBottom = searchArea.top + searchArea.height;
-
-	bool intersects = !(bLeft > aRight || bRight < aLeft || bTop > aBottom || bBottom < aTop);
-	if (intersects)
+	for (const auto &idx : node->starIndices)
 	{
-		for (const auto &idx : node->starIndices)
+		const Star &star = (*node->starVec)[idx];
+		if (star.getIsExplored() || hasVisited(star.getID()))
 		{
-			const Star &star = (*node->starVec)[idx];
-			if (!star.getIsExplored() && std::find_if(visitedStarSystems.begin(), visitedStarSystems.end(), [&star](const VisitedStarSystem &visitedSystem)
-													  { return visitedSystem.starID == star.getID(); }) == visitedStarSystems.end())
-			{
-				float distance = std::sqrt(std::pow(star.getX() - x, 2) + std::pow(star.getY() - y, 2));
-				if (distance <= searchRadius && distance < minDistance)
-				{
-					minDistance = distance;
-					nearestStar = &star;
-				}
-			}
+			continue;
 		}
-
-		if (!node->isLeaf)
+		const float d2 = distanceSquared3D(star.getWorldX(), star.getWorldY(), star.getWorldZ(), x, y, z);
+		if (d2 < minDistanceSquared)
 		{
-			for (int i = 0; i < 4; ++i)
+			minDistanceSquared = d2;
+			nearestStar = &star;
+		}
+	}
+
+	if (!node->isLeaf)
+	{
+		for (int i = 0; i < 4; ++i)
+		{
+			const Star *childNearest = findNearestUnvisitedStar(node->getChild(i), searchRadiusParsecs);
+			if (childNearest != nullptr)
 			{
-				const Star *childNearestStar = findNearestUnvisitedStarInQuadTree(node->getChild(i), searchRadius);
-				if (childNearestStar)
+				const float d2 = distanceSquared3D(childNearest->getWorldX(), childNearest->getWorldY(),
+												   childNearest->getWorldZ(), x, y, z);
+				if (d2 < minDistanceSquared)
 				{
-					float childDistance = std::sqrt(std::pow(childNearestStar->getX() - x, 2) + std::pow(childNearestStar->getY() - y, 2));
-					if (childDistance < minDistance)
-					{
-						minDistance = childDistance;
-						nearestStar = childNearestStar;
-					}
+					minDistanceSquared = d2;
+					nearestStar = childNearest;
 				}
 			}
 		}

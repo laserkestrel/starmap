@@ -19,16 +19,24 @@ public:
 	bool getSummaryShowPerProbe() const;
 	bool getSummaryShowFooter() const;
 	int getprobeIndividualReplicationLimit() const;
-	int getProbeSearchRadiusPixels() const;
+
+	// World-space settings. The probe search radius and speed used to be in
+	// screen pixels, which tied how far a probe could see to the window size.
+	float getProbeSearchRadiusParsecs() const;
+	float getProbeSpeedParsecsPerTick() const;
+	// View tilt: 90 = straight down (no stalks), 0 = edge on.
+	float getViewTiltDegrees() const;
+	// Half-thickness of the slab the view covers, above and below the plane.
+	float getViewDepthParsecs() const;
+
 	void loadFromFile();
 
 private:
 	LoadConfig();
 
-	// Defaults live here so that a missing config.json, or a missing/invalid key inside
-	// it, degrades to a usable value instead of leaving the member indeterminate.
-	// loadFromFile() only *overwrites* these -- every one of its validation branches
-	// previously logged to cerr and then left the member untouched.
+	// Defaults live here so that a missing config.json, or a missing/invalid key
+	// inside it, degrades to a usable value instead of leaving the member
+	// indeterminate. loadFromFile() only *overwrites* these.
 	int scaleFactor = 50;
 	int windowWidth = 1280;
 	int windowHeight = 720;
@@ -39,10 +47,11 @@ private:
 	bool summaryShowPerProbe = false;
 	bool summaryShowFooter = true;
 	int probeIndividualReplicationLimit = 3;
-	int probeSearchRadiusPixels = 300;
+	float probeSearchRadiusParsecs = 8.0f;
+	float probeSpeedParsecsPerTick = 0.25f;
+	float viewTiltDegrees = 75.0f;
+	float viewDepthParsecs = 12.0f;
 
-	// void loadFromFile(const std::string &filename);
-	//  Declare copy constructor and assignment operator as private to prevent copying
 	LoadConfig(const LoadConfig &) = delete;
 	LoadConfig &operator=(const LoadConfig &) = delete;
 };

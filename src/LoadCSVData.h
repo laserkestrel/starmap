@@ -3,7 +3,6 @@
 #define LOADCSVDATA_H
 
 #include "Star.h"
-#include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Color.hpp>
 #include <string>
 #include "LoadConfig.h"
@@ -12,7 +11,10 @@
 class LoadCSVData
 {
 public:
-	std::vector<Star> loadStarsFromCsv(const std::string &csvFilePath, sf::RenderWindow &window, const LoadConfig &config);
+	// Loads stars at their true positions in world space (parsecs). The window is
+	// no longer involved: where a star appears on screen is the Projection's
+	// business, not the loader's.
+	std::vector<Star> loadStarsFromCsv(const std::string &csvFilePath, const LoadConfig &config);
 
 	// --- Star colour ------------------------------------------------------------
 	// Deliberately public: these are pure functions, so they can be unit tested

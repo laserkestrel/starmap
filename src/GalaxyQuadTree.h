@@ -1,38 +1,35 @@
 // GalaxyQuadTree.h
-#pragma once // Header guard
+#pragma once
 
-#include <SFML/Graphics.hpp>    // Include necessary headers
-#include "GalaxyQuadTreeNode.h" // Include the node structure
+#include <SFML/Graphics/Rect.hpp>
+#include "GalaxyQuadTreeNode.h"
 #include "Star.h"
+#include <memory>
 #include <vector>
 
-// GalaxyQuadTree
-// - Manages the quadtree root node and the spatial boundary used for all
-//   insert/query operations.
-// - The constructor takes an initial boundary parameter which is assigned
-//   to the `boundary` member; the root node is then created using that
-//   initialized member. This avoids using an uninitialized boundary when
-//   constructing the root node.
+// Spatial index over the star catalogue, in world units (parsecs).
+//
+// The boundary is set from the catalogue's own extent, not from the window, so
+// a star cannot fall outside the tree just because it is off-screen.
 class GalaxyQuadTree
 {
 public:
-	GalaxyQuadTree(const sf::FloatRect &boundary_, int capacity); // Constructor
-	// Set pointer to the canonical star vector used by the quadtree nodes.
+	GalaxyQuadTree(const sf::FloatRect &worldBoundary, int capacity);
+
+	// Point the tree at the canonical star vector. Must be called before insert().
 	void setStarVector(const std::vector<Star> *sv);
-	// Insert a star by index into the quadtree.
-	// Returns false if the star lies outside the tree boundary and was not stored --
-	// callers should check this rather than assuming every star made it in.
+
+	// Insert a star by index. Returns false only if the star lies outside the
+	// tree's world boundary -- callers should check rather than assume.
 	bool insert(size_t starIndex);
-	std::vector<Star> query(const sf::Vector2f &point, float radius);
-	GalaxyQuadTreeNode *getRootNode() const
-	{
-		return root;
-	} // Query stars within a radius around a point
+
+	const GalaxyQuadTreeNode *getRootNode() const { return root.get(); }
+	const sf::FloatRect &getBoundary() const { return boundary; }
 	void debugPrint() const;
 
 private:
-	GalaxyQuadTreeNode *root; // Pointer to the root node of the quadtree
-	int capacity;              // Maximum capacity of stars in a node before splitting
-	sf::FloatRect boundary;    // Spatial bounds for the entire quadtree
-	const std::vector<Star> *starVec; // Pointer to canonical star storage (set via setStarVector)
+	std::unique_ptr<GalaxyQuadTreeNode> root; // owns the whole tree
+	int capacity;
+	sf::FloatRect boundary;
+	const std::vector<Star> *starVec = nullptr;
 };

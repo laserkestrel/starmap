@@ -1,9 +1,9 @@
-// Rendersystem.cpp
+// RenderSystem.cpp
 #include "RenderSystem.h"
-#include "Probe.h"
-#include "GalaxyQuadTreeNode.h"
-#include <iostream>
 #include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <numeric>
 
 namespace
 {
@@ -12,10 +12,8 @@ namespace
 	// The halo and core highlight used to be built by adding or subtracting a flat
 	// 50 from each channel. That is fine for a bright star, but most stars in the
 	// catalogue are faint and have already been scaled towards black by magnitude,
-	// so adding a constant to near-zero channels produced a neutral grey -- which
-	// is what made roughly three quarters of the on-screen stars look grey rather
-	// than coloured. Multiplying keeps the ratio between channels, and therefore
-	// the hue, at any brightness.
+	// so adding a constant to near-zero channels produced a neutral grey. Multiplying
+	// keeps the ratio between channels, and therefore the hue, at any brightness.
 	sf::Color scaleColour(const sf::Color &colour, float factor)
 	{
 		const auto scale = [factor](sf::Uint8 channel) {
@@ -27,169 +25,223 @@ namespace
 
 	const float HALO_BRIGHTNESS = 0.55f;      // outer 3.5px ring, dimmer than the star
 	const float HIGHLIGHT_BRIGHTNESS = 1.35f; // inner 2.5px core, brighter than the star
+	const float STALK_BRIGHTNESS = 0.34f;     // the line down to the plane
+
+	const float GRID_SPACING_PARSECS = 5.0f;
+	const sf::Color GRID_COLOUR(20, 27, 38);
+	const sf::Color GRID_AXIS_COLOUR(40, 54, 72);
+	const sf::Color PLANE_FOOT_COLOUR(46, 56, 72);
+
+	const float CULL_MARGIN_PIXELS = 8.0f;
 } // namespace
 
-RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
-													   showTextLabelsStars(false),
-													   showTextLabelsProbes(false),
-													   showProbeTrails(false),
-													   showDebugGraphics(false)
+RenderSystem::RenderSystem(sf::RenderWindow &window, const Projection &projection)
+	: renderWindow(window), projection(projection)
 {
-	// Initialize RenderSystem, if needed
-	// TODO - load this from the config object somehow.
 	if (!font.loadFromFile("./content/Frontier.ttf"))
 	{
 		std::cerr << "Error loading font file.\n";
 	}
-	// Configure FPS counter text //TODO - add this to debug view along with the quadtree grid.
 	fpsCounter.setFont(font);
 	fpsCounter.setCharacterSize(20);
 	fpsCounter.setFillColor(sf::Color::White);
-	fpsCounter.setPosition(10.f, 10.f); // Adjust position as needed
+	fpsCounter.setPosition(10.f, 10.f);
 
-	// Configure summary text display
 	summaryText.setFont(font);
 	summaryText.setCharacterSize(20);
 	summaryText.setFillColor(sf::Color::White);
 	summaryText.setPosition(20.f, 50.f);
 }
 
-void RenderSystem::toggleTextLabelsStars()
-{
-	showTextLabelsStars = !showTextLabelsStars; // Toggle the flag
-}
+void RenderSystem::toggleTextLabelsStars() { showTextLabelsStars = !showTextLabelsStars; }
+void RenderSystem::toggleTextLabelsProbes() { showTextLabelsProbes = !showTextLabelsProbes; }
+void RenderSystem::toggleProbeTrails() { showProbeTrails = !showProbeTrails; }
+void RenderSystem::toggleDebugGraphics() { showDebugGraphics = !showDebugGraphics; }
+void RenderSystem::toggleStarStalks() { showStarStalks = !showStarStalks; }
 
-void RenderSystem::toggleTextLabelsProbes()
-{
-	showTextLabelsProbes = !showTextLabelsProbes; // Toggle the flag
-}
-
-void RenderSystem::toggleProbeTrails()
-{
-	showProbeTrails = !showProbeTrails; // Toggle the flag
-}
-
-void RenderSystem::toggleDebugGraphics()
-{
-	showDebugGraphics = !showDebugGraphics; // Toggle the flag
-}
-
-// Initialization - Render stars onto a texture
 void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 {
-	// Create an off-screen render texture
-	sf::RenderTexture renderTexture;
-	renderTexture.create(renderWindow.getSize().x, renderWindow.getSize().y);
-	renderTexture.clear(sf::Color::Transparent);
+	const unsigned int width = renderWindow.getSize().x;
+	const unsigned int height = renderWindow.getSize().y;
 
-	// Render stars onto the texture
-	for (const Star &star : stars)
+	sf::RenderTexture renderTexture;
+	renderTexture.create(width, height);
+	renderTexture.clear(sf::Color(5, 6, 9));
+
+	// --- reference grid on the z = 0 plane -------------------------------------
+	// Without it the tilt is invisible and the stalks have nothing to sit on.
 	{
-		// Create a base circle slightly larger and darker
+		const float halfSpanX = (static_cast<float>(width) * 0.5f) / projection.getPixelsPerParsec();
+		const float sinTilt = std::max(0.05f, std::sin(projection.getTiltDegrees() * 3.14159265f / 180.0f));
+		const float halfSpanY = (static_cast<float>(height) * 0.5f) / (projection.getPixelsPerParsec() * sinTilt);
+
+		const float startX = std::floor(-halfSpanX / GRID_SPACING_PARSECS) * GRID_SPACING_PARSECS;
+		const float startY = std::floor(-halfSpanY / GRID_SPACING_PARSECS) * GRID_SPACING_PARSECS;
+
+		sf::VertexArray grid(sf::Lines);
+		for (float gx = startX; gx <= halfSpanX; gx += GRID_SPACING_PARSECS)
+		{
+			const sf::Color c = (std::abs(gx) < 0.01f) ? GRID_AXIS_COLOUR : GRID_COLOUR;
+			grid.append(sf::Vertex(projection.planeFoot(gx, -halfSpanY), c));
+			grid.append(sf::Vertex(projection.planeFoot(gx, halfSpanY), c));
+		}
+		for (float gy = startY; gy <= halfSpanY; gy += GRID_SPACING_PARSECS)
+		{
+			const sf::Color c = (std::abs(gy) < 0.01f) ? GRID_AXIS_COLOUR : GRID_COLOUR;
+			grid.append(sf::Vertex(projection.planeFoot(-halfSpanX, gy), c));
+			grid.append(sf::Vertex(projection.planeFoot(halfSpanX, gy), c));
+		}
+		renderTexture.draw(grid);
+	}
+
+	// --- decide what is worth drawing, and in what order ------------------------
+	// Painter's algorithm: far stars first so near ones overlap them.
+	std::vector<size_t> visible;
+	visible.reserve(stars.size());
+	for (size_t i = 0; i < stars.size(); ++i)
+	{
+		if (!projection.withinViewDepth(stars[i].getWorldZ()))
+		{
+			continue; // outside the slab this view covers
+		}
+		const sf::Vector2f p = projection.project(stars[i].getWorldX(), stars[i].getWorldY(), stars[i].getWorldZ());
+		const sf::Vector2f foot = projection.planeFoot(stars[i].getWorldX(), stars[i].getWorldY());
+		// Keep a star if either it or the foot of its stalk is on screen.
+		const bool starOn = p.x >= -CULL_MARGIN_PIXELS && p.x <= static_cast<float>(width) + CULL_MARGIN_PIXELS &&
+							p.y >= -CULL_MARGIN_PIXELS && p.y <= static_cast<float>(height) + CULL_MARGIN_PIXELS;
+		const bool footOn = foot.y >= -CULL_MARGIN_PIXELS && foot.y <= static_cast<float>(height) + CULL_MARGIN_PIXELS &&
+							foot.x >= -CULL_MARGIN_PIXELS && foot.x <= static_cast<float>(width) + CULL_MARGIN_PIXELS;
+		if (starOn || footOn)
+		{
+			visible.push_back(i);
+		}
+	}
+	std::sort(visible.begin(), visible.end(), [&stars, this](size_t a, size_t b) {
+		return projection.depth(stars[a].getWorldY(), stars[a].getWorldZ()) >
+			   projection.depth(stars[b].getWorldY(), stars[b].getWorldZ());
+	});
+
+	// --- stalks, batched into a single draw ------------------------------------
+	if (showStarStalks)
+	{
+		sf::VertexArray stalks(sf::Lines);
+		stalks.resize(0);
+		for (size_t idx : visible)
+		{
+			const Star &star = stars[idx];
+			const sf::Vector2f top = projection.project(star.getWorldX(), star.getWorldY(), star.getWorldZ());
+			const sf::Vector2f foot = projection.planeFoot(star.getWorldX(), star.getWorldY());
+			const sf::Color c = scaleColour(star.getColour(), STALK_BRIGHTNESS);
+			stalks.append(sf::Vertex(foot, c));
+			stalks.append(sf::Vertex(top, c));
+		}
+		renderTexture.draw(stalks);
+
+		// a small mark where each stalk meets the plane, so height is readable
+		sf::VertexArray feet(sf::Points);
+		for (size_t idx : visible)
+		{
+			const Star &star = stars[idx];
+			feet.append(sf::Vertex(projection.planeFoot(star.getWorldX(), star.getWorldY()), PLANE_FOOT_COLOUR));
+		}
+		renderTexture.draw(feet);
+	}
+
+	// --- the stars themselves ---------------------------------------------------
+	for (size_t idx : visible)
+	{
+		const Star &star = stars[idx];
+		const sf::Vector2f p = projection.project(star.getWorldX(), star.getWorldY(), star.getWorldZ());
+
 		sf::CircleShape baseShape(3.5f);
-		baseShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
-		sf::Color darkerColor = scaleColour(star.getColour(), HALO_BRIGHTNESS);
-		baseShape.setFillColor(darkerColor);
-		baseShape.setOrigin(baseShape.getRadius(), baseShape.getRadius());
+		baseShape.setOrigin(3.5f, 3.5f);
+		baseShape.setPosition(p);
+		baseShape.setFillColor(scaleColour(star.getColour(), HALO_BRIGHTNESS));
 		renderTexture.draw(baseShape);
 
-		// Create a core circle with the star's color
 		sf::CircleShape coreShape(3.0f);
-		coreShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
+		coreShape.setOrigin(3.0f, 3.0f);
+		coreShape.setPosition(p);
 		coreShape.setFillColor(star.getColour());
-		coreShape.setOrigin(coreShape.getRadius(), coreShape.getRadius());
 		renderTexture.draw(coreShape);
 
-		// Create a smaller circle in the center with a slightly lighter shade
 		sf::CircleShape centerShape(2.5f);
-		centerShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
-		sf::Color lighterColor = scaleColour(star.getColour(), HIGHLIGHT_BRIGHTNESS);
-		centerShape.setFillColor(lighterColor);
-		centerShape.setOrigin(centerShape.getRadius(), centerShape.getRadius());
+		centerShape.setOrigin(2.5f, 2.5f);
+		centerShape.setPosition(p);
+		centerShape.setFillColor(scaleColour(star.getColour(), HIGHLIGHT_BRIGHTNESS));
 		renderTexture.draw(centerShape);
 
-		if (showTextLabelsStars)
+		if (showTextLabelsStars && !star.getName().empty())
 		{
-			if (!star.getName().empty() && star.getName() != "\"\"") // deal with stars with blank names that get populated as ""
-			{
-				// Render text labels if the flag is true
-
-				sf::Text labelText(star.getName(), font, 14);
-				// std::cout << "Text Label for Star will be: " << star.getName() << std::endl; // TOO VERBOSE
-				labelText.setPosition((star.getX()) + 10, (star.getY()) + 10);
-				renderTexture.draw(labelText);
-			}
+			sf::Text labelText(star.getName(), font, 14);
+			labelText.setPosition(p.x + 8.0f, p.y - 18.0f);
+			renderTexture.draw(labelText);
 		}
 	}
 
-	renderTexture.display();				   // dont remove this, makes texture appear upside down or go undefined position.
-	starsTexture = renderTexture.getTexture(); // Save the rendered texture
+	renderTexture.display(); // don't remove: without it the texture is undefined
+	starsTexture = renderTexture.getTexture();
 }
 
-void RenderSystem::renderStars(const std::vector<Star> &stars)
+void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 {
-	sf::Sprite starsSprite(starsTexture); // Create a sprite from the pre-rendered texture
-	renderWindow.draw(starsSprite);		  // Draw the sprite onto the window
-}
-
-void RenderSystem::renderProbe(const Probe &probe)
-{
+	// Trails first, so probe markers sit on top of them.
 	if (showProbeTrails)
 	{
-		const std::vector<VisitedStarSystem> &probeVisitedStarSystems = probe.getVisitedStarSystems();
-		sf::Color pathColor = probe.getTrailColor(); // Assuming you have a getter for the trail color in Probe
-
-		if (probeVisitedStarSystems.size() >= 1)
+		sf::VertexArray trails(sf::Lines);
+		for (const auto &probe : probes)
 		{
-			for (size_t i = 1; i < probeVisitedStarSystems.size(); ++i)
+			const auto &visited = probe.getVisitedStarSystems();
+			const sf::Color pathColor = probe.getTrailColor();
+			for (size_t i = 1; i < visited.size(); ++i)
 			{
-				const VisitedStarSystem &currentSystem = probeVisitedStarSystems[i];
-				const VisitedStarSystem &prevSystem = probeVisitedStarSystems[i - 1];
-
-				if (currentSystem.visitedByProbe && prevSystem.visitedByProbe)
-				{
-					// Render a line segment between the current and previous star systems
-					sf::Vertex line[] = {
-						sf::Vertex(prevSystem.coordinates, pathColor),
-						sf::Vertex(currentSystem.coordinates, pathColor)};
-
-					renderWindow.draw(line, 2, sf::Lines);
-				}
+				if (!visited[i].visitedByProbe || !visited[i - 1].visitedByProbe)
+					continue;
+				const auto &a = visited[i - 1].coordinates;
+				const auto &b = visited[i].coordinates;
+				trails.append(sf::Vertex(projection.project(a.x, a.y, a.z), pathColor));
+				trails.append(sf::Vertex(projection.project(b.x, b.y, b.z), pathColor));
 			}
 		}
+		renderWindow.draw(trails);
 	}
 
-	// Render the probe at its current position outside the loop
-	sf::CircleShape probeShape(0.5f); // Adjust the radius as needed
-	probeShape.setPosition(probe.getX(), probe.getY());
-	probeShape.setFillColor(sf::Color(173, 216, 230));
-	// probeShape.setOrigin(probeShape.getRadius(), probeShape.getRadius()); // TODO - check if this hurts performance at high probe counts.
-	renderWindow.draw(probeShape);
+	// One batched draw for every probe marker, rather than a CircleShape each.
+	// The whole point of the simulation is exponential probe growth, so a draw
+	// call per probe scaled exactly the wrong way.
+	sf::VertexArray markers(sf::Points);
+	markers.resize(0);
+	for (const auto &probe : probes)
+	{
+		markers.append(sf::Vertex(projection.project(probe.getWorldX(), probe.getWorldY(), probe.getWorldZ()),
+								  sf::Color(173, 216, 230)));
+	}
+	renderWindow.draw(markers);
+
 	if (showTextLabelsProbes)
 	{
-		// Render probe text label if the flag is true
-		// std::string ajrtemp = probe.visitedStarSystemsToString();
-		sf::Text labelText(probe.getProbeName(), font, 10);
-		// sf::Text labelText(ajrtemp, font, 12);
-		labelText.setPosition((probe.getX()) - 10, (probe.getY()) - 10);
-				labelText.setFillColor(probe.getTrailColor());
-		renderWindow.draw(labelText);
+		for (const auto &probe : probes)
+		{
+			const sf::Vector2f p = projection.project(probe.getWorldX(), probe.getWorldY(), probe.getWorldZ());
+			sf::Text labelText(probe.getProbeName(), font, 10);
+			labelText.setPosition(p.x - 10.0f, p.y - 10.0f);
+			labelText.setFillColor(probe.getTrailColor());
+			renderWindow.draw(labelText);
+		}
 	}
 }
 
 void RenderSystem::renderSummaryText(const std::string &summary)
 {
 	summaryText.setString(summary);
-	// Set the position, formatting, and other properties of the summary text
-	// Example:
-	summaryText.setPosition(10, 10); // Set the position of the text within the window
-	renderWindow.draw(summaryText);	 // Draw the summary text within the game loop
+	summaryText.setPosition(10, 10);
+	renderWindow.draw(summaryText);
 }
 
 void RenderSystem::renderParameterList(const std::vector<std::pair<std::string, std::string>> &params, int focusedIndex, bool showCaret)
 {
 	const float startX = 20.f;
-	float y = 50.f;
+	const float y = 50.f;
 	const float lineHeight = 26.f;
 
 	for (size_t i = 0; i < params.size(); ++i)
@@ -204,17 +256,15 @@ void RenderSystem::renderParameterList(const std::vector<std::pair<std::string, 
 
 		if (static_cast<int>(i) == focusedIndex)
 		{
-			// draw highlight background
 			sf::RectangleShape bg(sf::Vector2f(700.f, lineHeight));
 			bg.setPosition(startX - 6.f, y + i * lineHeight - 2.f);
 			bg.setFillColor(sf::Color(64, 64, 64, 160));
 			renderWindow.draw(bg);
-			// If caret visible, draw a caret after value
 			if (showCaret)
 			{
-				float caretX = valueText.getPosition().x + valueText.getLocalBounds().width + 4.f;
-				float caretY = valueText.getPosition().y;
-				sf::RectangleShape caret(sf::Vector2f(2.f, valueText.getCharacterSize()));
+				const float caretX = valueText.getPosition().x + valueText.getLocalBounds().width + 4.f;
+				const float caretY = valueText.getPosition().y;
+				sf::RectangleShape caret(sf::Vector2f(2.f, static_cast<float>(valueText.getCharacterSize())));
 				caret.setPosition(caretX, caretY);
 				caret.setFillColor(sf::Color::White);
 				renderWindow.draw(caret);
@@ -225,7 +275,6 @@ void RenderSystem::renderParameterList(const std::vector<std::pair<std::string, 
 		renderWindow.draw(valueText);
 	}
 
-	// draw small instructions under the list
 	sf::Text instr("Tab: Next  Shift+Tab: Prev  Type numbers or use Up/Down  Enter: Start", font, 16);
 	instr.setPosition(startX, y + params.size() * lineHeight + 8.f);
 	instr.setFillColor(sf::Color(200, 200, 200));
@@ -234,50 +283,45 @@ void RenderSystem::renderParameterList(const std::vector<std::pair<std::string, 
 
 void RenderSystem::calculateAndDisplayFPS()
 {
-	if (showDebugGraphics) // TODO - change this to have own keybind? maybe like a dev setting
+	if (showDebugGraphics)
 	{
-		// Calculate FPS
-		sf::Time elapsed = fpsClock.restart();
-		float fps = 1.0f / elapsed.asSeconds();
+		const sf::Time elapsed = fpsClock.restart();
+		const float fps = (elapsed.asSeconds() > 0.f) ? (1.0f / elapsed.asSeconds()) : 0.f;
 
-		// Update text to display FPS
 		std::ostringstream ss;
 		ss << "FPS: " << static_cast<int>(fps);
 		fpsCounter.setString(ss.str());
-
-		// Draw FPS counter text
 		renderWindow.draw(fpsCounter);
 	}
 }
 
-void RenderSystem::renderQuadtree(sf::RenderWindow &window, GalaxyQuadTreeNode *node)
+void RenderSystem::renderQuadtree(sf::RenderWindow &window, const GalaxyQuadTreeNode *node)
 {
-	if (node == nullptr)
+	if (node == nullptr || !showDebugGraphics)
 	{
 		return;
 	}
 
-	if (showDebugGraphics)
+	// The tree's cells are world-axis-aligned rectangles on the z = 0 plane, and
+	// the projection scales x and y independently, so they stay rectangles on
+	// screen -- just vertically squashed by the tilt.
+	const sf::Vector2f topLeft = projection.planeFoot(node->boundary.left, node->boundary.top);
+	const sf::Vector2f bottomRight = projection.planeFoot(node->boundary.left + node->boundary.width,
+														  node->boundary.top + node->boundary.height);
+
+	sf::RectangleShape nodeRect;
+	nodeRect.setPosition(topLeft);
+	nodeRect.setSize(sf::Vector2f(bottomRight.x - topLeft.x, bottomRight.y - topLeft.y));
+	nodeRect.setFillColor(sf::Color::Transparent);
+	nodeRect.setOutlineThickness(0.5f);
+	nodeRect.setOutlineColor(sf::Color(55, 55, 55, 128));
+	window.draw(nodeRect);
+
+	if (!node->isLeaf)
 	{
-
-		sf::RectangleShape nodeRect;
-		nodeRect.setSize(sf::Vector2f(node->boundary.width, node->boundary.height));
-		nodeRect.setPosition(sf::Vector2f(node->boundary.left, node->boundary.top));
-		nodeRect.setFillColor(sf::Color::Transparent);
-		nodeRect.setOutlineThickness(0.5f);
-		int outlineRed = 55; // Replace these values with your desired RGB components (0-255)
-		int outlineGreen = 55;
-		int outlineBlue = 55;
-		int outlineAlpha = 128;
-		nodeRect.setOutlineColor(sf::Color(outlineRed, outlineGreen, outlineBlue, outlineAlpha));
-		window.draw(nodeRect);
-
-		if (!node->isLeaf)
+		for (int i = 0; i < 4; ++i)
 		{
-			for (int i = 0; i < 4; ++i)
-			{
-				renderQuadtree(window, node->getChild(i));
-			}
+			renderQuadtree(window, node->getChild(i));
 		}
 	}
 }

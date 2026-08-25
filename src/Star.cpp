@@ -1,32 +1,27 @@
 // Star.cpp
 #include "Star.h"
 
-Star::Star(uint32_t ID, int x, int y, const std::string &name, const sf::Color &colour) : ID(ID),
-																						  x(x),
-																						  y(y),
-																						  name(name),
-																						  colour(colour),
-																						  // metals(metals),
-																						  // polymers(polymers),
-																						  // fuel(fuel),
-																						  isExplored(false)
-{
-	// why does this have to be here?
-}
-
-// Copy constructor
-Star::Star(const Star &other) : ID(other.ID), x(other.x), y(other.y), name(other.name), colour(other.colour), isExplored(other.isExplored.load())
+Star::Star(uint32_t ID, float worldX, float worldY, float worldZ, const std::string &name, const sf::Color &colour)
+	: ID(ID), worldX(worldX), worldY(worldY), worldZ(worldZ), name(name), colour(colour), isExplored(false)
 {
 }
 
-// Copy assignment
+// Copy constructor -- std::atomic is neither copyable nor movable, so the whole
+// set below has to be written out by hand.
+Star::Star(const Star &other)
+	: ID(other.ID), worldX(other.worldX), worldY(other.worldY), worldZ(other.worldZ),
+	  name(other.name), colour(other.colour), isExplored(other.isExplored.load())
+{
+}
+
 Star &Star::operator=(const Star &other)
 {
 	if (this != &other)
 	{
 		ID = other.ID;
-		x = other.x;
-		y = other.y;
+		worldX = other.worldX;
+		worldY = other.worldY;
+		worldZ = other.worldZ;
 		name = other.name;
 		colour = other.colour;
 		isExplored.store(other.isExplored.load());
@@ -34,19 +29,20 @@ Star &Star::operator=(const Star &other)
 	return *this;
 }
 
-// Move constructor
-Star::Star(Star &&other) noexcept : ID(other.ID), x(other.x), y(other.y), name(std::move(other.name)), colour(other.colour), isExplored(other.isExplored.load())
+Star::Star(Star &&other) noexcept
+	: ID(other.ID), worldX(other.worldX), worldY(other.worldY), worldZ(other.worldZ),
+	  name(std::move(other.name)), colour(other.colour), isExplored(other.isExplored.load())
 {
 }
 
-// Move assignment
 Star &Star::operator=(Star &&other) noexcept
 {
 	if (this != &other)
 	{
 		ID = other.ID;
-		x = other.x;
-		y = other.y;
+		worldX = other.worldX;
+		worldY = other.worldY;
+		worldZ = other.worldZ;
 		name = std::move(other.name);
 		colour = other.colour;
 		isExplored.store(other.isExplored.load());
@@ -54,75 +50,18 @@ Star &Star::operator=(Star &&other) noexcept
 	return *this;
 }
 
-uint32_t Star::getID() const
-{
-	return ID;
-}
+uint32_t Star::getID() const { return ID; }
+float Star::getWorldX() const { return worldX; }
+float Star::getWorldY() const { return worldY; }
+float Star::getWorldZ() const { return worldZ; }
 
-int Star::getX() const
-{
-	return x;
-}
+// Returned by reference: initializeStarsTexture asks for this three times per
+// star per rebuild, and copying the string each time was pure waste.
+const std::string &Star::getName() const { return name; }
 
-int Star::getY() const
-{
-	return y;
-}
-
-std::string Star::getName() const
-{
-	return name;
-}
-
-sf::Color Star::getColour() const
-{
-	return colour;
-}
-
-/*
-double Star::getMetals() const
-{
-	return metals;
-}
-
-double Star::getPolymers() const
-{
-	return polymers;
-}
-
-double Star::getFuel() const
-{
-	return fuel;
-}
-*/
-
-bool Star::getIsExplored() const
-{
-	return isExplored.load();
-}
-
-// Setters
-/*
-void Star::setMetals(double newMetalsValue)
-{
-	metals = newMetalsValue;
-}
-
-void Star::setPolymers(double newPolymersValue)
-{
-	polymers = newPolymersValue;
-}
-
-void Star::setFuel(double newFuelValue)
-{
-	fuel = newFuelValue;
-}
-*/
-
-void Star::setIsExplored(bool newIsExploredValue)
-{
-	isExplored.store(newIsExploredValue);
-}
+sf::Color Star::getColour() const { return colour; }
+bool Star::getIsExplored() const { return isExplored.load(); }
+void Star::setIsExplored(bool newIsExploredValue) { isExplored.store(newIsExploredValue); }
 
 bool Star::tryMarkExplored()
 {

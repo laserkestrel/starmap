@@ -1,41 +1,34 @@
 // GalaxyQuadTree.cpp
 #include "GalaxyQuadTree.h"
 
-// Implement the constructor
-GalaxyQuadTree::GalaxyQuadTree(const sf::FloatRect &boundary_, int capacity)
-    : root(nullptr), capacity(capacity), boundary(boundary_), starVec(nullptr)
+GalaxyQuadTree::GalaxyQuadTree(const sf::FloatRect &worldBoundary, int capacity)
+	: capacity(capacity), boundary(worldBoundary)
 {
-    // root will be initialized when starVec is set so nodes have access to star data
-    root = new GalaxyQuadTreeNode(this->boundary, this->capacity, this->starVec);
+	root = std::make_unique<GalaxyQuadTreeNode>(boundary, capacity, starVec, 0);
 }
 
-// Implement the insert method
-// Set pointer to canonical star vector used by nodes
 void GalaxyQuadTree::setStarVector(const std::vector<Star> *sv)
 {
-    starVec = sv;
-    if (root)
-    {
-        // reassign starVec to root and any existing children would have been assigned during splits
-        root->starVec = starVec;
-    }
+	starVec = sv;
+	if (root)
+	{
+		root->setStarVector(starVec);
+	}
 }
 
-// Insert a star by index into the quadtree.
-// Returns false when the star falls outside the tree boundary and was dropped.
 bool GalaxyQuadTree::insert(size_t starIndex)
 {
-    if (root == nullptr)
-    {
-        root = new GalaxyQuadTreeNode(boundary, capacity, starVec);
-    }
-    return root->insert(starIndex);
+	if (!root)
+	{
+		root = std::make_unique<GalaxyQuadTreeNode>(boundary, capacity, starVec, 0);
+	}
+	return root->insert(starIndex);
 }
 
 void GalaxyQuadTree::debugPrint() const
 {
-    if (root)
-    {
-        root->debugPrint();
-    }
+	if (root)
+	{
+		root->debugPrint();
+	}
 }

@@ -11,19 +11,37 @@ Michael from www.dream-ware.co.uk for use of the Elite Frontier TTF font.
 
 # Configuration
 
-scaleFactor - The number of parsecs across the width of the display. (1 Parsec ~ 3.26156 Light Years, Milky way aprox 40,000 parsecs. Advise no more than 1000) as most data is under this value.<BR>
+scaleFactor - How many parsecs span the width of the window. Smaller = closer in. (1 Parsec ~ 3.26156 Light Years.)<BR>
+viewTiltDegrees - The map is a tilted view of the equatorial plane. 90 is straight down, where height above the plane is invisible; 0 is edge on. Around 75 reads well.<BR>
+viewDepthParsecs - How far above and below the plane the view reaches. An orthographic view is unbounded in depth, so without this every distant star projects into frame and the stalks become a solid curtain.<BR>
 sleepTimeMillis - Debugging, introduce artificial pause between each loop of code. Should be 0 for full performance.<BR>
-worldSeed - Not used anymore. Was used in previous datasets where no angular or distance information available.<BR>
-quadtreeSearchSize - used to strike a balance for how small the map is divided up. default 128 for around 150,000 stars.<BR>
-font - to be implemented<BR>
+loadStarsLimit - Load only the nearest N stars from the catalogue.<BR>
+quadtreeSearchSize - Stars per quadtree leaf before it splits. Default 128.<BR>
+probeSearchRadiusParsecs - How far a probe will look for its next unvisited star. In parsecs, not pixels: how far a probe can see no longer depends on your window size.<BR>
+probeSpeedParsecsPerTick - How far a probe moves each simulation tick.<BR>
+probeIndividualReplicationLimit - How many times a single probe may replicate before shutting down.<BR>
 summaryShowPerProbe - show console debug info on each probe at end of simulation.<BR>
-summaryShowFooter - show console  summary at end of simulation.<BR>
+summaryShowFooter - show console summary at end of simulation.<BR>
+
+# How positions are drawn
+
+Stars are stored at their true positions in parsecs, taken from the catalogue's own
+x/y/z columns, with Sol at the origin. The map is an orthographic view of that space,
+tilted back from straight-down so the third dimension is visible: each star is drawn
+with a stalk running to the point directly below or above it on the plane, and the
+length of that stalk is its height above or below the plane.
+
+Earlier versions plotted distance against right ascension and discarded declination
+entirely, which inflated a star's distance from the centre by 1/cos(declination) and
+meant that a probe's "nearest" star was the true nearest only about a quarter of the
+time. Probes now search in real three-dimensional space.
 
 # Key Bindings
 
 F1 - Toggle Star Names<BR>
 F2 - Toggle Probe Names<BR>
 F3 - Toggle Probe Trails<BR>
+F4 - Toggle Star Stalks (the lines showing height above/below the plane)<BR>
 F12 - Toggle Debug (Shows Quadtree boundaries and FPS)<BR>
 ESC - Exit Program<BR>
 

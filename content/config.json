@@ -1,5 +1,5 @@
 {
-  "scaleFactor": 50,
+  "scaleFactor": 30,
   "window": {
     "width": 2048,
     "height": 768
@@ -8,12 +8,15 @@
   "simulationIterations": 200000,
   "loadStarsLimit": 50000,
   "quadtreeSearchSize": 128,
+  "viewTiltDegrees": 75,
+  "viewDepthParsecs": 8,
   "font": {
     "file": "./content/Oxygen-Light.ttf",
     "size": 12
   },
-  "summaryShowPerProbe": "false",
-  "summaryShowFooter": "true",
+  "summaryShowPerProbe": false,
+  "summaryShowFooter": true,
   "probeIndividualReplicationLimit": 3,
-  "probeSearchRadiusPixels": 300
+  "probeSearchRadiusParsecs": 8.0,
+  "probeSpeedParsecsPerTick": 0.25
 }
