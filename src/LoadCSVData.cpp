@@ -27,10 +27,16 @@ namespace
 	const float FAINTEST_MAGNITUDE = 12.0f;  // at or above this, the floor below
 	const float MINIMUM_BRIGHTNESS = 0.35f;  // keeps faint stars dim but still coloured
 
-	// 1.0 = physically accurate. Real stars are far less saturated than popular
-	// imagery suggests -- most are near-white with a warm or cool tint. Raise this
-	// if you want the blue-to-red spread to read more strongly at a few pixels.
-	const float COLOUR_SATURATION = 1.0f;
+	// Saturation lift applied about the neutral axis, after the physically derived
+	// colour is computed. It scales how far each star sits from grey; it does NOT
+	// change the hue, so the ordering blue -> white -> yellow -> orange -> red stays
+	// exactly as the blackbody maths produced it.
+	//
+	// 1.0 is physically accurate, but real stars are far less saturated than popular
+	// imagery suggests -- most are near-white with only a faint tint, which reads as
+	// washed out at the three or four pixels a star occupies here. 3.0 is a stylised
+	// setting chosen so the warm/cool spread is legible at that size.
+	const float COLOUR_SATURATION = 3.0f;
 
 	// Removes the surrounding double quotes that the HYG catalogue puts around some
 	// fields. Without this a quoted spectral type like "G2V" has '"' as its first
