@@ -33,6 +33,21 @@ set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(SFML)
 
+# nlohmann/json -- LoadConfig.cpp includes <nlohmann/json.hpp>, so it is a real
+# dependency of this target and belongs here rather than being assumed to exist on
+# the system include path. Fetched from the packaged release archive (a few hundred
+# KB) rather than the git repo, which carries a very large test-data tree.
+FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+    URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+)
+
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_Install OFF CACHE INTERNAL "")
+
+FetchContent_MakeAvailable(nlohmann_json)
+
 # ---- Your executable ----
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp"
@@ -49,7 +64,7 @@ message(STATUS "Found source files: ${SOURCES}")
 
 add_executable(starmap3 ${SOURCES})
 
-target_link_libraries(starmap3 PRIVATE sfml-graphics)
+target_link_libraries(starmap3 PRIVATE sfml-graphics nlohmann_json::nlohmann_json)
 
 target_compile_features(starmap3 PRIVATE cxx_std_17)
 
