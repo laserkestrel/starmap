@@ -31,8 +31,12 @@ class Probe
 {
 public:
 	Probe(const std::string &probeName, float initialX, float initialY, float speed, GalaxyQuadTree &quadTree); // Probes require access to the same shared galaxyVector object to update resources there.
-	// Destructor
-	~Probe();
+
+	// NOTE: deliberately no destructor. Declaring one -- even an empty one -- suppresses
+	// the implicit move constructor, which forces std::vector<Probe> to *copy* every probe
+	// (including its whole visitedStarSystems history) on each reallocation. There is
+	// nothing to clean up here, so letting the compiler generate the special members keeps
+	// the move constructor noexcept and vector growth cheap.
 
 	std::string visitedStarSystemsToString() const;
 
@@ -70,22 +74,26 @@ public:
 	}
 
 private:
+	// Every member has a default here so that no constructor -- present or future -- can
+	// leave one indeterminate. targetX/targetY/targetStar/trailColor in particular were
+	// previously read before ever being written (Game::updateGameState calls getTargetStar()
+	// on any probe in Replicate mode, including one that never completed a Travel leg).
 	std::string probeName;
-	float x;
-	float y;
-	float targetX;
-	float targetY;
-	uint32_t targetStar;
-	float speed;
-	ProbeMode mode;
+	float x = 0.0f;
+	float y = 0.0f;
+	float targetX = 0.0f;
+	float targetY = 0.0f;
+	uint32_t targetStar = 0;
+	float speed = 0.0f;
+	ProbeMode mode = ProbeMode::Seek;
 	std::vector<VisitedStarSystem> visitedStarSystems; // a vector named visitedStarSystems that contains elements of type VisitedStarSystem
 	GalaxyQuadTree &quadTree;
-	const GalaxyQuadTreeNode *currentQuadTreeNode;
-	bool newBorn;
-	float totalDistanceTraveled;
-	int replicationCount;
-	sf::Color trailColor; // Declaration of trailColor within the class
-	LoadConfig *myConfigInstance;
+	const GalaxyQuadTreeNode *currentQuadTreeNode = nullptr;
+	bool newBorn = true;
+	float totalDistanceTraveled = 0.0f;
+	int replicationCount = 0;
+	sf::Color trailColor = sf::Color::White; // Declaration of trailColor within the class
+	LoadConfig *myConfigInstance = nullptr;
 };
 
 #endif // PROBE_H

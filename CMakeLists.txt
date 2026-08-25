@@ -38,6 +38,12 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp"
 )
 
+# src/Platform/ is unused SFML-template boilerplate -- nothing in the project includes
+# Platform.hpp. GLOB_RECURSE was pulling it into the build anyway, where LinuxPlatform.cpp
+# calls XInitThreads() and broke the link (X11 is never linked here). Excluded rather than
+# deleted, in case it's wanted later; to re-enable, drop this filter and link X11 on Linux.
+list(FILTER SOURCES EXCLUDE REGEX "/src/Platform/")
+
 message(STATUS "Found source files: ${SOURCES}")
 
 
@@ -46,6 +52,15 @@ add_executable(starmap3 ${SOURCES})
 target_link_libraries(starmap3 PRIVATE sfml-graphics)
 
 target_compile_features(starmap3 PRIVATE cxx_std_17)
+
+# ---- Warnings ----
+# Deliberately NOT -Werror: this turns the compiler into a reviewer without
+# blocking the build while the existing warnings get worked through.
+if (MSVC)
+    target_compile_options(starmap3 PRIVATE /W4)
+else()
+    target_compile_options(starmap3 PRIVATE -Wall -Wextra)
+endif()
 
 # Define _DEBUG only for Debug builds, in a portable way
 target_compile_definitions(starmap3 PRIVATE

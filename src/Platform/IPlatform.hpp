@@ -3,6 +3,10 @@
 
 #include <SFML/Window.hpp>
 
+#ifndef UNUSED
+#define UNUSED(x) (void)(x)
+#endif
+
 namespace util
 {
 struct IPlatform

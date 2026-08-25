@@ -1,5 +1,5 @@
 #ifdef __APPLE__
-	#include "Platform/MacOS/MacOSPlatform.hpp"
+	#include "MacOSPlatform.hpp"
 
 	#include <CoreFoundation/CoreFoundation.h>
 

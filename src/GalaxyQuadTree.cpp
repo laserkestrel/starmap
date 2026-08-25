@@ -21,14 +21,15 @@ void GalaxyQuadTree::setStarVector(const std::vector<Star> *sv)
     }
 }
 
-// Insert a star by index into the quadtree
-void GalaxyQuadTree::insert(size_t starIndex)
+// Insert a star by index into the quadtree.
+// Returns false when the star falls outside the tree boundary and was dropped.
+bool GalaxyQuadTree::insert(size_t starIndex)
 {
     if (root == nullptr)
     {
         root = new GalaxyQuadTreeNode(boundary, capacity, starVec);
     }
-    root->insert(starIndex);
+    return root->insert(starIndex);
 }
 
 void GalaxyQuadTree::debugPrint() const

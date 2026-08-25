@@ -34,17 +34,15 @@ std::string Probe::visitedStarSystemsToString() const
 
 	for (const auto &visitedSystem : visitedStarSystems)
 	{
-		result += "Star ID: " + std::to_string(visitedSystem.starID) + result += " Coordinates: (" + std::to_string(visitedSystem.coordinates.x) + ", " + std::to_string(visitedSystem.coordinates.y) + ")\n";
+		// NB: this line previously read `result += A + result += B`, which parses as
+		// `result += (A + (result += B))` and folds the accumulated string back into
+		// itself on every iteration. Split into two statements.
+		result += "Star ID: " + std::to_string(visitedSystem.starID);
+		result += " Coordinates: (" + std::to_string(visitedSystem.coordinates.x) + ", " + std::to_string(visitedSystem.coordinates.y) + ")\n";
 		// result += "Visited by Probe: " + (visitedSystem.visitedByProbe ? "Yes" : "No") + "\n\n";
 	}
 
 	return result;
-}
-
-// Destructor
-Probe::~Probe()
-{
-	// Cleanup if needed
 }
 
 // Setters

@@ -65,10 +65,29 @@ Game::Game(const LoadConfig &config) :
 	// Example population of the quadtree in Game.cpp
 	// Point the quadtree at our canonical star vector so nodes reference up-to-date stars
 	theQuadTreeInstance.setStarVector(&galaxyVector);
-	// Insert stars by index so the quadtree stores indices into the canonical vector
+	// Insert stars by index so the quadtree stores indices into the canonical vector.
+	// insert() returns false for any star outside the tree boundary -- which is the
+	// window rectangle -- so a star that falls off-screen is silently absent from the
+	// tree and no probe can ever find it. Count and report those rather than ignoring
+	// the return value.
+	size_t starsRejectedByQuadTree = 0;
 	for (size_t i = 0; i < galaxyVector.size(); ++i)
 	{
-		theQuadTreeInstance.insert(i);
+		if (!theQuadTreeInstance.insert(i))
+		{
+			++starsRejectedByQuadTree;
+		}
+	}
+
+	if (starsRejectedByQuadTree > 0)
+	{
+		const double rejectedPercent =
+			100.0 * static_cast<double>(starsRejectedByQuadTree) / static_cast<double>(galaxyVector.size());
+		std::cout << "WARNING: " << starsRejectedByQuadTree << " of " << galaxyVector.size()
+				  << " stars (" << rejectedPercent << "%) fell outside the quadtree boundary of "
+				  << config.getWindowWidth() << "x" << config.getWindowHeight()
+				  << " and are unreachable by probes. Lower scaleFactor or loadStarsLimit to fit more of the catalogue on screen."
+				  << std::endl;
 	}
 
 	DEBUG_LOG("[DEBUG] quadtree populated");

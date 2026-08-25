@@ -1,7 +1,7 @@
 #ifndef UTIL_MACOS_PLATFORM_HPP
 #define UTIL_MACOS_PLATFORM_HPP
 
-#include "Platform/IPlatform.hpp"
+#include "../IPlatform.hpp"
 
 namespace util
 {

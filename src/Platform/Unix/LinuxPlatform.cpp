@@ -1,5 +1,5 @@
 #ifdef __linux__
-	#include "Platform/Unix/LinuxPlatform.hpp"
+	#include "LinuxPlatform.hpp"
 
 	#include <X11/Xlib.h>
 

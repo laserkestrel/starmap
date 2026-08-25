@@ -1,12 +1,6 @@
 // GalaxyQuadTree.h
 #pragma once // Header guard
 
-#include <SFML/Graphics.hpp>	// Include necessary headers
-#include "GalaxyQuadTreeNode.h" // Include the node structure
-
-// GalaxyQuadTree.h
-#pragma once // Header guard
-
 #include <SFML/Graphics.hpp>    // Include necessary headers
 #include "GalaxyQuadTreeNode.h" // Include the node structure
 #include "Star.h"
@@ -25,8 +19,10 @@ public:
 	GalaxyQuadTree(const sf::FloatRect &boundary_, int capacity); // Constructor
 	// Set pointer to the canonical star vector used by the quadtree nodes.
 	void setStarVector(const std::vector<Star> *sv);
-	// Insert a star by index into the quadtree
-	void insert(size_t starIndex);
+	// Insert a star by index into the quadtree.
+	// Returns false if the star lies outside the tree boundary and was not stored --
+	// callers should check this rather than assuming every star made it in.
+	bool insert(size_t starIndex);
 	std::vector<Star> query(const sf::Vector2f &point, float radius);
 	GalaxyQuadTreeNode *getRootNode() const
 	{
