@@ -3,6 +3,31 @@
 #include "Probe.h"
 #include "GalaxyQuadTreeNode.h"
 #include <iostream>
+#include <algorithm>
+
+namespace
+{
+	// Scales a colour's brightness while preserving its hue.
+	//
+	// The halo and core highlight used to be built by adding or subtracting a flat
+	// 50 from each channel. That is fine for a bright star, but most stars in the
+	// catalogue are faint and have already been scaled towards black by magnitude,
+	// so adding a constant to near-zero channels produced a neutral grey -- which
+	// is what made roughly three quarters of the on-screen stars look grey rather
+	// than coloured. Multiplying keeps the ratio between channels, and therefore
+	// the hue, at any brightness.
+	sf::Color scaleColour(const sf::Color &colour, float factor)
+	{
+		const auto scale = [factor](sf::Uint8 channel) {
+			const float scaled = static_cast<float>(channel) * factor;
+			return static_cast<sf::Uint8>(std::max(0.0f, std::min(255.0f, scaled)));
+		};
+		return sf::Color(scale(colour.r), scale(colour.g), scale(colour.b), colour.a);
+	}
+
+	const float HALO_BRIGHTNESS = 0.55f;      // outer 3.5px ring, dimmer than the star
+	const float HIGHLIGHT_BRIGHTNESS = 1.35f; // inner 2.5px core, brighter than the star
+} // namespace
 
 RenderSystem::RenderSystem(sf::RenderWindow &window) : renderWindow(window),
 													   showTextLabelsStars(false),
@@ -63,10 +88,7 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 		// Create a base circle slightly larger and darker
 		sf::CircleShape baseShape(3.5f);
 		baseShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
-		sf::Color darkerColor = star.getColour();
-		darkerColor.r = std::max(0, darkerColor.r - 50);
-		darkerColor.g = std::max(0, darkerColor.g - 50);
-		darkerColor.b = std::max(0, darkerColor.b - 50);
+		sf::Color darkerColor = scaleColour(star.getColour(), HALO_BRIGHTNESS);
 		baseShape.setFillColor(darkerColor);
 		baseShape.setOrigin(baseShape.getRadius(), baseShape.getRadius());
 		renderTexture.draw(baseShape);
@@ -81,10 +103,7 @@ void RenderSystem::initializeStarsTexture(const std::vector<Star> &stars)
 		// Create a smaller circle in the center with a slightly lighter shade
 		sf::CircleShape centerShape(2.5f);
 		centerShape.setPosition(static_cast<float>(star.getX()), static_cast<float>(star.getY()));
-		sf::Color lighterColor = star.getColour();
-		lighterColor.r = std::min(255, lighterColor.r + 50);
-		lighterColor.g = std::min(255, lighterColor.g + 50);
-		lighterColor.b = std::min(255, lighterColor.b + 50);
+		sf::Color lighterColor = scaleColour(star.getColour(), HIGHLIGHT_BRIGHTNESS);
 		centerShape.setFillColor(lighterColor);
 		centerShape.setOrigin(centerShape.getRadius(), centerShape.getRadius());
 		renderTexture.draw(centerShape);
