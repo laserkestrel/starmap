@@ -16,7 +16,6 @@ public:
 	float getStartingViewRadiusParsecs() const;
 	int getWindowWidth() const;
 	int getWindowHeight() const;
-	int getSleepTimeMillis() const;
 	int getSimulationIterations() const;
 	int getLoadStarsLimit() const;
 	int getQuadTreeSearchSize() const;
@@ -40,6 +39,18 @@ public:
 	// render loop is also the simulation loop -- turning it on slows the sim down
 	// to your refresh rate as well as smoothing the display.
 	bool getVerticalSync() const;
+	// How much of each frame may be spent running simulation ticks. The renderer
+	// gets whatever is left, so the display stays responsive instead of being
+	// dragged along at whatever rate the simulation happens to manage.
+	int getFrameBudgetMillis() const;
+	// A run ends when any of these is met, so it stops on its own and reports why
+	// rather than running until you press Escape.
+	float getCoverageTargetPercent() const;
+	int getFrontierStallTicks() const;
+	// Safety valve. Without a cost to replication the fleet grows without bound --
+	// a 600-star galaxy reached 1.9 million probes in testing -- so a run needs a
+	// ceiling until something physical (resources, attrition) bounds it instead.
+	int getMaxProbes() const;
 	// How many star labels to draw at once. The brightest are chosen, so names
 	// thin out as you zoom out instead of vanishing all at once.
 	int getStarLabelMaxVisible() const;
@@ -58,7 +69,6 @@ private:
 	float startingViewRadiusParsecs = 8.0f;
 	int windowWidth = 1280;
 	int windowHeight = 720;
-	int sleepTimeMillis = 0;
 	int simulationIterations = 10000;
 	int loadStarsLimit = 10000;
 	int quadtreeSearchSize = 128;
@@ -73,6 +83,10 @@ private:
 	std::string displayMode = "borderlessFullscreen";
 	int starLabelMaxVisible = 120;
 	bool verticalSync = false;
+	int frameBudgetMillis = 8;
+	float coverageTargetPercent = 100.0f;
+	int frontierStallTicks = 5000;
+	int maxProbes = 250000;
 	float zoomMinPixelsPerParsec = 0.5f;
 	float zoomMaxPixelsPerParsec = 4000.0f;
 

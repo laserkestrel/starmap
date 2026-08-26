@@ -27,7 +27,27 @@ probeIndividualReplicationLimit - How many times a single probe may replicate be
 starSpriteStyle - How a star is drawn: "softGlow", "coreHalo", "diffractionSpikes" or "bloomRing". Cycle them live with F5.<BR>
 zoomMinPixelsPerParsec / zoomMaxPixelsPerParsec - Limits for mouse-wheel zoom.<BR>
 summaryShowPerProbe - show console debug info on each probe at end of simulation.<BR>
-summaryShowFooter - show console summary at end of simulation.<BR>
+summaryShowFooter - print the full debrief to the console as well as drawing it on screen. Keep this on: it is where you look when something like a missing content folder has gone wrong.<BR>
+frameBudgetMillis - How much of each frame may be spent running simulation ticks. The display gets whatever is left, so it stays responsive instead of being dragged along at whatever rate the simulation manages. Replaces the old sleepTimeMillis.<BR>
+coverageTargetPercent - End the run once this share of the catalogue has been reached.<BR>
+frontierStallTicks - End the run if no new furthest system has been reached for this many ticks.<BR>
+maxProbes - Safety ceiling on fleet size. Replication currently costs nothing, so the fleet grows without bound - a 600-star galaxy reached 1.9 million probes in testing. Until something physical bounds it, this stops a run running away.<BR>
+
+# Measuring a run
+
+A run now ends on its own and says why: every probe stopped, the coverage target
+was reached, the frontier stopped advancing, the tick limit was hit, or the fleet
+hit the population cap. The debrief is drawn in the window over the finished map,
+and printed to the console as well for headless runs.
+
+Everything is measured per TICK or as a ratio, never per wall-clock second. A
+metric that divides by elapsed time is measuring the computer it ran on, which is
+why the old "stars per probe-second" figure could not compare two runs.
+
+The number that matters most is EFFICIENCY: unique systems reached divided by total
+arrivals. 1.000 means no journey was ever wasted. Because probes only know what
+they and their ancestors found, unrelated lineages revisit each other's systems -
+and this is the number that measures how much that costs.
 
 # How positions are drawn
 

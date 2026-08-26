@@ -2,7 +2,9 @@
 #include "RenderSystem.h"
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 
 namespace
 {
@@ -418,4 +420,102 @@ void RenderSystem::renderQuadtree(sf::RenderWindow &window, const GalaxyQuadTree
 			renderQuadtree(window, node->getChild(i));
 		}
 	}
+}
+
+void RenderSystem::renderDebrief(const RunMetrics &metrics)
+{
+	const float width = static_cast<float>(renderWindow.getSize().x);
+	const float height = static_cast<float>(renderWindow.getSize().y);
+
+	const float panelW = 720.0f;
+	const float panelH = 560.0f;
+	const float x = (width - panelW) * 0.5f;
+	const float y = (height - panelH) * 0.5f;
+
+	// Dim the map so the panel reads, but leave it visible -- the result is the
+	// picture behind the numbers.
+	sf::RectangleShape veil(sf::Vector2f(width, height));
+	veil.setFillColor(sf::Color(4, 5, 8, 190));
+	renderWindow.draw(veil);
+
+	sf::RectangleShape panel(sf::Vector2f(panelW, panelH));
+	panel.setPosition(x, y);
+	panel.setFillColor(sf::Color(10, 13, 18, 240));
+	panel.setOutlineThickness(1.0f);
+	panel.setOutlineColor(sf::Color(70, 92, 120));
+	renderWindow.draw(panel);
+
+	const sf::Color heading(150, 190, 235);
+	const sf::Color label(132, 146, 164);
+	const sf::Color value(228, 232, 238);
+
+	auto text = [&](const std::string &s, float px, float py, unsigned size, const sf::Color &c) {
+		sf::Text t(s, font, size);
+		t.setPosition(std::floor(px), std::floor(py));
+		t.setFillColor(c);
+		renderWindow.draw(t);
+	};
+	auto row = [&](const std::string &name, const std::string &val, float py) {
+		text(name, x + 34.0f, py, 16, label);
+		text(val, x + 330.0f, py, 16, value);
+	};
+	auto num = [](double v, int dp) {
+		std::ostringstream ss;
+		ss << std::fixed << std::setprecision(dp) << v;
+		return ss.str();
+	};
+
+	float py = y + 28.0f;
+	text("EXPEDITION COMPLETE", x + 34.0f, py, 28, heading);
+	py += 38.0f;
+	text(runEndReasonText(metrics.endReason) + std::string("  -  ") +
+			 std::to_string(metrics.ticks) + " ticks",
+		 x + 34.0f, py, 15, label);
+
+	py += 44.0f;
+	text("REACH", x + 34.0f, py, 15, heading);
+	py += 26.0f;
+	row("systems reached", std::to_string(metrics.uniqueSystems) + " of " +
+							  std::to_string(metrics.catalogueSize) +
+							  "   (" + num(metrics.coveragePercent(), 2) + "%)", py);
+	py += 24.0f;
+	row("frontier", num(metrics.frontierParsecs, 1) + " pc from Sol", py);
+	py += 24.0f;
+	row("expansion rate", num(metrics.expansionRatePerThousandTicks(), 2) + " pc / 1000 ticks", py);
+
+	py += 40.0f;
+	text("EFFICIENCY", x + 34.0f, py, 15, heading);
+	py += 26.0f;
+	row("efficiency", num(metrics.efficiency(), 3) + "   (1.000 = nothing wasted)", py);
+	py += 24.0f;
+	row("wasted journeys", std::to_string(metrics.wastedJourneys()) + " of " +
+							   std::to_string(metrics.arrivals) + " arrivals", py);
+	py += 24.0f;
+	row("cost per system", num(metrics.parsecsPerDiscovery(), 2) + " pc flown, " +
+							   num(metrics.probesPerDiscovery(), 2) + " probes built", py);
+
+	py += 40.0f;
+	text("FLEET", x + 34.0f, py, 15, heading);
+	py += 26.0f;
+	row("built / peak / alive", std::to_string(metrics.probesBuilt) + "  /  " +
+									std::to_string(metrics.peakPopulation) + "  /  " +
+									std::to_string(metrics.probesAlive), py);
+	py += 24.0f;
+	row("hit replication limit", std::to_string(metrics.stoppedAtReplicationLimit), py);
+	py += 24.0f;
+	row("nothing within range", std::to_string(metrics.stoppedWithNothingInRange), py);
+
+	py += 44.0f;
+	sf::RectangleShape rule(sf::Vector2f(panelW - 68.0f, 1.0f));
+	rule.setPosition(x + 34.0f, py);
+	rule.setFillColor(sf::Color(48, 62, 82));
+	renderWindow.draw(rule);
+
+	py += 18.0f;
+	text("SCORE", x + 34.0f, py + 10.0f, 15, heading);
+	text(std::to_string(metrics.score()), x + 330.0f, py, 34, value);
+	text("GRADE", x + panelW - 210.0f, py + 10.0f, 15, heading);
+	text(metrics.grade(), x + panelW - 110.0f, py - 4.0f, 40, heading);
+
+	text("arrows pan   wheel zooms   Esc closes", x + 34.0f, y + panelH - 30.0f, 14, label);
 }

@@ -7,6 +7,7 @@
 #include "LoadConfig.h"
 #include "Probe.h"
 #include "Projection.h"
+#include "RunMetrics.h"
 #include "RenderSystem.h"
 #include "SimSettings.h"
 #include "Star.h"
@@ -39,7 +40,9 @@ private:
 	void handleEvents();
 	void updateGameState();
 	void render();
-	void generateSummary() const;
+	void finaliseMetrics();
+	RunEndReason checkForEnd() const;
+	void showDebrief();
 	// World-space bounding box of the loaded catalogue, used as the quadtree's
 	// boundary. Previously this was the window rectangle, which is why almost
 	// every star fell outside the tree and no probe could ever reach it.
@@ -65,6 +68,9 @@ private:
 	sf::Clock caretClock;
 	bool caretVisible = true;
 	double simulationTimeInSeconds = 0.0;
+	int lastTicksPerFrame = 0;
+	RunMetrics metrics;
+	size_t liveProbeCount = 1;
 
 	std::unordered_map<sf::Keyboard::Key, std::function<void()>> keyBindings;
 };

@@ -2,12 +2,15 @@
   "startingViewRadiusParsecs": 8.0,
   "displayMode": "borderlessFullscreen",
   "verticalSync": false,
+  "frameBudgetMillis": 8,
+  "coverageTargetPercent": 100.0,
+  "frontierStallTicks": 5000,
+  "maxProbes": 250000,
   "starLabelMaxVisible": 120,
   "window": {
     "width": 2048,
     "height": 768
   },
-  "sleepTimeMillis": 0,
   "simulationIterations": 200000,
   "loadStarsLimit": 50000,
   "quadtreeSearchSize": 128,

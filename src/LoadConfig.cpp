@@ -74,7 +74,6 @@ LoadConfig::LoadConfig()
 float LoadConfig::getStartingViewRadiusParsecs() const { return startingViewRadiusParsecs; }
 int LoadConfig::getWindowWidth() const { return windowWidth; }
 int LoadConfig::getWindowHeight() const { return windowHeight; }
-int LoadConfig::getSleepTimeMillis() const { return sleepTimeMillis; }
 int LoadConfig::getSimulationIterations() const { return simulationIterations; }
 int LoadConfig::getLoadStarsLimit() const { return loadStarsLimit; }
 int LoadConfig::getQuadTreeSearchSize() const { return quadtreeSearchSize; }
@@ -88,6 +87,10 @@ float LoadConfig::getViewDepthParsecs() const { return viewDepthParsecs; }
 const std::string &LoadConfig::getStarSpriteStyle() const { return starSpriteStyle; }
 const std::string &LoadConfig::getDisplayMode() const { return displayMode; }
 bool LoadConfig::getVerticalSync() const { return verticalSync; }
+int LoadConfig::getFrameBudgetMillis() const { return frameBudgetMillis; }
+float LoadConfig::getCoverageTargetPercent() const { return coverageTargetPercent; }
+int LoadConfig::getFrontierStallTicks() const { return frontierStallTicks; }
+int LoadConfig::getMaxProbes() const { return maxProbes; }
 int LoadConfig::getStarLabelMaxVisible() const { return starLabelMaxVisible; }
 float LoadConfig::getZoomMinPixelsPerParsec() const { return zoomMinPixelsPerParsec; }
 float LoadConfig::getZoomMaxPixelsPerParsec() const { return zoomMaxPixelsPerParsec; }
@@ -125,7 +128,6 @@ void LoadConfig::loadFromFile()
 			std::cerr << "Config: missing or invalid 'window' object, keeping defaults." << std::endl;
 		}
 
-		readNumber(config, "sleepTimeMillis", sleepTimeMillis);
 		readNumber(config, "simulationIterations", simulationIterations);
 		readNumber(config, "loadStarsLimit", loadStarsLimit);
 		readNumber(config, "quadtreeSearchSize", quadtreeSearchSize);
@@ -139,6 +141,10 @@ void LoadConfig::loadFromFile()
 		readString(config, "starSpriteStyle", starSpriteStyle);
 		readString(config, "displayMode", displayMode);
 		readBool(config, "verticalSync", verticalSync);
+		readNumber(config, "frameBudgetMillis", frameBudgetMillis);
+		readNumber(config, "coverageTargetPercent", coverageTargetPercent);
+		readNumber(config, "frontierStallTicks", frontierStallTicks);
+		readNumber(config, "maxProbes", maxProbes);
 		readNumber(config, "starLabelMaxVisible", starLabelMaxVisible);
 		readBool(config, "summaryShowPerProbe", summaryShowPerProbe);
 		readBool(config, "summaryShowFooter", summaryShowFooter);

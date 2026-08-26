@@ -265,42 +265,61 @@ void Game::run()
 
 	const auto simulationStartTime = std::chrono::high_resolution_clock::now();
 	const int simulationIterations = config.getSimulationIterations();
-	const int sleepTimeMillis = config.getSleepTimeMillis();
-	sf::Clock clock;
+	const int frameBudgetMillis = std::max(1, config.getFrameBudgetMillis());
+	sf::Clock frameClock;
 	int iteration = 0;
 
-	while (iteration < simulationIterations && window.isOpen())
+	// The simulation and the display used to run in lockstep -- one tick, one frame,
+	// forever. That coupling was accidental, and it meant a tick taking 130 ms left
+	// the window redrawing seven times a second, so the whole program looked hung.
+	//
+	// Now each frame spends up to frameBudgetMillis running ticks and then draws
+	// regardless. Early on, when a tick is microseconds, that is hundreds of ticks
+	// per frame and the simulation runs far faster than it used to. Later it falls
+	// to one tick per frame and the simulation slows down -- which it should -- while
+	// input and drawing keep going.
+	//
+	// Honest limit: a frame still cannot be shorter than a single tick, so once one
+	// tick alone exceeds the budget the display is bounded by it. Going beyond that
+	// needs the simulation on its own thread.
+	RunEndReason endReason = RunEndReason::StillRunning;
+	while (endReason == RunEndReason::StillRunning && window.isOpen())
 	{
-		const sf::Time elapsed = clock.restart();
+		const sf::Time frameElapsed = frameClock.restart();
 
 		handleEvents();
-		updateCamera(elapsed.asSeconds());
-		updateGameState();
-		render();
-		++iteration;
+		updateCamera(frameElapsed.asSeconds());
 
-		const sf::Time sleepTime = sf::milliseconds(sleepTimeMillis);
-		if (elapsed < sleepTime)
+		sf::Clock tickBudget;
+		int ticksThisFrame = 0;
+		do
 		{
-			sf::sleep(sleepTime - elapsed);
-		}
+			updateGameState();
+			++iteration;
+			++ticksThisFrame;
+
+			endReason = checkForEnd();
+			if (endReason == RunEndReason::StillRunning && iteration >= simulationIterations)
+			{
+				endReason = RunEndReason::IterationLimit;
+			}
+		} while (endReason == RunEndReason::StillRunning && window.isOpen() &&
+				 tickBudget.getElapsedTime().asMilliseconds() < frameBudgetMillis);
+
+		lastTicksPerFrame = ticksThisFrame;
+		render();
 	}
+	if (!window.isOpen() && endReason == RunEndReason::StillRunning)
+	{
+		endReason = RunEndReason::Abandoned;
+	}
+	metrics.endReason = endReason;
 
 	const auto simulationEndTime = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> simulationDuration = simulationEndTime - simulationStartTime;
 	simulationTimeInSeconds = simulationDuration.count();
-	std::cout << "Simulation took " << simulationTimeInSeconds << " seconds." << std::endl;
-	generateSummary();
-
-	// Keep the map interactive after the simulation ends -- pan and zoom still work.
-	sf::Clock viewClock;
-	while (window.isOpen())
-	{
-		handleEvents();
-		updateCamera(viewClock.restart().asSeconds());
-		render();
-		sf::sleep(sf::milliseconds(16));
-	}
+	finaliseMetrics();
+	showDebrief();
 }
 
 void Game::handleEvents()
@@ -418,6 +437,9 @@ std::string Game::cameraHudText() const
 	ss.precision(1);
 	ss << "view " << across << " pc across   centre " << c.x << ", " << c.y << " pc"
 	   << "   stars drawn " << renderSystem.getLastVisibleStarCount()
+	   << "   probes " << probeVector.size()
+	   << "   ticks/frame " << lastTicksPerFrame
+	   << "   explored " << metrics.uniqueSystems
 	   << "   [arrows pan, shift = faster, wheel = zoom, Home = reset, F5 = sprite]";
 	return ss.str();
 }
@@ -443,7 +465,7 @@ void Game::updateGameState()
 
 		if (probe.getReplicationCount() >= settings.probeIndividualReplicationLimit)
 		{
-			probe.setMode(ProbeMode::Shutdown);
+			probe.shutdown(ShutdownReason::ReplicationLimitReached);
 			continue;
 		}
 
@@ -473,6 +495,7 @@ void Game::updateGameState()
 		}
 
 		newProbes.push_back(std::move(replicatedProbe));
+		++metrics.probesBuilt;
 	}
 
 	for (auto &newProbe : newProbes)
@@ -514,20 +537,51 @@ void Game::updateGameState()
 			w.join();
 	}
 
-	// Mark newly visited stars explored. This is bookkeeping for the summary only --
-	// no probe reads it, by design.
+	// Mark newly visited stars explored, and gather the run's metrics off the same
+	// walk. isExplored is bookkeeping for the observer only -- no probe reads it.
 	for (size_t i = 0; i < probeVector.size() && i < oldTrailLengths.size(); ++i)
 	{
 		const auto &trail = probeVector[i].getTrail();
 		for (size_t j = oldTrailLengths[i]; j < trail.size(); ++j)
 		{
+			++metrics.arrivals;
 			auto it = starIndexMap.find(trail[j].starID);
-			if (it != starIndexMap.end())
+			if (it == starIndexMap.end())
+				continue;
+
+			Star &star = galaxyVector[it->second];
+			if (star.tryMarkExplored())
 			{
-				galaxyVector[it->second].tryMarkExplored();
+				// First time anyone has reached it. Anything else was a wasted trip.
+				++metrics.uniqueSystems;
+				const double distanceFromSol = std::sqrt(
+					static_cast<double>(star.getWorldX()) * star.getWorldX() +
+					static_cast<double>(star.getWorldY()) * star.getWorldY() +
+					static_cast<double>(star.getWorldZ()) * star.getWorldZ());
+				if (distanceFromSol > metrics.frontierParsecs)
+				{
+					metrics.frontierParsecs = distanceFromSol;
+					metrics.lastFrontierAdvanceTick = metrics.ticks;
+				}
 			}
 		}
 	}
+
+	// Recount the living. Cheap next to the move phase, and it keeps the
+	// end-of-run check O(1).
+	liveProbeCount = 0;
+	for (const auto &probe : probeVector)
+	{
+		if (probe.getMode() != ProbeMode::Shutdown)
+			++liveProbeCount;
+	}
+
+	++metrics.ticks;
+	metrics.peakPopulation = std::max(metrics.peakPopulation, probeVector.size());
+	const double coverage = metrics.coveragePercent();
+	if (metrics.ticksTo25 < 0 && coverage >= 25.0) metrics.ticksTo25 = metrics.ticks;
+	if (metrics.ticksTo50 < 0 && coverage >= 50.0) metrics.ticksTo50 = metrics.ticks;
+	if (metrics.ticksTo75 < 0 && coverage >= 75.0) metrics.ticksTo75 = metrics.ticks;
 }
 
 void Game::render()
@@ -540,59 +594,88 @@ void Game::render()
 	window.display();
 }
 
-void Game::generateSummary() const
+RunEndReason Game::checkForEnd() const
 {
-	std::cout << "-----------------" << '\n'
-			  << "Begin Summary: " << '\n'
-			  << "-----------------" << '\n';
+	// Counted as probes shut down rather than rescanned: at a million probes a
+	// full scan every tick is itself a meaningful cost.
+	if (liveProbeCount == 0)
+		return RunEndReason::AllProbesStopped;
 
+	const int cap = config.getMaxProbes();
+	if (cap > 0 && probeVector.size() >= static_cast<size_t>(cap))
+		return RunEndReason::PopulationCap;
+
+	if (metrics.coveragePercent() >= config.getCoverageTargetPercent())
+		return RunEndReason::CoverageReached;
+
+	const int stallLimit = config.getFrontierStallTicks();
+	if (stallLimit > 0 && metrics.ticks - metrics.lastFrontierAdvanceTick > stallLimit)
+		return RunEndReason::FrontierStalled;
+
+	return RunEndReason::StillRunning;
+}
+
+void Game::finaliseMetrics()
+{
+	metrics.catalogueSize = galaxyVector.size();
+	metrics.distanceFlownParsecs = 0.0;
+	metrics.probesAlive = 0;
+	metrics.stoppedAtReplicationLimit = 0;
+	metrics.stoppedWithNothingInRange = 0;
+
+	for (const auto &probe : probeVector)
+	{
+		metrics.distanceFlownParsecs += probe.getTotalDistanceTraveled();
+		if (probe.getMode() != ProbeMode::Shutdown)
+		{
+			++metrics.probesAlive;
+			continue;
+		}
+		switch (probe.getShutdownReason())
+		{
+		case ShutdownReason::ReplicationLimitReached: ++metrics.stoppedAtReplicationLimit; break;
+		case ShutdownReason::NothingWithinRange:      ++metrics.stoppedWithNothingInRange; break;
+		default: break;
+		}
+	}
+
+	metrics.wallClockSeconds = simulationTimeInSeconds;
+
+	// Still printed to the console as well as drawn on screen: headless runs, CI
+	// and piping to a file all need it, and it is where you look when something
+	// like a missing content folder has gone wrong.
 	if (config.getSummaryShowPerProbe())
 	{
 		for (const auto &probe : probeVector)
 		{
-			if (probe.getTotalDistanceTraveled() > 0 && probe.getReplicationCount() > 0)
-			{
-				std::cout << "- Probe [" << probe.getProbeName() << "] travelled ["
-						  << probe.getTotalDistanceTraveled() << " pc], replicated ["
-						  << probe.getReplicationCount() << "] times, visiting ";
-				for (const auto &visitedSystem : probe.getTrail())
-				{
-					std::cout << "[" << visitedSystem.starID << "];";
-				}
-				std::cout << std::endl;
-			}
+			std::cout << "- Probe [" << probe.getProbeName() << "] travelled ["
+					  << probe.getTotalDistanceTraveled() << " pc], replicated ["
+					  << probe.getReplicationCount() << "] times, visited ["
+					  << probe.getTrail().size() << "] systems" << std::endl;
 		}
 	}
-
-	size_t totalStarsVisitedByProbes = 0;
-	for (const auto &star : galaxyVector)
-	{
-		if (star.getIsExplored())
-		{
-			++totalStarsVisitedByProbes;
-		}
-	}
-
 	if (config.getSummaryShowFooter())
 	{
-		const size_t probeCount = probeVector.size();
-		// Guarded: this used to divide by probeCount and elapsed time without
-		// checking either.
-		const double denominator = simulationTimeInSeconds * static_cast<double>(probeCount);
-		const double starsPerProbeSecond = (denominator > 0.0)
-											   ? static_cast<double>(totalStarsVisitedByProbes) / denominator
-											   : 0.0;
-		const double coverage = galaxyVector.empty()
-									? 0.0
-									: 100.0 * static_cast<double>(totalStarsVisitedByProbes) / static_cast<double>(galaxyVector.size());
+		metrics.printToConsole();
+	}
+}
 
-		std::cout << "Simulation Summary:" << '\n'
-				  << "Simulation limited to [" << config.getSimulationIterations() << "] epochs" << '\n'
-				  << "Total number of stars: " << galaxyVector.size() << '\n'
-				  << "Total number of probes: " << probeCount << '\n'
-				  << "Stars explored: " << totalStarsVisitedByProbes << " (" << coverage << "% of catalogue)" << '\n'
-				  << "Total Simulation Time: " << simulationTimeInSeconds << " seconds." << '\n'
-				  << "Stars per probe-second: " << starsPerProbeSecond << '\n'
-				  << "-----------------" << std::endl;
+void Game::showDebrief()
+{
+	// The map stays live underneath, so you can still pan and zoom around the
+	// result while reading it.
+	sf::Clock viewClock;
+	while (window.isOpen())
+	{
+		handleEvents();
+		updateCamera(viewClock.restart().asSeconds());
+
+		renderSystem.renderStarfield(galaxyVector, *quadTree);
+		renderSystem.renderQuadtree(window, quadTree->getRootNode());
+		renderSystem.renderProbes(probeVector);
+		renderSystem.renderDebrief(metrics);
+		renderSystem.renderHud(cameraHudText());
+		renderSystem.calculateAndDisplayFPS();
+		window.display();
 	}
 }

@@ -60,6 +60,13 @@ void Probe::setWorldPosition(float newX, float newY, float newZ) { x = newX; y =
 void Probe::setTargetPosition(float newX, float newY, float newZ) { targetX = newX; targetY = newY; targetZ = newZ; }
 void Probe::setSpeed(float parsecsPerTick) { speed = parsecsPerTick; }
 void Probe::setMode(ProbeMode newMode) { mode = newMode; }
+ShutdownReason Probe::getShutdownReason() const { return shutdownReason; }
+
+void Probe::shutdown(ShutdownReason reason)
+{
+	mode = ProbeMode::Shutdown;
+	shutdownReason = reason;
+}
 void Probe::setNewBorn(bool status) { newBorn = status; }
 void Probe::setTargetStar(uint32_t starID) { targetStar = starID; }
 
@@ -114,7 +121,7 @@ void Probe::move()
 			}
 			else if (replicationCount >= settings->probeIndividualReplicationLimit)
 			{
-				setMode(ProbeMode::Shutdown);
+				shutdown(ShutdownReason::ReplicationLimitReached);
 			}
 			else
 			{
@@ -171,7 +178,7 @@ void Probe::move()
 		else
 		{
 			DEBUG_LOG("Probe found no unvisited star within its search radius.");
-			setMode(ProbeMode::Shutdown);
+			shutdown(ShutdownReason::NothingWithinRange);
 		}
 	}
 	else if (mode == ProbeMode::Shutdown)

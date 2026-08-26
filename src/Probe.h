@@ -20,6 +20,16 @@ enum class ProbeMode
 	Shutdown
 };
 
+// Why a probe stopped. The split between these two is diagnostic: lots of the
+// first means the replication limit is what is holding exploration back, lots of
+// the second means the search radius is.
+enum class ShutdownReason
+{
+	StillRunning,
+	ReplicationLimitReached,
+	NothingWithinRange
+};
+
 // One stop on a probe's own journey. Coordinates are world parsecs, so a trail can
 // be projected through the current view like anything else.
 //
@@ -49,6 +59,7 @@ public:
 	void setTargetPosition(float x, float y, float z);
 	void setSpeed(float parsecsPerTick);
 	void setMode(ProbeMode mode);
+	void shutdown(ShutdownReason reason);
 	void setNewBorn(bool status);
 	void setTargetStar(uint32_t starID);
 	// Arrived somewhere: goes on the trail and into this probe's knowledge.
@@ -68,6 +79,7 @@ public:
 	float getSpeed() const;
 	uint32_t getTargetStar() const;
 	ProbeMode getMode() const;
+	ShutdownReason getShutdownReason() const;
 	bool isNewBorn() const;
 	float getTotalDistanceTraveled() const;
 	int getReplicationCount() const;
@@ -97,6 +109,7 @@ private:
 	uint32_t targetStar = 0;
 	float speed = 0.0f; // parsecs per tick
 	ProbeMode mode = ProbeMode::Seek;
+	ShutdownReason shutdownReason = ShutdownReason::StillRunning;
 
 	std::vector<VisitedStarSystem> trail; // only where this probe itself went
 	Knowledge knowledge;                  // what it and its ancestors know, shared

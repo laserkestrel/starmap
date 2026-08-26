@@ -6,6 +6,7 @@
 #include "GalaxyQuadTreeNode.h"
 #include "Probe.h"
 #include "Projection.h"
+#include "RunMetrics.h"
 #include "Star.h"
 #include "StarSprite.h"
 #include <SFML/Graphics.hpp>
@@ -33,6 +34,8 @@ public:
 	void renderParameterList(const std::vector<std::pair<std::string, std::string>> &params, int focusedIndex, bool showCaret);
 	void renderQuadtree(sf::RenderWindow &window, const GalaxyQuadTreeNode *node);
 	void renderHud(const std::string &text);
+	// End-of-run debrief, drawn over the live map.
+	void renderDebrief(const RunMetrics &metrics);
 	void calculateAndDisplayFPS();
 
 	void toggleTextLabelsStars();
