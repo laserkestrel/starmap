@@ -30,20 +30,26 @@ namespace
 
 Game::Game(const LoadConfig &config)
 	: config(config),
-	  window(sf::VideoMode(config.getWindowWidth(), config.getWindowHeight()), "Star Map"),
+	  displayMode(displayModeFromString(config.getDisplayMode())),
+	  window(videoModeFor(displayMode, config.getWindowWidth(), config.getWindowHeight()),
+			 "Star Map", windowStyleFor(displayMode)),
 	  renderSystem(window, projection, starSpriteStyleFromString(config.getStarSpriteStyle()))
 {
 	settings.probeSearchRadiusParsecs = config.getProbeSearchRadiusParsecs();
 	settings.probeSpeedParsecsPerTick = config.getProbeSpeedParsecsPerTick();
 	settings.probeIndividualReplicationLimit = config.getprobeIndividualReplicationLimit();
 
-	// scaleFactor is how many parsecs span the window's width.
-	const float scaleFactor = std::max(1.0f, static_cast<float>(config.getScaleFactor()));
-	projection.setPixelsPerParsec(static_cast<float>(config.getWindowWidth()) / scaleFactor);
+	window.setVerticalSyncEnabled(config.getVerticalSync());
+	std::cout << "Display: " << displayModeName(displayMode) << " "
+			  << window.getSize().x << "x" << window.getSize().y << std::endl;
+
 	projection.setTiltDegrees(config.getViewTiltDegrees());
 	projection.setViewDepthParsecs(config.getViewDepthParsecs());
-	projection.setScreenCentre(sf::Vector2f(config.getWindowWidth() / 2.0f, config.getWindowHeight() / 2.0f));
 	projection.setWorldCentre(sf::Vector2f(0.0f, 0.0f)); // start looking at Sol
+	// Scale and centre come from the window's real size, which in fullscreen has
+	// nothing to do with the configured width and height.
+	syncViewportToWindow();
+	resetView();
 
 	LoadCSVData dataLoader;
 	galaxyVector = dataLoader.loadStarsFromCsv("./content/hygdata_v40.csv", config);
@@ -136,6 +142,10 @@ void Game::initializeKeyBindings()
 	};
 	keyBindings[sf::Keyboard::F12] = [this]() { renderSystem.toggleDebugGraphics(); };
 	keyBindings[sf::Keyboard::Home] = [this]() { resetView(); };
+	keyBindings[sf::Keyboard::F11] = [this]() {
+		applyDisplayMode(displayMode == DisplayMode::Windowed ? DisplayMode::BorderlessFullscreen
+															 : DisplayMode::Windowed);
+	};
 }
 
 void Game::runStartupScreen()
@@ -202,6 +212,10 @@ void Game::runStartupScreen()
 				{
 					value.pop_back();
 				}
+			}
+			else if (event.type == sf::Event::Resized)
+			{
+				syncViewportToWindow();
 			}
 			else if (event.type == sf::Event::MouseWheelScrolled)
 			{
@@ -305,6 +319,11 @@ void Game::handleEvents()
 				it->second();
 			}
 		}
+		else if (event.type == sf::Event::Resized)
+		{
+			// Without this the contents stretch instead of revealing more map.
+			syncViewportToWindow();
+		}
 		else if (event.type == sf::Event::MouseWheelScrolled)
 		{
 			// Zoom about the cursor, so whatever is under the pointer stays put.
@@ -345,14 +364,48 @@ void Game::updateCamera(float deltaSeconds)
 void Game::resetView()
 {
 	const float scaleFactor = std::max(1.0f, static_cast<float>(config.getScaleFactor()));
-	projection.setPixelsPerParsec(static_cast<float>(config.getWindowWidth()) / scaleFactor);
+	projection.setPixelsPerParsec(static_cast<float>(window.getSize().x) / scaleFactor);
 	projection.setWorldCentre(sf::Vector2f(0.0f, 0.0f));
+}
+
+// Re-derives what depends on the window's size: a 1-unit-per-pixel view, and the
+// screen point the projection maps world origin to. Deliberately does NOT touch
+// the zoom, so resizing the window reveals more map rather than yanking the zoom
+// back to the configured default mid-session.
+void Game::syncViewportToWindow()
+{
+	const sf::Vector2u size = window.getSize();
+	window.setView(sf::View(sf::FloatRect(0.0f, 0.0f, static_cast<float>(size.x), static_cast<float>(size.y))));
+	projection.setScreenCentre(sf::Vector2f(size.x / 2.0f, size.y / 2.0f));
+}
+
+void Game::applyDisplayMode(DisplayMode mode)
+{
+	// Keep the camera where it is across the switch -- only the framing changes.
+	const sf::Vector2f keptCentre = projection.getWorldCentre();
+	const float keptScale = projection.getPixelsPerParsec();
+
+	displayMode = mode;
+	window.create(videoModeFor(displayMode, config.getWindowWidth(), config.getWindowHeight()),
+				  "Star Map", windowStyleFor(displayMode));
+	window.setVerticalSyncEnabled(config.getVerticalSync());
+
+	// Recreating the window can invalidate GL-backed resources.
+	renderSystem.reloadGraphicsResources();
+
+	syncViewportToWindow();
+	projection.setWorldCentre(keptCentre);
+	projection.setPixelsPerParsec(keptScale);
+	(void)0;
+
+	std::cout << "Display: " << displayModeName(displayMode) << " "
+			  << window.getSize().x << "x" << window.getSize().y << std::endl;
 }
 
 std::string Game::cameraHudText() const
 {
 	const float ppc = projection.getPixelsPerParsec();
-	const float across = static_cast<float>(config.getWindowWidth()) / ppc;
+	const float across = static_cast<float>(window.getSize().x) / ppc;
 	const sf::Vector2f c = projection.getWorldCentre();
 
 	std::ostringstream ss;

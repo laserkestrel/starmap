@@ -41,6 +41,10 @@ public:
 	void toggleDebugGraphics();
 	void toggleStarStalks();
 
+	// Recreating the window can invalidate the GL resources these hold, so the
+	// font and sprite are rebuilt after any display-mode change.
+	void reloadGraphicsResources();
+
 	void setSpriteStyle(StarSpriteStyle style);
 	StarSpriteStyle getSpriteStyle() const { return spriteStyle; }
 	StarSpriteStyle cycleSpriteStyle();

@@ -30,6 +30,12 @@ public:
 	float getViewDepthParsecs() const;
 	// Star sprite: "softGlow", "coreHalo", "diffractionSpikes" or "bloomRing".
 	const std::string &getStarSpriteStyle() const;
+	// "windowed", "borderlessFullscreen" or "exclusiveFullscreen".
+	const std::string &getDisplayMode() const;
+	// Cap the loop to the monitor's refresh rate. Off by default, because the
+	// render loop is also the simulation loop -- turning it on slows the sim down
+	// to your refresh rate as well as smoothing the display.
+	bool getVerticalSync() const;
 	// Zoom limits, in pixels per parsec.
 	float getZoomMinPixelsPerParsec() const;
 	float getZoomMaxPixelsPerParsec() const;
@@ -57,6 +63,8 @@ private:
 	float viewTiltDegrees = 75.0f;
 	float viewDepthParsecs = 12.0f;
 	std::string starSpriteStyle = "coreHalo";
+	std::string displayMode = "borderlessFullscreen";
+	bool verticalSync = false;
 	float zoomMinPixelsPerParsec = 0.5f;
 	float zoomMaxPixelsPerParsec = 4000.0f;
 

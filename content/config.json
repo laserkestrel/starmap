@@ -1,5 +1,7 @@
 {
   "scaleFactor": 30,
+  "displayMode": "borderlessFullscreen",
+  "verticalSync": false,
   "window": {
     "width": 2048,
     "height": 768

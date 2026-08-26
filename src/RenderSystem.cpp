@@ -84,6 +84,18 @@ void RenderSystem::toggleProbeTrails() { showProbeTrails = !showProbeTrails; }
 void RenderSystem::toggleDebugGraphics() { showDebugGraphics = !showDebugGraphics; }
 void RenderSystem::toggleStarStalks() { showStarStalks = !showStarStalks; }
 
+void RenderSystem::reloadGraphicsResources()
+{
+	if (!font.loadFromFile("./content/Frontier.ttf"))
+	{
+		std::cerr << "Error reloading font file.\n";
+	}
+	fpsCounter.setFont(font);
+	summaryText.setFont(font);
+	hudText.setFont(font);
+	starSprite = makeStarSprite(spriteStyle);
+}
+
 void RenderSystem::setSpriteStyle(StarSpriteStyle style)
 {
 	spriteStyle = style;

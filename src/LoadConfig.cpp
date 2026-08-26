@@ -86,6 +86,8 @@ float LoadConfig::getProbeSpeedParsecsPerTick() const { return probeSpeedParsecs
 float LoadConfig::getViewTiltDegrees() const { return viewTiltDegrees; }
 float LoadConfig::getViewDepthParsecs() const { return viewDepthParsecs; }
 const std::string &LoadConfig::getStarSpriteStyle() const { return starSpriteStyle; }
+const std::string &LoadConfig::getDisplayMode() const { return displayMode; }
+bool LoadConfig::getVerticalSync() const { return verticalSync; }
 float LoadConfig::getZoomMinPixelsPerParsec() const { return zoomMinPixelsPerParsec; }
 float LoadConfig::getZoomMaxPixelsPerParsec() const { return zoomMaxPixelsPerParsec; }
 
@@ -128,6 +130,8 @@ void LoadConfig::loadFromFile()
 		readNumber(config, "zoomMinPixelsPerParsec", zoomMinPixelsPerParsec);
 		readNumber(config, "zoomMaxPixelsPerParsec", zoomMaxPixelsPerParsec);
 		readString(config, "starSpriteStyle", starSpriteStyle);
+		readString(config, "displayMode", displayMode);
+		readBool(config, "verticalSync", verticalSync);
 		readBool(config, "summaryShowPerProbe", summaryShowPerProbe);
 		readBool(config, "summaryShowFooter", summaryShowFooter);
 	}

@@ -2,6 +2,7 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include "DisplayMode.h"
 #include "GalaxyQuadTree.h"
 #include "LoadConfig.h"
 #include "Probe.h"
@@ -30,6 +31,10 @@ private:
 	// Arrow-key panning, polled each frame so held keys move smoothly.
 	void updateCamera(float deltaSeconds);
 	void resetView();
+	// Recreates the window in `mode` and re-derives everything that depends on
+	// its size. Safe to call at any time.
+	void applyDisplayMode(DisplayMode mode);
+	void syncViewportToWindow();
 	std::string cameraHudText() const;
 	void handleEvents();
 	void updateGameState();
@@ -44,6 +49,7 @@ private:
 	SimSettings settings;   // mutable copy the startup screen edits and probes read
 	Projection projection;  // the one world -> screen transform
 
+	DisplayMode displayMode = DisplayMode::BorderlessFullscreen;
 	sf::RenderWindow window;
 	RenderSystem renderSystem;
 
