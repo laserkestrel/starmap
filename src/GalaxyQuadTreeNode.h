@@ -38,6 +38,8 @@ struct GalaxyQuadTreeNode
 
 	const GalaxyQuadTreeNode *getChild(int index) const;
 	bool insert(size_t starIndex);
+	// Appends the indices of every star inside `area` to `out`.
+	void queryRange(const sf::FloatRect &area, std::vector<size_t> &out) const;
 	void split();
 	void setStarVector(const std::vector<Star> *sv);
 	void debugPrint(int indentDepth = 0) const;

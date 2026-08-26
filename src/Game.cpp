@@ -10,6 +10,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <sstream>
 #include <thread>
 
 namespace
@@ -19,12 +20,18 @@ namespace
 	// A little slack so a star sitting exactly on the maximum extent is still
 	// inside the tree -- sf::FloatRect::contains treats the far edge as outside.
 	const float BOUNDS_PADDING_PARSECS = 1.0f;
+
+	// Camera feel. Panning is in screen pixels per second so it covers the same
+	// visual distance whatever the zoom; the world distance follows from the scale.
+	const float PAN_PIXELS_PER_SECOND = 700.0f;
+	const float PAN_FAST_MULTIPLIER = 4.0f; // hold Shift
+	const float ZOOM_STEP = 1.15f;          // per mouse-wheel notch
 } // namespace
 
 Game::Game(const LoadConfig &config)
 	: config(config),
 	  window(sf::VideoMode(config.getWindowWidth(), config.getWindowHeight()), "Star Map"),
-	  renderSystem(window, projection)
+	  renderSystem(window, projection, starSpriteStyleFromString(config.getStarSpriteStyle()))
 {
 	settings.probeSearchRadiusParsecs = config.getProbeSearchRadiusParsecs();
 	settings.probeSpeedParsecsPerTick = config.getProbeSpeedParsecsPerTick();
@@ -35,7 +42,8 @@ Game::Game(const LoadConfig &config)
 	projection.setPixelsPerParsec(static_cast<float>(config.getWindowWidth()) / scaleFactor);
 	projection.setTiltDegrees(config.getViewTiltDegrees());
 	projection.setViewDepthParsecs(config.getViewDepthParsecs());
-	projection.setCentre(sf::Vector2f(config.getWindowWidth() / 2.0f, config.getWindowHeight() / 2.0f));
+	projection.setScreenCentre(sf::Vector2f(config.getWindowWidth() / 2.0f, config.getWindowHeight() / 2.0f));
+	projection.setWorldCentre(sf::Vector2f(0.0f, 0.0f)); // start looking at Sol
 
 	LoadCSVData dataLoader;
 	galaxyVector = dataLoader.loadStarsFromCsv("./content/hygdata_v40.csv", config);
@@ -78,8 +86,6 @@ Game::Game(const LoadConfig &config)
 	}
 	std::cout << "." << std::endl;
 
-	renderSystem.initializeStarsTexture(galaxyVector);
-
 	// The first probe starts at Sol, which is the origin of world space.
 	Probe firstProbe("SOL-SOL-AAA", 0.0f, 0.0f, 0.0f, settings.probeSpeedParsecsPerTick, *quadTree, settings);
 	firstProbe.setMode(ProbeMode::Seek);
@@ -118,24 +124,24 @@ sf::FloatRect Game::computeCatalogueBounds() const
 void Game::initializeKeyBindings()
 {
 	keyBindings[sf::Keyboard::Escape] = [this]() { window.close(); };
-	// Only the toggles that change the starfield rebuild its texture. F2 flips
-	// probe labels, which has nothing to do with the stars.
-	keyBindings[sf::Keyboard::F1] = [this]() {
-		renderSystem.toggleTextLabelsStars();
-		renderSystem.initializeStarsTexture(galaxyVector);
-	};
+	// The starfield is drawn fresh every frame now, so these are all instant --
+	// none of them has to rebuild anything.
+	keyBindings[sf::Keyboard::F1] = [this]() { renderSystem.toggleTextLabelsStars(); };
 	keyBindings[sf::Keyboard::F2] = [this]() { renderSystem.toggleTextLabelsProbes(); };
 	keyBindings[sf::Keyboard::F3] = [this]() { renderSystem.toggleProbeTrails(); };
-	keyBindings[sf::Keyboard::F4] = [this]() {
-		renderSystem.toggleStarStalks();
-		renderSystem.initializeStarsTexture(galaxyVector);
+	keyBindings[sf::Keyboard::F4] = [this]() { renderSystem.toggleStarStalks(); };
+	keyBindings[sf::Keyboard::F5] = [this]() {
+		const StarSpriteStyle style = renderSystem.cycleSpriteStyle();
+		std::cout << "Star sprite: " << starSpriteStyleName(style) << std::endl;
 	};
 	keyBindings[sf::Keyboard::F12] = [this]() { renderSystem.toggleDebugGraphics(); };
+	keyBindings[sf::Keyboard::Home] = [this]() { resetView(); };
 }
 
 void Game::runStartupScreen()
 {
 	bool started = false;
+	sf::Clock startupClock;
 	while (!started && window.isOpen())
 	{
 		sf::Event event;
@@ -197,6 +203,14 @@ void Game::runStartupScreen()
 					value.pop_back();
 				}
 			}
+			else if (event.type == sf::Event::MouseWheelScrolled)
+			{
+				const sf::Vector2f anchor(static_cast<float>(event.mouseWheelScroll.x),
+										  static_cast<float>(event.mouseWheelScroll.y));
+				const float factor = (event.mouseWheelScroll.delta > 0) ? ZOOM_STEP : (1.0f / ZOOM_STEP);
+				projection.zoomAbout(anchor, factor,
+									 config.getZoomMinPixelsPerParsec(), config.getZoomMaxPixelsPerParsec());
+			}
 			else if (event.type == sf::Event::MouseButtonPressed)
 			{
 				started = true;
@@ -209,13 +223,13 @@ void Game::runStartupScreen()
 			caretClock.restart();
 		}
 
-		window.clear();
-		window.draw(sf::Sprite(renderSystem.getStarsTexture()));
+		updateCamera(startupClock.restart().asSeconds());
+
+		renderSystem.renderStarfield(galaxyVector, *quadTree);
 		renderSystem.renderParameterList(editableParams, focusedParamIndex, caretVisible);
+		renderSystem.renderHud(cameraHudText());
 		renderSystem.calculateAndDisplayFPS();
 		window.display();
-
-		sf::sleep(sf::milliseconds(50));
 	}
 
 	// Apply BOTH edited values. Previously only editableParams[0] was read back,
@@ -245,6 +259,7 @@ void Game::run()
 		const sf::Time elapsed = clock.restart();
 
 		handleEvents();
+		updateCamera(elapsed.asSeconds());
 		updateGameState();
 		render();
 		++iteration;
@@ -262,11 +277,14 @@ void Game::run()
 	std::cout << "Simulation took " << simulationTimeInSeconds << " seconds." << std::endl;
 	generateSummary();
 
+	// Keep the map interactive after the simulation ends -- pan and zoom still work.
+	sf::Clock viewClock;
 	while (window.isOpen())
 	{
 		handleEvents();
+		updateCamera(viewClock.restart().asSeconds());
 		render();
-		sf::sleep(sf::milliseconds(200));
+		sf::sleep(sf::milliseconds(16));
 	}
 }
 
@@ -287,7 +305,63 @@ void Game::handleEvents()
 				it->second();
 			}
 		}
+		else if (event.type == sf::Event::MouseWheelScrolled)
+		{
+			// Zoom about the cursor, so whatever is under the pointer stays put.
+			const sf::Vector2f anchor(static_cast<float>(event.mouseWheelScroll.x),
+									  static_cast<float>(event.mouseWheelScroll.y));
+			const float factor = (event.mouseWheelScroll.delta > 0) ? ZOOM_STEP : (1.0f / ZOOM_STEP);
+			projection.zoomAbout(anchor, factor,
+								 config.getZoomMinPixelsPerParsec(), config.getZoomMaxPixelsPerParsec());
+		}
 	}
+}
+
+void Game::updateCamera(float deltaSeconds)
+{
+	if (!window.hasFocus())
+	{
+		return;
+	}
+
+	float dx = 0.0f, dy = 0.0f;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))  dx -= 1.0f;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) dx += 1.0f;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))    dy -= 1.0f;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))  dy += 1.0f;
+	if (dx == 0.0f && dy == 0.0f)
+	{
+		return;
+	}
+
+	float speed = PAN_PIXELS_PER_SECOND * deltaSeconds;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
+	{
+		speed *= PAN_FAST_MULTIPLIER;
+	}
+	projection.panByPixels(dx * speed, dy * speed);
+}
+
+void Game::resetView()
+{
+	const float scaleFactor = std::max(1.0f, static_cast<float>(config.getScaleFactor()));
+	projection.setPixelsPerParsec(static_cast<float>(config.getWindowWidth()) / scaleFactor);
+	projection.setWorldCentre(sf::Vector2f(0.0f, 0.0f));
+}
+
+std::string Game::cameraHudText() const
+{
+	const float ppc = projection.getPixelsPerParsec();
+	const float across = static_cast<float>(config.getWindowWidth()) / ppc;
+	const sf::Vector2f c = projection.getWorldCentre();
+
+	std::ostringstream ss;
+	ss.setf(std::ios::fixed);
+	ss.precision(1);
+	ss << "view " << across << " pc across   centre " << c.x << ", " << c.y << " pc"
+	   << "   stars drawn " << renderSystem.getLastVisibleStarCount()
+	   << "   [arrows pan, shift = faster, wheel = zoom, Home = reset, F5 = sprite]";
+	return ss.str();
 }
 
 void Game::updateGameState()
@@ -404,10 +478,10 @@ void Game::updateGameState()
 
 void Game::render()
 {
-	window.clear();
-	window.draw(sf::Sprite(renderSystem.getStarsTexture()));
+	renderSystem.renderStarfield(galaxyVector, *quadTree);
 	renderSystem.renderQuadtree(window, quadTree->getRootNode());
 	renderSystem.renderProbes(probeVector);
+	renderSystem.renderHud(cameraHudText());
 	renderSystem.calculateAndDisplayFPS();
 	window.display();
 }

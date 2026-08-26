@@ -20,6 +20,8 @@ quadtreeSearchSize - Stars per quadtree leaf before it splits. Default 128.<BR>
 probeSearchRadiusParsecs - How far a probe will look for its next unvisited star. In parsecs, not pixels: how far a probe can see no longer depends on your window size.<BR>
 probeSpeedParsecsPerTick - How far a probe moves each simulation tick.<BR>
 probeIndividualReplicationLimit - How many times a single probe may replicate before shutting down.<BR>
+starSpriteStyle - How a star is drawn: "softGlow", "coreHalo", "diffractionSpikes" or "bloomRing". Cycle them live with F5.<BR>
+zoomMinPixelsPerParsec / zoomMaxPixelsPerParsec - Limits for mouse-wheel zoom.<BR>
 summaryShowPerProbe - show console debug info on each probe at end of simulation.<BR>
 summaryShowFooter - show console summary at end of simulation.<BR>
 
@@ -30,6 +32,13 @@ x/y/z columns, with Sol at the origin. The map is an orthographic view of that s
 tilted back from straight-down so the third dimension is visible: each star is drawn
 with a stalk running to the point directly below or above it on the plane, and the
 length of that stalk is its height above or below the plane.
+
+The starfield is drawn fresh every frame rather than baked into a texture, because
+a baked texture cannot pan or zoom. Each star is one textured quad, so the whole
+field is a single draw call, and the quadtree is asked for just the stars that
+could be on screen -- the cost tracks what is visible, not the size of the catalogue.
+Stars are blended additively, which is what makes a crowded field read as light
+rather than paint.
 
 Earlier versions plotted distance against right ascension and discarded declination
 entirely, which inflated a star's distance from the centre by 1/cos(declination) and
@@ -42,7 +51,11 @@ F1 - Toggle Star Names<BR>
 F2 - Toggle Probe Names<BR>
 F3 - Toggle Probe Trails<BR>
 F4 - Toggle Star Stalks (the lines showing height above/below the plane)<BR>
-F12 - Toggle Debug (Shows Quadtree boundaries and FPS)<BR>
+F5 - Cycle the star sprite style<BR>
+F12 - Toggle Debug (Shows Quadtree boundaries, FPS and the number of stars drawn)<BR>
+Home - Reset the view to Sol at the configured zoom<BR>
+Arrow keys - Pan the view (hold Shift to pan faster)<BR>
+Mouse wheel - Zoom, centred on the cursor<BR>
 ESC - Exit Program<BR>
 
 ## Useful build commands

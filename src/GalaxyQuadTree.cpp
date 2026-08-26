@@ -25,6 +25,14 @@ bool GalaxyQuadTree::insert(size_t starIndex)
 	return root->insert(starIndex);
 }
 
+void GalaxyQuadTree::queryRange(const sf::FloatRect &area, std::vector<size_t> &out) const
+{
+	if (root)
+	{
+		root->queryRange(area, out);
+	}
+}
+
 void GalaxyQuadTree::debugPrint() const
 {
 	if (root)

@@ -10,6 +10,9 @@
   "quadtreeSearchSize": 128,
   "viewTiltDegrees": 75,
   "viewDepthParsecs": 8,
+  "starSpriteStyle": "coreHalo",
+  "zoomMinPixelsPerParsec": 0.5,
+  "zoomMaxPixelsPerParsec": 4000,
   "font": {
     "file": "./content/Oxygen-Light.ttf",
     "size": 12

@@ -28,6 +28,11 @@ public:
 	float getViewTiltDegrees() const;
 	// Half-thickness of the slab the view covers, above and below the plane.
 	float getViewDepthParsecs() const;
+	// Star sprite: "softGlow", "coreHalo", "diffractionSpikes" or "bloomRing".
+	const std::string &getStarSpriteStyle() const;
+	// Zoom limits, in pixels per parsec.
+	float getZoomMinPixelsPerParsec() const;
+	float getZoomMaxPixelsPerParsec() const;
 
 	void loadFromFile();
 
@@ -51,6 +56,9 @@ private:
 	float probeSpeedParsecsPerTick = 0.25f;
 	float viewTiltDegrees = 75.0f;
 	float viewDepthParsecs = 12.0f;
+	std::string starSpriteStyle = "coreHalo";
+	float zoomMinPixelsPerParsec = 0.5f;
+	float zoomMaxPixelsPerParsec = 4000.0f;
 
 	LoadConfig(const LoadConfig &) = delete;
 	LoadConfig &operator=(const LoadConfig &) = delete;

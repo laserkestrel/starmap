@@ -1,8 +1,10 @@
 // Star.cpp
 #include "Star.h"
 
-Star::Star(uint32_t ID, float worldX, float worldY, float worldZ, const std::string &name, const sf::Color &colour)
-	: ID(ID), worldX(worldX), worldY(worldY), worldZ(worldZ), name(name), colour(colour), isExplored(false)
+Star::Star(uint32_t ID, float worldX, float worldY, float worldZ, const std::string &name,
+		   const sf::Color &colour, float displayBrightness)
+	: ID(ID), worldX(worldX), worldY(worldY), worldZ(worldZ), name(name), colour(colour),
+	  displayBrightness(displayBrightness), isExplored(false)
 {
 }
 
@@ -10,7 +12,8 @@ Star::Star(uint32_t ID, float worldX, float worldY, float worldZ, const std::str
 // set below has to be written out by hand.
 Star::Star(const Star &other)
 	: ID(other.ID), worldX(other.worldX), worldY(other.worldY), worldZ(other.worldZ),
-	  name(other.name), colour(other.colour), isExplored(other.isExplored.load())
+	  name(other.name), colour(other.colour), displayBrightness(other.displayBrightness),
+	  isExplored(other.isExplored.load())
 {
 }
 
@@ -24,6 +27,7 @@ Star &Star::operator=(const Star &other)
 		worldZ = other.worldZ;
 		name = other.name;
 		colour = other.colour;
+		displayBrightness = other.displayBrightness;
 		isExplored.store(other.isExplored.load());
 	}
 	return *this;
@@ -31,7 +35,8 @@ Star &Star::operator=(const Star &other)
 
 Star::Star(Star &&other) noexcept
 	: ID(other.ID), worldX(other.worldX), worldY(other.worldY), worldZ(other.worldZ),
-	  name(std::move(other.name)), colour(other.colour), isExplored(other.isExplored.load())
+	  name(std::move(other.name)), colour(other.colour), displayBrightness(other.displayBrightness),
+	  isExplored(other.isExplored.load())
 {
 }
 
@@ -45,6 +50,7 @@ Star &Star::operator=(Star &&other) noexcept
 		worldZ = other.worldZ;
 		name = std::move(other.name);
 		colour = other.colour;
+		displayBrightness = other.displayBrightness;
 		isExplored.store(other.isExplored.load());
 	}
 	return *this;
@@ -60,6 +66,7 @@ float Star::getWorldZ() const { return worldZ; }
 const std::string &Star::getName() const { return name; }
 
 sf::Color Star::getColour() const { return colour; }
+float Star::getDisplayBrightness() const { return displayBrightness; }
 bool Star::getIsExplored() const { return isExplored.load(); }
 void Star::setIsExplored(bool newIsExploredValue) { isExplored.store(newIsExploredValue); }
 

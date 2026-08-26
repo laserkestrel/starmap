@@ -69,6 +69,31 @@ bool GalaxyQuadTreeNode::insert(size_t starIndex)
 	return true;
 }
 
+void GalaxyQuadTreeNode::queryRange(const sf::FloatRect &area, std::vector<size_t> &out) const
+{
+	if (starVec == nullptr || !area.intersects(boundary))
+	{
+		return;
+	}
+
+	for (const auto &idx : starIndices)
+	{
+		const Star &star = (*starVec)[idx];
+		if (area.contains(star.getWorldX(), star.getWorldY()))
+		{
+			out.push_back(idx);
+		}
+	}
+
+	for (const auto &child : children)
+	{
+		if (child)
+		{
+			child->queryRange(area, out);
+		}
+	}
+}
+
 void GalaxyQuadTreeNode::split()
 {
 	const float subWidth = boundary.width / 2.0f;

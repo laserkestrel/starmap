@@ -27,6 +27,18 @@ namespace
 
 	// Accepts a real JSON boolean, and still tolerates the legacy "true"/"false"
 	// strings that earlier versions of config.json used.
+	void readString(const json &node, const char *key, std::string &target)
+	{
+		if (node.contains(key) && node[key].is_string())
+		{
+			target = node[key].get<std::string>();
+		}
+		else
+		{
+			std::cerr << "Config: missing or invalid '" << key << "', keeping default " << target << std::endl;
+		}
+	}
+
 	void readBool(const json &node, const char *key, bool &target)
 	{
 		if (node.contains(key))
@@ -73,6 +85,9 @@ float LoadConfig::getProbeSearchRadiusParsecs() const { return probeSearchRadius
 float LoadConfig::getProbeSpeedParsecsPerTick() const { return probeSpeedParsecsPerTick; }
 float LoadConfig::getViewTiltDegrees() const { return viewTiltDegrees; }
 float LoadConfig::getViewDepthParsecs() const { return viewDepthParsecs; }
+const std::string &LoadConfig::getStarSpriteStyle() const { return starSpriteStyle; }
+float LoadConfig::getZoomMinPixelsPerParsec() const { return zoomMinPixelsPerParsec; }
+float LoadConfig::getZoomMaxPixelsPerParsec() const { return zoomMaxPixelsPerParsec; }
 
 void LoadConfig::loadFromFile()
 {
@@ -110,6 +125,9 @@ void LoadConfig::loadFromFile()
 		readNumber(config, "probeSpeedParsecsPerTick", probeSpeedParsecsPerTick);
 		readNumber(config, "viewTiltDegrees", viewTiltDegrees);
 		readNumber(config, "viewDepthParsecs", viewDepthParsecs);
+		readNumber(config, "zoomMinPixelsPerParsec", zoomMinPixelsPerParsec);
+		readNumber(config, "zoomMaxPixelsPerParsec", zoomMaxPixelsPerParsec);
+		readString(config, "starSpriteStyle", starSpriteStyle);
 		readBool(config, "summaryShowPerProbe", summaryShowPerProbe);
 		readBool(config, "summaryShowFooter", summaryShowFooter);
 	}

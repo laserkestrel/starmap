@@ -13,7 +13,8 @@
 class Star
 {
 public:
-	Star(uint32_t ID, float worldX, float worldY, float worldZ, const std::string &name, const sf::Color &colour);
+	Star(uint32_t ID, float worldX, float worldY, float worldZ, const std::string &name,
+		 const sf::Color &colour, float displayBrightness);
 	// copy/move support needed because of the atomic member
 	Star(const Star &other);
 	Star &operator=(const Star &other);
@@ -26,6 +27,9 @@ public:
 	float getWorldZ() const;
 	const std::string &getName() const;
 	sf::Color getColour() const;
+	// 0..1, the magnitude-derived brightness already folded into the colour.
+	// The renderer uses it to size the star, since brighter stars read as larger.
+	float getDisplayBrightness() const;
 	bool getIsExplored() const;
 	void setIsExplored(bool newIsExploredValue);
 	// Atomically attempt to mark the star explored. Returns true if this call changed
@@ -39,6 +43,7 @@ private:
 	float worldZ = 0.0f;
 	std::string name;
 	sf::Color colour;
+	float displayBrightness = 1.0f;
 	std::atomic<bool> isExplored;
 };
 

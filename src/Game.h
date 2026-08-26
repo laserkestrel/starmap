@@ -9,6 +9,7 @@
 #include "RenderSystem.h"
 #include "SimSettings.h"
 #include "Star.h"
+#include "StarSprite.h"
 #include <SFML/Graphics.hpp>
 #include <functional>
 #include <memory>
@@ -26,6 +27,10 @@ public:
 
 private:
 	void runStartupScreen();
+	// Arrow-key panning, polled each frame so held keys move smoothly.
+	void updateCamera(float deltaSeconds);
+	void resetView();
+	std::string cameraHudText() const;
 	void handleEvents();
 	void updateGameState();
 	void render();

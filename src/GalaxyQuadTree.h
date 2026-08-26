@@ -23,6 +23,10 @@ public:
 	// tree's world boundary -- callers should check rather than assume.
 	bool insert(size_t starIndex);
 
+	// Every star whose x/y falls inside `area`. Used to draw only what is on
+	// screen instead of walking all 50,000 stars every frame.
+	void queryRange(const sf::FloatRect &area, std::vector<size_t> &out) const;
+
 	const GalaxyQuadTreeNode *getRootNode() const { return root.get(); }
 	const sf::FloatRect &getBoundary() const { return boundary; }
 	void debugPrint() const;

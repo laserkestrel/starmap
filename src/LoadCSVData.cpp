@@ -344,7 +344,8 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 			rawStarColor = spectralTypeToColour(fields[NAME_INDEX15]);
 		}
 
-		const sf::Color adjStarColor = applyBrightness(rawStarColor, displayBrightnessForMagnitude(starAppMagnitude));
+		const float displayBrightness = displayBrightnessForMagnitude(starAppMagnitude);
+		const sf::Color adjStarColor = applyBrightness(rawStarColor, displayBrightness);
 
 		// True 3D position, straight from the catalogue.
 		float worldX = 0.0f, worldY = 0.0f, worldZ = 0.0f;
@@ -363,7 +364,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 			continue; // no usable position; better to skip than to invent one
 		}
 
-		stars.emplace_back(newStarID, worldX, worldY, worldZ, newStarName, adjStarColor);
+		stars.emplace_back(newStarID, worldX, worldY, worldZ, newStarName, adjStarColor, displayBrightness);
 	}
 
 	return stars;
