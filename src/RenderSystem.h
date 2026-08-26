@@ -45,6 +45,11 @@ public:
 	// font and sprite are rebuilt after any display-mode change.
 	void reloadGraphicsResources();
 
+	// How many labels to draw. The brightest visible stars win, so names thin out
+	// gracefully as you zoom out rather than disappearing all at once.
+	void setLabelMaxVisible(size_t limit) { labelMaxVisible = limit; }
+	size_t getLabelMaxVisible() const { return labelMaxVisible; }
+
 	void setSpriteStyle(StarSpriteStyle style);
 	StarSpriteStyle getSpriteStyle() const { return spriteStyle; }
 	StarSpriteStyle cycleSpriteStyle();
@@ -69,6 +74,7 @@ private:
 	// Reused between frames so a moving camera does not reallocate every tick.
 	std::vector<size_t> visibleScratch;
 	std::vector<size_t> visible;
+	std::vector<size_t> labelCandidates;
 	sf::VertexArray gridLines{sf::Lines};
 	sf::VertexArray stalkLines{sf::Lines};
 	sf::VertexArray starQuads{sf::Quads};
@@ -76,6 +82,7 @@ private:
 	sf::VertexArray trailLines{sf::Lines};
 
 	size_t lastVisibleStarCount = 0;
+	size_t labelMaxVisible = 120;
 
 	bool showTextLabelsStars = false;
 	bool showTextLabelsProbes = false;

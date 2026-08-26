@@ -71,7 +71,7 @@ LoadConfig::LoadConfig()
 	loadFromFile();
 }
 
-int LoadConfig::getScaleFactor() const { return scaleFactor; }
+float LoadConfig::getStartingViewRadiusParsecs() const { return startingViewRadiusParsecs; }
 int LoadConfig::getWindowWidth() const { return windowWidth; }
 int LoadConfig::getWindowHeight() const { return windowHeight; }
 int LoadConfig::getSleepTimeMillis() const { return sleepTimeMillis; }
@@ -88,6 +88,7 @@ float LoadConfig::getViewDepthParsecs() const { return viewDepthParsecs; }
 const std::string &LoadConfig::getStarSpriteStyle() const { return starSpriteStyle; }
 const std::string &LoadConfig::getDisplayMode() const { return displayMode; }
 bool LoadConfig::getVerticalSync() const { return verticalSync; }
+int LoadConfig::getStarLabelMaxVisible() const { return starLabelMaxVisible; }
 float LoadConfig::getZoomMinPixelsPerParsec() const { return zoomMinPixelsPerParsec; }
 float LoadConfig::getZoomMaxPixelsPerParsec() const { return zoomMaxPixelsPerParsec; }
 
@@ -105,7 +106,13 @@ void LoadConfig::loadFromFile()
 		json config;
 		file >> config;
 
-		readNumber(config, "scaleFactor", scaleFactor);
+		readNumber(config, "startingViewRadiusParsecs", startingViewRadiusParsecs);
+		if (config.contains("scaleFactor"))
+		{
+			std::cerr << "Config: 'scaleFactor' is no longer used -- it framed the view by window "
+						 "width, which gave wide monitors a shorter view rather than a bigger one. "
+						 "Use 'startingViewRadiusParsecs' instead." << std::endl;
+		}
 
 		if (config.contains("window") && config["window"].is_object())
 		{
@@ -132,6 +139,7 @@ void LoadConfig::loadFromFile()
 		readString(config, "starSpriteStyle", starSpriteStyle);
 		readString(config, "displayMode", displayMode);
 		readBool(config, "verticalSync", verticalSync);
+		readNumber(config, "starLabelMaxVisible", starLabelMaxVisible);
 		readBool(config, "summaryShowPerProbe", summaryShowPerProbe);
 		readBool(config, "summaryShowFooter", summaryShowFooter);
 	}

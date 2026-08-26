@@ -9,7 +9,11 @@ class LoadConfig
 public:
 	static LoadConfig &getInstance();
 
-	int getScaleFactor() const;
+	// Starting zoom, expressed as the radius around Sol guaranteed to be in frame.
+	// Defining it as a radius rather than "parsecs across the width" makes the
+	// opening view the same neighbourhood on any resolution or aspect ratio -- a
+	// wider monitor simply shows more to either side.
+	float getStartingViewRadiusParsecs() const;
 	int getWindowWidth() const;
 	int getWindowHeight() const;
 	int getSleepTimeMillis() const;
@@ -36,6 +40,9 @@ public:
 	// render loop is also the simulation loop -- turning it on slows the sim down
 	// to your refresh rate as well as smoothing the display.
 	bool getVerticalSync() const;
+	// How many star labels to draw at once. The brightest are chosen, so names
+	// thin out as you zoom out instead of vanishing all at once.
+	int getStarLabelMaxVisible() const;
 	// Zoom limits, in pixels per parsec.
 	float getZoomMinPixelsPerParsec() const;
 	float getZoomMaxPixelsPerParsec() const;
@@ -48,7 +55,7 @@ private:
 	// Defaults live here so that a missing config.json, or a missing/invalid key
 	// inside it, degrades to a usable value instead of leaving the member
 	// indeterminate. loadFromFile() only *overwrites* these.
-	int scaleFactor = 50;
+	float startingViewRadiusParsecs = 8.0f;
 	int windowWidth = 1280;
 	int windowHeight = 720;
 	int sleepTimeMillis = 0;
@@ -64,6 +71,7 @@ private:
 	float viewDepthParsecs = 12.0f;
 	std::string starSpriteStyle = "coreHalo";
 	std::string displayMode = "borderlessFullscreen";
+	int starLabelMaxVisible = 120;
 	bool verticalSync = false;
 	float zoomMinPixelsPerParsec = 0.5f;
 	float zoomMaxPixelsPerParsec = 4000.0f;

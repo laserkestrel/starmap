@@ -1,7 +1,8 @@
 {
-  "scaleFactor": 30,
+  "startingViewRadiusParsecs": 8.0,
   "displayMode": "borderlessFullscreen",
   "verticalSync": false,
+  "starLabelMaxVisible": 120,
   "window": {
     "width": 2048,
     "height": 768

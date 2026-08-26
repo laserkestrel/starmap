@@ -40,6 +40,7 @@ Game::Game(const LoadConfig &config)
 	settings.probeIndividualReplicationLimit = config.getprobeIndividualReplicationLimit();
 
 	window.setVerticalSyncEnabled(config.getVerticalSync());
+	renderSystem.setLabelMaxVisible(static_cast<size_t>(std::max(0, config.getStarLabelMaxVisible())));
 	std::cout << "Display: " << displayModeName(displayMode) << " "
 			  << window.getSize().x << "x" << window.getSize().y << std::endl;
 
@@ -363,8 +364,12 @@ void Game::updateCamera(float deltaSeconds)
 
 void Game::resetView()
 {
-	const float scaleFactor = std::max(1.0f, static_cast<float>(config.getScaleFactor()));
-	projection.setPixelsPerParsec(static_cast<float>(window.getSize().x) / scaleFactor);
+	// Fit a sphere of this radius around Sol. A point R parsecs away can be pushed
+	// at most R*ppc from the centre in either screen axis, so the shorter side of
+	// the window is what has to accommodate it.
+	const float radius = std::max(0.001f, config.getStartingViewRadiusParsecs());
+	const float shorterSide = static_cast<float>(std::min(window.getSize().x, window.getSize().y));
+	projection.setPixelsPerParsec(shorterSide / (2.0f * radius));
 	projection.setWorldCentre(sf::Vector2f(0.0f, 0.0f));
 }
 

@@ -30,9 +30,6 @@ namespace
 	const sf::Color BACKGROUND_COLOUR(5, 6, 9);
 
 	const float CULL_MARGIN_PIXELS = 32.0f;
-	// Above this many stars on screen, labels are suppressed -- they would be an
-	// unreadable wall of text and cost a draw call each.
-	const size_t LABEL_LIMIT = 300;
 
 	sf::Color scaleColour(const sf::Color &colour, float factor)
 	{
@@ -223,14 +220,34 @@ void RenderSystem::renderStarfield(const std::vector<Star> &stars, const GalaxyQ
 		renderWindow.draw(starQuads, states);
 	}
 
-	// --- labels, only when the field is sparse enough to read --------------------
-	if (showTextLabelsStars && visible.size() <= LABEL_LIMIT)
+	// --- labels: the brightest few ----------------------------------------------
+	// Labelling everything is unreadable once a few hundred stars are on screen,
+	// and each label is its own draw call since sf::Text cannot be batched. Ranking
+	// by brightness and keeping the top N means the prominent stars stay named at
+	// any zoom and the cost is bounded no matter how far out you go.
+	if (showTextLabelsStars && labelMaxVisible > 0)
 	{
+		labelCandidates.clear();
 		for (size_t idx : visible)
 		{
+			if (!stars[idx].getName().empty())
+			{
+				labelCandidates.push_back(idx);
+			}
+		}
+
+		if (labelCandidates.size() > labelMaxVisible)
+		{
+			std::nth_element(labelCandidates.begin(), labelCandidates.begin() + labelMaxVisible,
+							 labelCandidates.end(), [&stars](size_t a, size_t b) {
+								 return stars[a].getDisplayBrightness() > stars[b].getDisplayBrightness();
+							 });
+			labelCandidates.resize(labelMaxVisible);
+		}
+
+		for (size_t idx : labelCandidates)
+		{
 			const Star &star = stars[idx];
-			if (star.getName().empty())
-				continue;
 			const sf::Vector2f p = projection.project(star.getWorldX(), star.getWorldY(), star.getWorldZ());
 			sf::Text labelText(star.getName(), font, 14);
 			labelText.setPosition(p.x + 9.0f, p.y - 18.0f);
@@ -276,10 +293,13 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 		renderWindow.draw(probeQuads, states);
 	}
 
-	if (showTextLabelsProbes && probes.size() <= LABEL_LIMIT)
+	if (showTextLabelsProbes)
 	{
+		size_t drawn = 0;
 		for (const auto &probe : probes)
 		{
+			if (drawn++ >= labelMaxVisible)
+				break;
 			const sf::Vector2f p = projection.project(probe.getWorldX(), probe.getWorldY(), probe.getWorldZ());
 			sf::Text labelText(probe.getProbeName(), font, 10);
 			labelText.setPosition(p.x - 10.0f, p.y - 10.0f);
