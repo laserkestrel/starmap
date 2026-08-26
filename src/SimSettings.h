@@ -13,4 +13,8 @@ struct SimSettings
 	float probeSearchRadiusParsecs = 8.0f;
 	float probeSpeedParsecsPerTick = 0.25f;
 	int probeIndividualReplicationLimit = 3;
+	// Whether a probe may copy itself at the very first system it reaches, or has to
+	// establish itself there first and wait for the next one. A real lever on the
+	// growth curve: switching it on roughly doubles the exponent.
+	bool replicateOnFirstArrival = false;
 };

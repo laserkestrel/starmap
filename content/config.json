@@ -26,6 +26,7 @@
   "summaryShowPerProbe": false,
   "summaryShowFooter": true,
   "probeIndividualReplicationLimit": 3,
+  "replicateOnFirstArrival": false,
   "probeSearchRadiusParsecs": 8.0,
   "probeSpeedParsecsPerTick": 0.25
 }

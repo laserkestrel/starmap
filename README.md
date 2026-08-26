@@ -24,6 +24,7 @@ quadtreeSearchSize - Stars per quadtree leaf before it splits. Default 128.<BR>
 probeSearchRadiusParsecs - How far a probe will look for its next unvisited star. In parsecs, not pixels: how far a probe can see no longer depends on your window size.<BR>
 probeSpeedParsecsPerTick - How far a probe moves each simulation tick.<BR>
 probeIndividualReplicationLimit - How many times a single probe may replicate before shutting down.<BR>
+replicateOnFirstArrival - Whether a new probe may copy itself at the very first system it reaches, or must establish itself there first and wait for the next one. Roughly doubles the growth exponent: measured over 125 ticks, switching it on took the fleet from 1,266 probes to 24,383 while systems explored went only from 142 to 198. Also on the setup screen.<BR>
 starSpriteStyle - How a star is drawn: "softGlow", "coreHalo", "diffractionSpikes" or "bloomRing". Cycle them live with F5.<BR>
 zoomMinPixelsPerParsec / zoomMaxPixelsPerParsec - Limits for mouse-wheel zoom.<BR>
 summaryShowPerProbe - show console debug info on each probe at end of simulation.<BR>

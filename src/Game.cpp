@@ -39,6 +39,7 @@ Game::Game(const LoadConfig &config)
 	settings.probeSearchRadiusParsecs = config.getProbeSearchRadiusParsecs();
 	settings.probeSpeedParsecsPerTick = config.getProbeSpeedParsecsPerTick();
 	settings.probeIndividualReplicationLimit = config.getprobeIndividualReplicationLimit();
+	settings.replicateOnFirstArrival = config.getReplicateOnFirstArrival();
 	activeMaxProbes = config.getMaxProbes();
 
 	window.setVerticalSyncEnabled(config.getVerticalSync());
@@ -68,6 +69,7 @@ Game::Game(const LoadConfig &config)
 	setupUI.setValue(SetupUI::ViewTilt, config.getViewTiltDegrees());
 	setupUI.setValue(SetupUI::ViewDepth, config.getViewDepthParsecs());
 	setupUI.setSpriteChoice(static_cast<int>(starSpriteStyleFromString(config.getStarSpriteStyle())));
+	setupUI.setReplicateOnFirstArrival(config.getReplicateOnFirstArrival());
 	// The catalogue was loaded at the config size, so record what the slider now
 	// agrees with -- otherwise the first mouse release reloads for no reason.
 	loadedStarLimit = setupUI.intValue(SetupUI::GalaxySize);
@@ -293,6 +295,7 @@ void Game::runStartupScreen()
 	settings.probeSearchRadiusParsecs = setupUI.value(SetupUI::SearchRadius);
 	settings.probeSpeedParsecsPerTick = setupUI.value(SetupUI::ProbeSpeed);
 	settings.probeIndividualReplicationLimit = setupUI.intValue(SetupUI::ReplicationLimit);
+	settings.replicateOnFirstArrival = setupUI.replicateOnFirstArrival();
 	activeMaxProbes = setupUI.intValue(SetupUI::FleetCap);
 	projection.setTiltDegrees(setupUI.value(SetupUI::ViewTilt));
 	projection.setViewDepthParsecs(setupUI.value(SetupUI::ViewDepth));
@@ -309,7 +312,8 @@ void Game::runStartupScreen()
 			  << " pc, replication limit " << settings.probeIndividualReplicationLimit
 			  << ", speed " << settings.probeSpeedParsecsPerTick
 			  << " pc/tick, fleet cap " << activeMaxProbes
-			  << ", " << galaxyVector.size() << " stars." << std::endl;
+			  << ", " << galaxyVector.size() << " stars, replicate-on-first-arrival "
+			  << (settings.replicateOnFirstArrival ? "on" : "off") << "." << std::endl;
 }
 
 void Game::run()

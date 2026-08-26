@@ -114,9 +114,12 @@ void Probe::move()
 			totalDistanceTraveled += distanceToTarget;
 			recordVisit(targetStar, sf::Vector3f(x, y, z));
 
-			if (isNewBorn())
+			const bool firstArrival = isNewBorn();
+			setNewBorn(false);
+
+			if (firstArrival && !settings->replicateOnFirstArrival)
 			{
-				setNewBorn(false);
+				// Establish itself here before it is allowed to build a copy.
 				setMode(ProbeMode::Seek);
 			}
 			else if (replicationCount >= settings->probeIndividualReplicationLimit)
@@ -147,26 +150,11 @@ void Probe::move()
 	}
 	else if (mode == ProbeMode::Seek)
 	{
-		if (isNewBorn() && !trail.empty())
-		{
-			// Drift a short way from the parent in a random 3D direction before
-			// starting to seek, so siblings do not all set off along one line.
-			std::uniform_real_distribution<float> azimuth(0.0f, 2.0f * 3.14159265f);
-			std::uniform_real_distribution<float> cosPolar(-1.0f, 1.0f);
-			std::uniform_real_distribution<float> hop(0.5f, 1.5f); // parsecs
-
-			const float phi = azimuth(rng());
-			const float cosTheta = cosPolar(rng());
-			const float sinTheta = std::sqrt(std::max(0.0f, 1.0f - cosTheta * cosTheta));
-			const float r = hop(rng());
-
-			setTargetPosition(x + r * sinTheta * std::cos(phi),
-							  y + r * sinTheta * std::sin(phi),
-							  z + r * cosTheta);
-			setMode(ProbeMode::Travel);
-			return;
-		}
-
+		// A newborn used to drift to a random point first, to stop siblings all
+		// setting off along the same line. It was guarded on `!trail.empty()`, which
+		// is never true for a child -- a child inherits knowledge, not a trail -- so
+		// it never once executed. The premise was moot anyway: a parent replicates
+		// only once per system, so siblings are never created simultaneously.
 		const Star *nearestStar = findNearestUnvisitedStar(quadTree->getRootNode(),
 														  settings->probeSearchRadiusParsecs);
 		if (nearestStar != nullptr)

@@ -20,7 +20,7 @@ namespace
 	const sf::Color SEG_ON(52, 84, 126);
 
 	const float PANEL_W = 820.0f;
-	const float PANEL_H = 720.0f;
+	const float PANEL_H = 776.0f;
 	const float PAD = 36.0f;
 	const float TRACK_X = 300.0f;   // relative to panel left
 	const float TRACK_W = 340.0f;
@@ -85,6 +85,11 @@ SetupUI::SetupUI()
 	spriteStyle.help = "Purely cosmetic. F5 also cycles these while running.";
 	spriteStyle.options = {"Soft glow", "Core + halo", "Spikes", "Bloom ring"};
 	spriteStyle.selected = 1;
+
+	firstArrival.label = "Replicate at first star";
+	firstArrival.help = "Whether a new probe may copy itself at the very first system it reaches, or must establish itself there first. Roughly doubles the growth exponent.";
+	firstArrival.options = {"No", "Yes"};
+	firstArrival.selected = 0;
 
 	preset.label = "Expedition profile";
 	preset.help = "A starting point. Move any slider and it becomes Custom.";
@@ -170,6 +175,13 @@ void SetupUI::layout(const sf::Vector2u &windowSize)
 		y += ROW_H;
 	}
 
+	firstArrival.boxes.clear();
+	for (size_t i = 0; i < firstArrival.options.size(); ++i)
+	{
+		firstArrival.boxes.push_back(sf::FloatRect(panel.left + TRACK_X + i * 92.0f, y - 4.0f, 86.0f, 26.0f));
+	}
+	y += ROW_H;
+
 	spriteStyle.boxes.clear();
 	for (size_t i = 0; i < spriteStyle.options.size(); ++i)
 	{
@@ -214,6 +226,15 @@ bool SetupUI::onMousePressed(const sf::Vector2f &p)
 		if (spriteStyle.boxes[i].contains(p))
 		{
 			spriteStyle.selected = static_cast<int>(i);
+			return true;
+		}
+	}
+	for (size_t i = 0; i < firstArrival.boxes.size(); ++i)
+	{
+		if (firstArrival.boxes[i].contains(p))
+		{
+			firstArrival.selected = static_cast<int>(i);
+			preset.selected = 3; // Custom
 			return true;
 		}
 	}
@@ -328,6 +349,7 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 		text(format(s.value, s.decimals, s.suffix), s.track.left + s.track.width + 24.0f, s.track.top - 10.0f, 16, VALUE);
 	}
 
+	segments(firstArrival, firstArrival.boxes.empty() ? panel.top : firstArrival.boxes[0].top + 4.0f);
 	segments(spriteStyle, spriteStyle.boxes.empty() ? panel.top : spriteStyle.boxes[0].top + 4.0f);
 
 	sf::RectangleShape rule(sf::Vector2f(panel.width - 2.0f * PAD, 1.0f));

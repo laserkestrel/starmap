@@ -80,6 +80,7 @@ int LoadConfig::getQuadTreeSearchSize() const { return quadtreeSearchSize; }
 bool LoadConfig::getSummaryShowPerProbe() const { return summaryShowPerProbe; }
 bool LoadConfig::getSummaryShowFooter() const { return summaryShowFooter; }
 int LoadConfig::getprobeIndividualReplicationLimit() const { return probeIndividualReplicationLimit; }
+bool LoadConfig::getReplicateOnFirstArrival() const { return replicateOnFirstArrival; }
 float LoadConfig::getProbeSearchRadiusParsecs() const { return probeSearchRadiusParsecs; }
 float LoadConfig::getProbeSpeedParsecsPerTick() const { return probeSpeedParsecsPerTick; }
 float LoadConfig::getViewTiltDegrees() const { return viewTiltDegrees; }
@@ -146,6 +147,7 @@ void LoadConfig::loadFromFile()
 		readNumber(config, "frontierStallTicks", frontierStallTicks);
 		readNumber(config, "maxProbes", maxProbes);
 		readNumber(config, "starLabelMaxVisible", starLabelMaxVisible);
+		readBool(config, "replicateOnFirstArrival", replicateOnFirstArrival);
 		readBool(config, "summaryShowPerProbe", summaryShowPerProbe);
 		readBool(config, "summaryShowFooter", summaryShowFooter);
 	}

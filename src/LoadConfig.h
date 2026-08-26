@@ -22,6 +22,9 @@ public:
 	bool getSummaryShowPerProbe() const;
 	bool getSummaryShowFooter() const;
 	int getprobeIndividualReplicationLimit() const;
+	// May a probe replicate at the first system it reaches, or must it establish
+	// itself there first? A real lever on how fast the fleet grows.
+	bool getReplicateOnFirstArrival() const;
 
 	// World-space settings. The probe search radius and speed used to be in
 	// screen pixels, which tied how far a probe could see to the window size.
@@ -75,6 +78,7 @@ private:
 	bool summaryShowPerProbe = false;
 	bool summaryShowFooter = true;
 	int probeIndividualReplicationLimit = 3;
+	bool replicateOnFirstArrival = false;
 	float probeSearchRadiusParsecs = 8.0f;
 	float probeSpeedParsecsPerTick = 0.25f;
 	float viewTiltDegrees = 75.0f;

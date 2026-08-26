@@ -67,6 +67,8 @@ public:
 	float value(SliderId id) const { return sliders[id].value; }
 	int intValue(SliderId id) const;
 	int spriteChoice() const { return spriteStyle.selected; }
+	bool replicateOnFirstArrival() const { return firstArrival.selected == 1; }
+	void setReplicateOnFirstArrival(bool on) { firstArrival.selected = on ? 1 : 0; }
 	int presetChoice() const { return preset.selected; }
 	void applyPreset(int index);
 	// Seeds a control from config so the screen opens showing what the file says
@@ -80,6 +82,7 @@ private:
 
 	std::vector<Slider> sliders;
 	Segmented spriteStyle;
+	Segmented firstArrival;
 	Segmented preset;
 	sf::FloatRect panel;
 	sf::FloatRect launchButton;
