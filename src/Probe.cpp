@@ -43,10 +43,10 @@ Probe::Probe(const std::string &probeName, float startX, float startY, float sta
 {
 }
 
-std::string Probe::visitedStarSystemsToString() const
+std::string Probe::trailToString() const
 {
 	std::string result;
-	for (const auto &visitedSystem : visitedStarSystems)
+	for (const auto &visitedSystem : trail)
 	{
 		result += "Star ID: " + std::to_string(visitedSystem.starID);
 		result += " at (" + std::to_string(visitedSystem.coordinates.x) + ", " +
@@ -63,10 +63,20 @@ void Probe::setMode(ProbeMode newMode) { mode = newMode; }
 void Probe::setNewBorn(bool status) { newBorn = status; }
 void Probe::setTargetStar(uint32_t starID) { targetStar = starID; }
 
-void Probe::addVisitedStarSystem(uint32_t starID, const sf::Vector3f &coordinates, bool visitedByProbe)
+void Probe::recordVisit(uint32_t starID, const sf::Vector3f &coordinates)
 {
-	visitedStarSystems.push_back(VisitedStarSystem{starID, coordinates, visitedByProbe});
-	visitedStarIDs.insert(starID);
+	trail.push_back(VisitedStarSystem{starID, coordinates});
+	knowledge.learn(starID);
+}
+
+void Probe::recordKnown(uint32_t starID)
+{
+	knowledge.learn(starID);
+}
+
+void Probe::forkKnowledgeInto(Probe &child)
+{
+	knowledge.forkInto(child.knowledge);
 }
 
 const std::string &Probe::getProbeName() const { return probeName; }
@@ -79,7 +89,9 @@ ProbeMode Probe::getMode() const { return mode; }
 bool Probe::isNewBorn() const { return newBorn; }
 float Probe::getTotalDistanceTraveled() const { return totalDistanceTraveled; }
 int Probe::getReplicationCount() const { return replicationCount; }
-const std::vector<VisitedStarSystem> &Probe::getVisitedStarSystems() const { return visitedStarSystems; }
+const std::vector<VisitedStarSystem> &Probe::getTrail() const { return trail; }
+size_t Probe::getKnownSystemCount() const { return knowledge.knownCount(); }
+size_t Probe::getKnowledgeChainDepth() const { return knowledge.chainDepth(); }
 sf::Color Probe::getTrailColor() const { return trailColor; }
 
 void Probe::move()
@@ -93,7 +105,7 @@ void Probe::move()
 			// Close enough to land this tick.
 			setWorldPosition(targetX, targetY, targetZ);
 			totalDistanceTraveled += distanceToTarget;
-			addVisitedStarSystem(targetStar, sf::Vector3f(x, y, z), true);
+			recordVisit(targetStar, sf::Vector3f(x, y, z));
 
 			if (isNewBorn())
 			{
@@ -128,7 +140,7 @@ void Probe::move()
 	}
 	else if (mode == ProbeMode::Seek)
 	{
-		if (isNewBorn() && !visitedStarSystems.empty())
+		if (isNewBorn() && !trail.empty())
 		{
 			// Drift a short way from the parent in a random 3D direction before
 			// starting to seek, so siblings do not all set off along one line.
@@ -230,7 +242,12 @@ const Star *Probe::findNearestUnvisitedStar(const GalaxyQuadTreeNode *node, floa
 	for (const auto &idx : node->starIndices)
 	{
 		const Star &star = (*node->starVec)[idx];
-		if (star.getIsExplored() || hasVisited(star.getID()))
+		// Only this lineage's own knowledge decides. Star::isExplored is a global
+		// flag set the moment ANY probe arrives anywhere, so consulting it here gave
+		// every probe instantaneous galaxy-wide awareness -- which is not something
+		// a probe forty parsecs away could possibly have. It survives purely as an
+		// observer's statistic for the summary.
+		if (knows(star.getID()))
 		{
 			continue;
 		}

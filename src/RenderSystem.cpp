@@ -264,12 +264,12 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 		trailLines.clear();
 		for (const auto &probe : probes)
 		{
-			const auto &visited = probe.getVisitedStarSystems();
+			// The trail is now only where this probe itself went, so every
+			// consecutive pair is a real leg of its journey.
+			const auto &visited = probe.getTrail();
 			const sf::Color pathColor = probe.getTrailColor();
 			for (size_t i = 1; i < visited.size(); ++i)
 			{
-				if (!visited[i].visitedByProbe || !visited[i - 1].visitedByProbe)
-					continue;
 				const auto &a = visited[i - 1].coordinates;
 				const auto &b = visited[i].coordinates;
 				trailLines.append(sf::Vertex(projection.project(a.x, a.y, a.z), pathColor));

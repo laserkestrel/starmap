@@ -98,7 +98,7 @@ Game::Game(const LoadConfig &config)
 	firstProbe.setMode(ProbeMode::Seek);
 	firstProbe.setNewBorn(false);
 	firstProbe.setRandomTrailColor();
-	firstProbe.addVisitedStarSystem(0, sf::Vector3f(0.0f, 0.0f, 0.0f), true);
+	firstProbe.recordVisit(0, sf::Vector3f(0.0f, 0.0f, 0.0f));
 	probeVector.push_back(std::move(firstProbe));
 
 	editableParams.emplace_back("probeSearchRadiusParsecs", std::to_string(settings.probeSearchRadiusParsecs));
@@ -454,11 +454,10 @@ void Game::updateGameState()
 							  settings.probeSpeedParsecsPerTick, *quadTree, settings);
 		replicatedProbe.setRandomTrailColor();
 
-		// The child inherits its parent's knowledge, but not the credit for it.
-		for (const auto &visitedSystem : probe.getVisitedStarSystems())
-		{
-			replicatedProbe.addVisitedStarSystem(visitedSystem.starID, visitedSystem.coordinates, false);
-		}
+		// The child inherits its parent's knowledge, shared by pointer rather than
+		// copied. Copying it was O(everything the ancestry ever saw) per replication,
+		// which is what made memory outrun the probe count.
+		probe.forkKnowledgeInto(replicatedProbe);
 
 		// Tell the child where its parent is headed next, so the two do not both
 		// set off for the same star.
@@ -470,11 +469,7 @@ void Game::updateGameState()
 		const Star *parentNextTarget = probe.findNearestUnvisitedStar(searchRoot, settings.probeSearchRadiusParsecs);
 		if (parentNextTarget != nullptr)
 		{
-			replicatedProbe.addVisitedStarSystem(parentNextTarget->getID(),
-												 sf::Vector3f(parentNextTarget->getWorldX(),
-															  parentNextTarget->getWorldY(),
-															  parentNextTarget->getWorldZ()),
-												 false);
+			replicatedProbe.recordKnown(parentNextTarget->getID());
 		}
 
 		newProbes.push_back(std::move(replicatedProbe));
@@ -486,11 +481,11 @@ void Game::updateGameState()
 	}
 
 	// --- parallel probe updates -------------------------------------------------
-	std::vector<size_t> oldVisitedCounts;
-	oldVisitedCounts.reserve(probeVector.size());
+	std::vector<size_t> oldTrailLengths;
+	oldTrailLengths.reserve(probeVector.size());
 	for (const auto &probe : probeVector)
 	{
-		oldVisitedCounts.push_back(probe.getVisitedStarSystems().size());
+		oldTrailLengths.push_back(probe.getTrail().size());
 	}
 
 	const unsigned int threadCount = std::max(1u, std::thread::hardware_concurrency());
@@ -519,13 +514,14 @@ void Game::updateGameState()
 			w.join();
 	}
 
-	// Mark newly visited stars explored.
-	for (size_t i = 0; i < probeVector.size() && i < oldVisitedCounts.size(); ++i)
+	// Mark newly visited stars explored. This is bookkeeping for the summary only --
+	// no probe reads it, by design.
+	for (size_t i = 0; i < probeVector.size() && i < oldTrailLengths.size(); ++i)
 	{
-		const auto &visited = probeVector[i].getVisitedStarSystems();
-		for (size_t j = oldVisitedCounts[i]; j < visited.size(); ++j)
+		const auto &trail = probeVector[i].getTrail();
+		for (size_t j = oldTrailLengths[i]; j < trail.size(); ++j)
 		{
-			auto it = starIndexMap.find(visited[j].starID);
+			auto it = starIndexMap.find(trail[j].starID);
 			if (it != starIndexMap.end())
 			{
 				galaxyVector[it->second].tryMarkExplored();
@@ -559,12 +555,9 @@ void Game::generateSummary() const
 				std::cout << "- Probe [" << probe.getProbeName() << "] travelled ["
 						  << probe.getTotalDistanceTraveled() << " pc], replicated ["
 						  << probe.getReplicationCount() << "] times, visiting ";
-				for (const auto &visitedSystem : probe.getVisitedStarSystems())
+				for (const auto &visitedSystem : probe.getTrail())
 				{
-					if (visitedSystem.visitedByProbe)
-					{
-						std::cout << "[" << visitedSystem.starID << "];";
-					}
+					std::cout << "[" << visitedSystem.starID << "];";
 				}
 				std::cout << std::endl;
 			}

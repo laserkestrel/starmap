@@ -4,12 +4,12 @@
 
 #include "Star.h"
 #include "GalaxyQuadTree.h"
+#include "Knowledge.h"
 #include "SimSettings.h"
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/System/Vector3.hpp>
 #include <cstdint>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 enum class ProbeMode
@@ -20,13 +20,16 @@ enum class ProbeMode
 	Shutdown
 };
 
-// A probe's own record of a system it knows about. Coordinates are world
-// parsecs, so a trail can be projected through the current view like anything else.
+// One stop on a probe's own journey. Coordinates are world parsecs, so a trail can
+// be projected through the current view like anything else.
+//
+// This is only what THIS probe visited -- inherited knowledge lives in Knowledge and
+// is shared rather than copied. The two were previously conflated in one vector,
+// which is why memory grew faster than the probe count.
 struct VisitedStarSystem
 {
 	uint32_t starID;
 	sf::Vector3f coordinates;
-	bool visitedByProbe; // true = this probe went there, false = inherited from its parent
 };
 
 class Probe
@@ -39,7 +42,7 @@ public:
 	// the implicit move constructor, which forces std::vector<Probe> to *copy* every probe
 	// (including its whole visitedStarSystems history) on each reallocation.
 
-	std::string visitedStarSystemsToString() const;
+	std::string trailToString() const;
 
 	// Setters
 	void setWorldPosition(float x, float y, float z);
@@ -48,7 +51,12 @@ public:
 	void setMode(ProbeMode mode);
 	void setNewBorn(bool status);
 	void setTargetStar(uint32_t starID);
-	void addVisitedStarSystem(uint32_t starID, const sf::Vector3f &coordinates, bool visitedByProbe);
+	// Arrived somewhere: goes on the trail and into this probe's knowledge.
+	void recordVisit(uint32_t starID, const sf::Vector3f &coordinates);
+	// Knows about somewhere without having been there (e.g. a parent's next target).
+	void recordKnown(uint32_t starID);
+	// Hands the child everything known so far, shared rather than copied.
+	void forkKnowledgeInto(Probe &child);
 	void setRandomTrailColor();
 	void setBlackTrailColor();
 
@@ -63,7 +71,9 @@ public:
 	bool isNewBorn() const;
 	float getTotalDistanceTraveled() const;
 	int getReplicationCount() const;
-	const std::vector<VisitedStarSystem> &getVisitedStarSystems() const;
+	const std::vector<VisitedStarSystem> &getTrail() const;
+	size_t getKnownSystemCount() const;
+	size_t getKnowledgeChainDepth() const;
 	sf::Color getTrailColor() const;
 
 	void move();
@@ -75,7 +85,7 @@ public:
 	const GalaxyQuadTreeNode *getCurrentQuadTreeNode() const { return currentQuadTreeNode; }
 
 private:
-	bool hasVisited(uint32_t starID) const { return visitedStarIDs.count(starID) != 0; }
+	bool knows(uint32_t starID) const { return knowledge.knows(starID); }
 
 	std::string probeName;
 	float x = 0.0f;
@@ -88,10 +98,8 @@ private:
 	float speed = 0.0f; // parsecs per tick
 	ProbeMode mode = ProbeMode::Seek;
 
-	std::vector<VisitedStarSystem> visitedStarSystems; // ordered record, used for trails
-	// Same contents keyed for lookup. The search used to scan the vector linearly
-	// for every candidate star, which got slower the longer a probe lived.
-	std::unordered_set<uint32_t> visitedStarIDs;
+	std::vector<VisitedStarSystem> trail; // only where this probe itself went
+	Knowledge knowledge;                  // what it and its ancestors know, shared
 
 	GalaxyQuadTree *quadTree = nullptr;
 	const SimSettings *settings = nullptr;
