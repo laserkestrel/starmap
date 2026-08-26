@@ -94,5 +94,27 @@ if (WIN32)
     )
 endif()
 
+# ---- Runtime content ----
+# The program opens ./content/hygdata_v40.csv, ./content/config.json and
+# ./content/Frontier.ttf relative to its working directory, so the data has to sit
+# beside the executable to be runnable. Copying it here rather than in the CI
+# packaging step means every build gets it -- CI, local, any generator -- and the
+# packaged artifact is runnable without a separate copy step remembering to do it.
+if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.26)
+    set(STARMAP_COPY_DIR_COMMAND copy_directory_if_different)
+else()
+    set(STARMAP_COPY_DIR_COMMAND copy_directory)
+endif()
+
+add_custom_command(
+    TARGET starmap3
+    POST_BUILD
+    COMMENT "Copy ./content next to the executable"
+    COMMAND ${CMAKE_COMMAND} -E ${STARMAP_COPY_DIR_COMMAND}
+        ${CMAKE_CURRENT_LIST_DIR}/content
+        $<TARGET_FILE_DIR:starmap3>/content
+)
+
 # ---- Install rule (optional, but fine) ----
 install(TARGETS starmap3)
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/content/ DESTINATION bin/content)

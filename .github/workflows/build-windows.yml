@@ -19,11 +19,28 @@ jobs:
     - name: Build
       run: cmake --build build --config Release
 
+    # CMake copies ./content next to the executable as a post-build step, so the
+    # build output directory is already a runnable layout. Take all of it rather
+    # than naming individual files, which is how content came to be missing.
     - name: Package executable
       run: |
-        mkdir artifact
-        copy build\bin\Release\starmap3.exe artifact\
-        copy build\bin\Release\*.dll artifact\ || echo "No extra DLLs"
+        New-Item -ItemType Directory -Force -Path artifact | Out-Null
+        Copy-Item build\bin\Release\* artifact\ -Recurse -Force
+
+    # Fail here rather than silently shipping a build that cannot start.
+    - name: Verify the artifact is runnable
+      run: |
+        $required = @(
+          'starmap3.exe',
+          'content\hygdata_v40.csv',
+          'content\config.json',
+          'content\Frontier.ttf'
+        )
+        foreach ($f in $required) {
+          if (-not (Test-Path (Join-Path 'artifact' $f))) { throw "Missing from artifact: $f" }
+        }
+        Get-ChildItem artifact -Recurse -File |
+          Select-Object Name, @{ n = 'MB'; e = { [math]::Round($_.Length / 1MB, 2) } }
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
