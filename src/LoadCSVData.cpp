@@ -204,7 +204,7 @@ sf::Color LoadCSVData::applyBrightness(const sf::Color &colour, float brightness
 					 colour.a);
 }
 
-std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, const LoadConfig &config)
+std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, const LoadConfig &config, int starLimit)
 {
 	std::vector<Star> stars;
 	std::ifstream csvFile(csvFilePath);
@@ -277,7 +277,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		return parseDistance(allRecords[a]) < parseDistance(allRecords[b]);
 	});
 
-	int dataLoaderStarsLimit = config.getLoadStarsLimit();
+	int dataLoaderStarsLimit = (starLimit >= 0) ? starLimit : config.getLoadStarsLimit();
 	size_t limit = indices.size();
 	if (dataLoaderStarsLimit > 0 && static_cast<size_t>(dataLoaderStarsLimit) < limit)
 		limit = static_cast<size_t>(dataLoaderStarsLimit);

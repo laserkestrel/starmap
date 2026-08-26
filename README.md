@@ -33,6 +33,25 @@ coverageTargetPercent - End the run once this share of the catalogue has been re
 frontierStallTicks - End the run if no new furthest system has been reached for this many ticks.<BR>
 maxProbes - Safety ceiling on fleet size. Replication currently costs nothing, so the fleet grows without bound - a 600-star galaxy reached 1.9 million probes in testing. Until something physical bounds it, this stops a run running away.<BR>
 
+# Beginning an expedition
+
+The setup screen is driven entirely by the MOUSE: drag the sliders, click the
+profile and sprite buttons, click LAUNCH (or press Enter). The arrow keys still pan
+the map behind it, so nothing competes for them - the old screen used Up/Down for
+both panning and editing values, which is why they fought.
+
+Each control says what it does and which way it pushes the result, and the line
+above LAUNCH tells you how many systems sit within one hop of Sol at the current
+search radius. If that reads zero, the first probe has nowhere to go.
+
+Expedition profiles are starting points: Survey (short range, barely replicates -
+slow but tidy), Swarm (replicates hard, looks no further than the doorstep), Scout
+(long range, few children - far frontier, thin coverage). Move any slider and the
+profile becomes Custom. Same galaxy, very different scores.
+
+Changing "Stars loaded" re-reads the catalogue, so it waits until you release the
+slider rather than reloading mid-drag.
+
 # Measuring a run
 
 A run now ends on its own and says why: every probe stopped, the coverage target

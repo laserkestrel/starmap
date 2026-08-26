@@ -31,7 +31,6 @@ public:
 
 	void renderProbes(const std::vector<Probe> &probes);
 	void renderSummaryText(const std::string &summary);
-	void renderParameterList(const std::vector<std::pair<std::string, std::string>> &params, int focusedIndex, bool showCaret);
 	void renderQuadtree(sf::RenderWindow &window, const GalaxyQuadTreeNode *node);
 	void renderHud(const std::string &text);
 	// End-of-run debrief, drawn over the live map.
@@ -58,6 +57,8 @@ public:
 	StarSpriteStyle cycleSpriteStyle();
 
 	size_t getLastVisibleStarCount() const { return lastVisibleStarCount; }
+	// The setup screen draws its own controls and needs the loaded font.
+	const sf::Font &getFont() const { return font; }
 
 private:
 	void appendSpriteQuad(sf::VertexArray &target, const sf::Vector2f &centre, float sizePixels, const sf::Color &colour) const;

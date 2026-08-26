@@ -7,6 +7,7 @@
 #include <SFML/System/Time.hpp>
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -38,6 +39,7 @@ Game::Game(const LoadConfig &config)
 	settings.probeSearchRadiusParsecs = config.getProbeSearchRadiusParsecs();
 	settings.probeSpeedParsecsPerTick = config.getProbeSpeedParsecsPerTick();
 	settings.probeIndividualReplicationLimit = config.getprobeIndividualReplicationLimit();
+	activeMaxProbes = config.getMaxProbes();
 
 	window.setVerticalSyncEnabled(config.getVerticalSync());
 	renderSystem.setLabelMaxVisible(static_cast<size_t>(std::max(0, config.getStarLabelMaxVisible())));
@@ -52,8 +54,42 @@ Game::Game(const LoadConfig &config)
 	syncViewportToWindow();
 	resetView();
 
+	loadedStarLimit = config.getLoadStarsLimit();
+	reloadGalaxy(loadedStarLimit);
+
+	// Seed the setup screen from config so the sliders open where the file says,
+	// rather than at hard-coded defaults that would trigger a spurious reload.
+	setupUI.applyPreset(3); // Custom
+	setupUI.setValue(SetupUI::SearchRadius, config.getProbeSearchRadiusParsecs());
+	setupUI.setValue(SetupUI::ReplicationLimit, static_cast<float>(config.getprobeIndividualReplicationLimit()));
+	setupUI.setValue(SetupUI::ProbeSpeed, config.getProbeSpeedParsecsPerTick());
+	setupUI.setValue(SetupUI::FleetCap, static_cast<float>(config.getMaxProbes()));
+	setupUI.setValue(SetupUI::GalaxySize, static_cast<float>(config.getLoadStarsLimit()));
+	setupUI.setValue(SetupUI::ViewTilt, config.getViewTiltDegrees());
+	setupUI.setValue(SetupUI::ViewDepth, config.getViewDepthParsecs());
+	setupUI.setSpriteChoice(static_cast<int>(starSpriteStyleFromString(config.getStarSpriteStyle())));
+	// The catalogue was loaded at the config size, so record what the slider now
+	// agrees with -- otherwise the first mouse release reloads for no reason.
+	loadedStarLimit = setupUI.intValue(SetupUI::GalaxySize);
+}
+
+void Game::seedFirstProbe()
+{
+	probeVector.clear();
+	Probe firstProbe("SOL-SOL-AAA", 0.0f, 0.0f, 0.0f, settings.probeSpeedParsecsPerTick, *quadTree, settings);
+	firstProbe.setMode(ProbeMode::Seek);
+	firstProbe.setNewBorn(false);
+	firstProbe.setRandomTrailColor();
+	firstProbe.recordVisit(0, sf::Vector3f(0.0f, 0.0f, 0.0f));
+	probeVector.push_back(std::move(firstProbe));
+	liveProbeCount = 1;
+	metrics = RunMetrics{};
+}
+
+void Game::reloadGalaxy(int starLimit)
+{
 	LoadCSVData dataLoader;
-	galaxyVector = dataLoader.loadStarsFromCsv("./content/hygdata_v40.csv", config);
+	galaxyVector = dataLoader.loadStarsFromCsv("./content/hygdata_v40.csv", config, starLimit);
 	if (galaxyVector.empty())
 	{
 		std::cerr << "No stars loaded -- check ./content/hygdata_v40.csv" << std::endl;
@@ -65,13 +101,13 @@ Game::Game(const LoadConfig &config)
 
 	Utilities::populateStarData(galaxyVector);
 
+	starIndexMap.clear();
 	starIndexMap.reserve(galaxyVector.size());
 	for (size_t i = 0; i < galaxyVector.size(); ++i)
 	{
 		starIndexMap[galaxyVector[i].getID()] = i;
 	}
 
-	// Quadtree bounded by the data, not the viewport.
 	const sf::FloatRect bounds = computeCatalogueBounds();
 	quadTree = std::make_unique<GalaxyQuadTree>(bounds, config.getQuadTreeSearchSize());
 	quadTree->setStarVector(&galaxyVector);
@@ -93,16 +129,31 @@ Game::Game(const LoadConfig &config)
 	}
 	std::cout << "." << std::endl;
 
-	// The first probe starts at Sol, which is the origin of world space.
-	Probe firstProbe("SOL-SOL-AAA", 0.0f, 0.0f, 0.0f, settings.probeSpeedParsecsPerTick, *quadTree, settings);
-	firstProbe.setMode(ProbeMode::Seek);
-	firstProbe.setNewBorn(false);
-	firstProbe.setRandomTrailColor();
-	firstProbe.recordVisit(0, sf::Vector3f(0.0f, 0.0f, 0.0f));
-	probeVector.push_back(std::move(firstProbe));
+	loadedStarLimit = starLimit;
+	seedFirstProbe();
+}
 
-	editableParams.emplace_back("probeSearchRadiusParsecs", std::to_string(settings.probeSearchRadiusParsecs));
-	editableParams.emplace_back("probeIndividualReplicationLimit", std::to_string(settings.probeIndividualReplicationLimit));
+// How many systems sit within one hop of Sol at the current search radius. If this
+// reads zero the first probe cannot move at all, which is worth knowing before you
+// spend a run finding out.
+std::string Game::reachSummary() const
+{
+	const float radius = setupUI.value(SetupUI::SearchRadius);
+	const float r2 = radius * radius;
+	size_t within = 0;
+	for (const auto &star : galaxyVector)
+	{
+		const float d2 = star.getWorldX() * star.getWorldX() + star.getWorldY() * star.getWorldY() +
+						 star.getWorldZ() * star.getWorldZ();
+		if (d2 > 0.0f && d2 <= r2)
+			++within;
+	}
+	std::ostringstream ss;
+	ss << galaxyVector.size() << " systems loaded    " << within
+	   << " within one hop of Sol at " << std::fixed << std::setprecision(1) << radius << " pc";
+	if (within == 0)
+		ss << "   -- the first probe will have nowhere to go";
+	return ss.str();
 }
 
 sf::FloatRect Game::computeCatalogueBounds() const
@@ -151,6 +202,8 @@ void Game::initializeKeyBindings()
 
 void Game::runStartupScreen()
 {
+	setupUI.layout(window.getSize());
+
 	bool started = false;
 	sf::Clock startupClock;
 	while (!started && window.isOpen())
@@ -162,38 +215,21 @@ void Game::runStartupScreen()
 			{
 				window.close();
 			}
+			else if (event.type == sf::Event::Resized)
+			{
+				syncViewportToWindow();
+				setupUI.layout(window.getSize());
+			}
 			else if (event.type == sf::Event::KeyPressed)
 			{
-				const int count = static_cast<int>(editableParams.size());
 				if (event.key.code == sf::Keyboard::Enter)
 				{
 					started = true;
 				}
-				else if (event.key.code == sf::Keyboard::Tab && count > 0)
-				{
-					focusedParamIndex = event.key.shift ? (focusedParamIndex - 1 + count) % count
-														: (focusedParamIndex + 1) % count;
-				}
-				else if (event.key.code == sf::Keyboard::Up || event.key.code == sf::Keyboard::Down)
-				{
-					const float direction = (event.key.code == sf::Keyboard::Up) ? 1.0f : -1.0f;
-					try
-					{
-						if (focusedParamIndex == 0)
-						{
-							float v = std::stof(editableParams[0].second) + direction * PARAM_STEP_RADIUS;
-							editableParams[0].second = std::to_string(std::max(0.1f, v));
-						}
-						else
-						{
-							int v = std::stoi(editableParams[1].second) + static_cast<int>(direction) * PARAM_STEP_LIMIT;
-							editableParams[1].second = std::to_string(std::max(0, v));
-						}
-					}
-					catch (...) {}
-				}
 				else
 				{
+					// The arrow keys reach the camera, not the controls, so panning
+					// and parameter editing no longer fight over them.
 					auto it = keyBindings.find(event.key.code);
 					if (it != keyBindings.end())
 					{
@@ -201,22 +237,39 @@ void Game::runStartupScreen()
 					}
 				}
 			}
-			else if (event.type == sf::Event::TextEntered)
+			else if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
 			{
-				const unsigned int uni = event.text.unicode;
-				std::string &value = editableParams[focusedParamIndex].second;
-				if ((uni >= '0' && uni <= '9') || uni == '.')
+				const sf::Vector2f p(static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y));
+				if (setupUI.launchClicked(p))
 				{
-					value.push_back(static_cast<char>(uni));
+					started = true;
 				}
-				else if (uni == 8 && !value.empty()) // backspace
+				else if (setupUI.onMousePressed(p))
 				{
-					value.pop_back();
+					// Applied live so the view reacts as you drag.
+					projection.setTiltDegrees(setupUI.value(SetupUI::ViewTilt));
+					projection.setViewDepthParsecs(setupUI.value(SetupUI::ViewDepth));
+					renderSystem.setSpriteStyle(static_cast<StarSpriteStyle>(setupUI.spriteChoice()));
 				}
 			}
-			else if (event.type == sf::Event::Resized)
+			else if (event.type == sf::Event::MouseMoved)
 			{
-				syncViewportToWindow();
+				const sf::Vector2f p(static_cast<float>(event.mouseMove.x), static_cast<float>(event.mouseMove.y));
+				if (setupUI.onMouseMoved(p))
+				{
+					projection.setTiltDegrees(setupUI.value(SetupUI::ViewTilt));
+					projection.setViewDepthParsecs(setupUI.value(SetupUI::ViewDepth));
+				}
+			}
+			else if (event.type == sf::Event::MouseButtonReleased)
+			{
+				setupUI.onMouseReleased();
+				// Reloading the catalogue is slow, so it waits until the drag ends.
+				const int wanted = setupUI.intValue(SetupUI::GalaxySize);
+				if (wanted != loadedStarLimit)
+				{
+					reloadGalaxy(wanted);
+				}
 			}
 			else if (event.type == sf::Event::MouseWheelScrolled)
 			{
@@ -226,36 +279,37 @@ void Game::runStartupScreen()
 				projection.zoomAbout(anchor, factor,
 									 config.getZoomMinPixelsPerParsec(), config.getZoomMaxPixelsPerParsec());
 			}
-			else if (event.type == sf::Event::MouseButtonPressed)
-			{
-				started = true;
-			}
-		}
-
-		if (caretClock.getElapsedTime().asMilliseconds() > 500)
-		{
-			caretVisible = !caretVisible;
-			caretClock.restart();
 		}
 
 		updateCamera(startupClock.restart().asSeconds());
 
 		renderSystem.renderStarfield(galaxyVector, *quadTree);
-		renderSystem.renderParameterList(editableParams, focusedParamIndex, caretVisible);
+		setupUI.draw(window, renderSystem.getFont(), reachSummary());
 		renderSystem.renderHud(cameraHudText());
-		renderSystem.calculateAndDisplayFPS();
 		window.display();
 	}
 
-	// Apply BOTH edited values. Previously only editableParams[0] was read back,
-	// and even that went into a Game member the probes never looked at.
-	try { settings.probeSearchRadiusParsecs = std::max(0.1f, std::stof(editableParams[0].second)); }
-	catch (...) {}
-	try { settings.probeIndividualReplicationLimit = std::max(0, std::stoi(editableParams[1].second)); }
-	catch (...) {}
+	// Everything the sliders decide, applied in one place.
+	settings.probeSearchRadiusParsecs = setupUI.value(SetupUI::SearchRadius);
+	settings.probeSpeedParsecsPerTick = setupUI.value(SetupUI::ProbeSpeed);
+	settings.probeIndividualReplicationLimit = setupUI.intValue(SetupUI::ReplicationLimit);
+	activeMaxProbes = setupUI.intValue(SetupUI::FleetCap);
+	projection.setTiltDegrees(setupUI.value(SetupUI::ViewTilt));
+	projection.setViewDepthParsecs(setupUI.value(SetupUI::ViewDepth));
+	renderSystem.setSpriteStyle(static_cast<StarSpriteStyle>(setupUI.spriteChoice()));
 
-	std::cout << "Starting with search radius " << settings.probeSearchRadiusParsecs
-			  << " pc, replication limit " << settings.probeIndividualReplicationLimit << "." << std::endl;
+	if (setupUI.intValue(SetupUI::GalaxySize) != loadedStarLimit)
+	{
+		reloadGalaxy(setupUI.intValue(SetupUI::GalaxySize));
+	}
+	// The first probe must carry the speed the sliders just chose.
+	seedFirstProbe();
+
+	std::cout << "Launching: search radius " << settings.probeSearchRadiusParsecs
+			  << " pc, replication limit " << settings.probeIndividualReplicationLimit
+			  << ", speed " << settings.probeSpeedParsecsPerTick
+			  << " pc/tick, fleet cap " << activeMaxProbes
+			  << ", " << galaxyVector.size() << " stars." << std::endl;
 }
 
 void Game::run()
@@ -601,7 +655,7 @@ RunEndReason Game::checkForEnd() const
 	if (liveProbeCount == 0)
 		return RunEndReason::AllProbesStopped;
 
-	const int cap = config.getMaxProbes();
+	const int cap = activeMaxProbes;
 	if (cap > 0 && probeVector.size() >= static_cast<size_t>(cap))
 		return RunEndReason::PopulationCap;
 

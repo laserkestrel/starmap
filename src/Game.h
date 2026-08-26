@@ -8,6 +8,7 @@
 #include "Probe.h"
 #include "Projection.h"
 #include "RunMetrics.h"
+#include "SetupUI.h"
 #include "RenderSystem.h"
 #include "SimSettings.h"
 #include "Star.h"
@@ -29,6 +30,11 @@ public:
 
 private:
 	void runStartupScreen();
+	// Re-reads the catalogue at a new size and rebuilds everything that depends on
+	// it. Needed because the setup screen can change how many stars are loaded.
+	void reloadGalaxy(int starLimit);
+	void seedFirstProbe();
+	std::string reachSummary() const;
 	// Arrow-key panning, polled each frame so held keys move smoothly.
 	void updateCamera(float deltaSeconds);
 	void resetView();
@@ -63,10 +69,9 @@ private:
 	// Built after the catalogue is loaded, since its bounds come from the data.
 	std::unique_ptr<GalaxyQuadTree> quadTree;
 
-	std::vector<std::pair<std::string, std::string>> editableParams;
-	int focusedParamIndex = 0;
-	sf::Clock caretClock;
-	bool caretVisible = true;
+	SetupUI setupUI;
+	int loadedStarLimit = 0;
+	int activeMaxProbes = 250000;
 	double simulationTimeInSeconds = 0.0;
 	int lastTicksPerFrame = 0;
 	RunMetrics metrics;

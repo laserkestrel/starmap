@@ -325,47 +325,6 @@ void RenderSystem::renderHud(const std::string &text)
 	renderWindow.draw(hudText);
 }
 
-void RenderSystem::renderParameterList(const std::vector<std::pair<std::string, std::string>> &params, int focusedIndex, bool showCaret)
-{
-	const float startX = 20.f;
-	const float y = 50.f;
-	const float lineHeight = 26.f;
-
-	for (size_t i = 0; i < params.size(); ++i)
-	{
-		sf::Text keyText(params[i].first + ": ", font, 20);
-		keyText.setPosition(startX, y + i * lineHeight);
-		keyText.setFillColor(sf::Color::White);
-
-		sf::Text valueText(params[i].second, font, 20);
-		valueText.setPosition(startX + 300.f, y + i * lineHeight);
-		valueText.setFillColor(sf::Color::White);
-
-		if (static_cast<int>(i) == focusedIndex)
-		{
-			sf::RectangleShape bg(sf::Vector2f(700.f, lineHeight));
-			bg.setPosition(startX - 6.f, y + i * lineHeight - 2.f);
-			bg.setFillColor(sf::Color(64, 64, 64, 160));
-			renderWindow.draw(bg);
-			if (showCaret)
-			{
-				const float caretX = valueText.getPosition().x + valueText.getLocalBounds().width + 4.f;
-				sf::RectangleShape caret(sf::Vector2f(2.f, static_cast<float>(valueText.getCharacterSize())));
-				caret.setPosition(caretX, valueText.getPosition().y);
-				caret.setFillColor(sf::Color::White);
-				renderWindow.draw(caret);
-			}
-		}
-
-		renderWindow.draw(keyText);
-		renderWindow.draw(valueText);
-	}
-
-	sf::Text instr("Tab: Next  Shift+Tab: Prev  Type numbers or use Up/Down  Enter: Start", font, 16);
-	instr.setPosition(startX, y + params.size() * lineHeight + 8.f);
-	instr.setFillColor(sf::Color(200, 200, 200));
-	renderWindow.draw(instr);
-}
 
 void RenderSystem::calculateAndDisplayFPS()
 {

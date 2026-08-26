@@ -14,7 +14,8 @@ public:
 	// Loads stars at their true positions in world space (parsecs). The window is
 	// no longer involved: where a star appears on screen is the Projection's
 	// business, not the loader's.
-	std::vector<Star> loadStarsFromCsv(const std::string &csvFilePath, const LoadConfig &config);
+	// starLimit < 0 means "use the value from config".
+	std::vector<Star> loadStarsFromCsv(const std::string &csvFilePath, const LoadConfig &config, int starLimit = -1);
 
 	// --- Star colour ------------------------------------------------------------
 	// Deliberately public: these are pure functions, so they can be unit tested
