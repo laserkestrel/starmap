@@ -35,8 +35,8 @@ Purpose: Quickly orient an AI coding agent to become productive in this reposito
 - **Platform changes:** Keep platform-specific code in `src/Platform/*`. Prefer adding cross-platform hooks in `Platform.hpp` / `IPlatform.hpp` rather than scattering #ifdefs elsewhere.
 
 - **Debugging & profiling hints from README:**
-  - Check binaries for debug symbols: `nm -C starmap3 | grep ' [BD] '` (Linux/macOS).
-  - Use `valgrind --tool=callgrind ./starmap3` and visualize with `kcachegrind` for hotspots.
+  - Check binaries for debug symbols: `nm -C starmap | grep ' [BD] '` (Linux/macOS).
+  - Use `valgrind --tool=callgrind ./starmap` and visualize with `kcachegrind` for hotspots.
 
 - **When modifying code, include:**
   - A reference to the concrete file(s) you changed (use repo-relative paths).

@@ -175,10 +175,10 @@ ESC - Exit Program<BR>
 ## Useful build commands
 
 How to check if binary contains debug symbols
-nm -C starmap3 | grep ' [BD] '
+nm -C starmap | grep ' [BD] '
 
 Generate a memory profile for the binary. (needs debug symbols)
-valgrind --tool=callgrind ./starmap3 --fn-skip="0x*" --fn-skip="llvm*"
+valgrind --tool=callgrind ./starmap --fn-skip="0x*" --fn-skip="llvm*"
 
 View the output of valgrind
 kcachegrind callgrind.out.<PID>
