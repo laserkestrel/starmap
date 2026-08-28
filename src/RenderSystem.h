@@ -6,6 +6,7 @@
 #include "GalaxyQuadTreeNode.h"
 #include "Probe.h"
 #include "Projection.h"
+#include "HighScores.h"
 #include "RunMetrics.h"
 #include "Star.h"
 #include "StarSprite.h"
@@ -33,8 +34,18 @@ public:
 	void renderSummaryText(const std::string &summary);
 	void renderQuadtree(sf::RenderWindow &window, const GalaxyQuadTreeNode *node);
 	void renderHud(const std::string &text);
-	// End-of-run debrief, drawn over the live map.
-	void renderDebrief(const RunMetrics &metrics);
+	// Where the debrief's buttons ended up, so Game can hit-test them.
+	struct DebriefButtons
+	{
+		sf::FloatRect again;
+		sf::FloatRect close;
+		sf::FloatRect quit;
+	};
+
+	// End-of-run debrief, drawn over the live map. `newRank` is the 1-based place
+	// this run took on the table, or 0 if it did not place.
+	void renderDebrief(const RunMetrics &metrics, const HighScores &scores, int newRank);
+	const DebriefButtons &getDebriefButtons() const { return debriefButtons; }
 	void calculateAndDisplayFPS();
 
 	void toggleTextLabelsStars();
@@ -87,6 +98,7 @@ private:
 
 	size_t lastVisibleStarCount = 0;
 	size_t labelMaxVisible = 120;
+	DebriefButtons debriefButtons;
 
 	bool showTextLabelsStars = false;
 	bool showTextLabelsProbes = false;

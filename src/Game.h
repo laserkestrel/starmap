@@ -7,6 +7,7 @@
 #include "LoadConfig.h"
 #include "Probe.h"
 #include "Projection.h"
+#include "HighScores.h"
 #include "RunMetrics.h"
 #include "SetupUI.h"
 #include "RenderSystem.h"
@@ -48,7 +49,10 @@ private:
 	void render();
 	void finaliseMetrics();
 	RunEndReason checkForEnd() const;
-	void showDebrief();
+	// What the player chose at the end of a run.
+	enum class DebriefChoice { RunAgain, Quit };
+	DebriefChoice showDebrief(int newRank);
+	void runSimulation();
 	// World-space bounding box of the loaded catalogue, used as the quadtree's
 	// boundary. Previously this was the window rectangle, which is why almost
 	// every star fell outside the tree and no probe could ever reach it.
@@ -75,6 +79,8 @@ private:
 	double simulationTimeInSeconds = 0.0;
 	int lastTicksPerFrame = 0;
 	RunMetrics metrics;
+	HighScores highScores;
+	bool debriefVisible = true;
 	size_t liveProbeCount = 1;
 
 	std::unordered_map<sf::Keyboard::Key, std::function<void()>> keyBindings;

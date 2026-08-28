@@ -77,6 +77,13 @@ Game::Game(const LoadConfig &config)
 
 void Game::seedFirstProbe()
 {
+	// Clear what the previous run discovered. Without this a second expedition
+	// starts with the whole catalogue already explored.
+	for (auto &star : galaxyVector)
+	{
+		star.setIsExplored(false);
+	}
+
 	probeVector.clear();
 	Probe firstProbe("SOL-SOL-AAA", 0.0f, 0.0f, 0.0f, settings.probeSpeedParsecsPerTick, *quadTree, settings);
 	firstProbe.setMode(ProbeMode::Seek);
@@ -319,8 +326,41 @@ void Game::runStartupScreen()
 void Game::run()
 {
 	initializeKeyBindings();
-	runStartupScreen();
+	highScores.load();
 
+	// One pass per expedition. The setup screen, the run, then the debrief, which
+	// decides whether we go round again.
+	while (window.isOpen())
+	{
+		runStartupScreen();
+		if (!window.isOpen())
+			break;
+
+		runSimulation();
+		if (!window.isOpen())
+			break;
+
+		finaliseMetrics();
+
+		const HighScoreEntry entry = HighScores::fromRun(
+			metrics, settings.probeSearchRadiusParsecs, settings.probeIndividualReplicationLimit,
+			settings.probeSpeedParsecsPerTick, static_cast<int>(galaxyVector.size()),
+			settings.replicateOnFirstArrival);
+		const int rank = highScores.add(entry);
+		highScores.save();
+		if (rank > 0)
+		{
+			std::cout << "New high score entry at place " << rank << "." << std::endl;
+		}
+
+		debriefVisible = true;
+		if (showDebrief(rank) == DebriefChoice::Quit)
+			break;
+	}
+}
+
+void Game::runSimulation()
+{
 	const auto simulationStartTime = std::chrono::high_resolution_clock::now();
 	const int simulationIterations = config.getSimulationIterations();
 	const int frameBudgetMillis = std::max(1, config.getFrameBudgetMillis());
@@ -332,14 +372,8 @@ void Game::run()
 	// the window redrawing seven times a second, so the whole program looked hung.
 	//
 	// Now each frame spends up to frameBudgetMillis running ticks and then draws
-	// regardless. Early on, when a tick is microseconds, that is hundreds of ticks
-	// per frame and the simulation runs far faster than it used to. Later it falls
-	// to one tick per frame and the simulation slows down -- which it should -- while
-	// input and drawing keep going.
-	//
-	// Honest limit: a frame still cannot be shorter than a single tick, so once one
-	// tick alone exceeds the budget the display is bounded by it. Going beyond that
-	// needs the simulation on its own thread.
+	// regardless. Honest limit: a frame still cannot be shorter than a single tick,
+	// so once one tick alone exceeds the budget the display is bounded by it.
 	RunEndReason endReason = RunEndReason::StillRunning;
 	while (endReason == RunEndReason::StillRunning && window.isOpen())
 	{
@@ -376,8 +410,7 @@ void Game::run()
 	const auto simulationEndTime = std::chrono::high_resolution_clock::now();
 	const std::chrono::duration<double> simulationDuration = simulationEndTime - simulationStartTime;
 	simulationTimeInSeconds = simulationDuration.count();
-	finaliseMetrics();
-	showDebrief();
+	std::cout << "Simulation took " << simulationTimeInSeconds << " seconds." << std::endl;
 }
 
 void Game::handleEvents()
@@ -718,22 +751,79 @@ void Game::finaliseMetrics()
 	}
 }
 
-void Game::showDebrief()
+Game::DebriefChoice Game::showDebrief(int newRank)
 {
-	// The map stays live underneath, so you can still pan and zoom around the
-	// result while reading it.
+	// The map stays live underneath, so you can pan and zoom around the result while
+	// reading it -- and F9 hides the panel entirely to see the map unobstructed.
 	sf::Clock viewClock;
 	while (window.isOpen())
 	{
-		handleEvents();
+		sf::Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == sf::Event::Closed)
+			{
+				window.close();
+			}
+			else if (event.type == sf::Event::Resized)
+			{
+				syncViewportToWindow();
+			}
+			else if (event.type == sf::Event::KeyPressed)
+			{
+				if (event.key.code == sf::Keyboard::F9)
+				{
+					debriefVisible = !debriefVisible;
+				}
+				else
+				{
+					auto it = keyBindings.find(event.key.code);
+					if (it != keyBindings.end())
+					{
+						it->second();
+					}
+				}
+			}
+			else if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+			{
+				const sf::Vector2f p(static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y));
+				if (debriefVisible)
+				{
+					const auto &buttons = renderSystem.getDebriefButtons();
+					if (buttons.again.contains(p))
+						return DebriefChoice::RunAgain;
+					if (buttons.quit.contains(p))
+						return DebriefChoice::Quit;
+					if (buttons.close.contains(p))
+						debriefVisible = false;
+				}
+			}
+			else if (event.type == sf::Event::MouseWheelScrolled)
+			{
+				const sf::Vector2f anchor(static_cast<float>(event.mouseWheelScroll.x),
+										  static_cast<float>(event.mouseWheelScroll.y));
+				const float factor = (event.mouseWheelScroll.delta > 0) ? ZOOM_STEP : (1.0f / ZOOM_STEP);
+				projection.zoomAbout(anchor, factor,
+									 config.getZoomMinPixelsPerParsec(), config.getZoomMaxPixelsPerParsec());
+			}
+		}
+
 		updateCamera(viewClock.restart().asSeconds());
 
 		renderSystem.renderStarfield(galaxyVector, *quadTree);
 		renderSystem.renderQuadtree(window, quadTree->getRootNode());
 		renderSystem.renderProbes(probeVector);
-		renderSystem.renderDebrief(metrics);
-		renderSystem.renderHud(cameraHudText());
+		if (debriefVisible)
+		{
+			renderSystem.renderDebrief(metrics, highScores, newRank);
+			renderSystem.renderHud(cameraHudText());
+		}
+		else
+		{
+			renderSystem.renderHud(cameraHudText() + "   [F9 shows the results again]");
+		}
 		renderSystem.calculateAndDisplayFPS();
 		window.display();
 	}
+	return DebriefChoice::Quit;
 }

@@ -381,13 +381,13 @@ void RenderSystem::renderQuadtree(sf::RenderWindow &window, const GalaxyQuadTree
 	}
 }
 
-void RenderSystem::renderDebrief(const RunMetrics &metrics)
+void RenderSystem::renderDebrief(const RunMetrics &metrics, const HighScores &scores, int newRank)
 {
 	const float width = static_cast<float>(renderWindow.getSize().x);
 	const float height = static_cast<float>(renderWindow.getSize().y);
 
-	const float panelW = 720.0f;
-	const float panelH = 560.0f;
+	const float panelW = 900.0f;
+	const float panelH = 720.0f;
 	const float x = (width - panelW) * 0.5f;
 	const float y = (height - panelH) * 0.5f;
 
@@ -407,6 +407,7 @@ void RenderSystem::renderDebrief(const RunMetrics &metrics)
 	const sf::Color heading(150, 190, 235);
 	const sf::Color label(132, 146, 164);
 	const sf::Color value(228, 232, 238);
+	const sf::Color highlight(240, 208, 130);
 
 	auto text = [&](const std::string &s, float px, float py, unsigned size, const sf::Color &c) {
 		sf::Text t(s, font, size);
@@ -416,65 +417,121 @@ void RenderSystem::renderDebrief(const RunMetrics &metrics)
 	};
 	auto row = [&](const std::string &name, const std::string &val, float py) {
 		text(name, x + 34.0f, py, 16, label);
-		text(val, x + 330.0f, py, 16, value);
+		text(val, x + 300.0f, py, 16, value);
 	};
 	auto num = [](double v, int dp) {
 		std::ostringstream ss;
 		ss << std::fixed << std::setprecision(dp) << v;
 		return ss.str();
 	};
+	auto button = [&](const sf::FloatRect &r, const std::string &caption, bool primary) {
+		sf::RectangleShape b(sf::Vector2f(r.width, r.height));
+		b.setPosition(r.left, r.top);
+		b.setFillColor(primary ? sf::Color(52, 84, 126) : sf::Color(24, 31, 42));
+		b.setOutlineThickness(1.0f);
+		b.setOutlineColor(primary ? heading : sf::Color(70, 92, 120));
+		renderWindow.draw(b);
+		sf::Text t(caption, font, 16);
+		const float tw = t.getLocalBounds().width;
+		t.setPosition(std::floor(r.left + (r.width - tw) * 0.5f), std::floor(r.top + 12.0f));
+		t.setFillColor(primary ? value : label);
+		renderWindow.draw(t);
+	};
 
-	float py = y + 28.0f;
+	float py = y + 26.0f;
 	text("EXPEDITION COMPLETE", x + 34.0f, py, 28, heading);
 	py += 38.0f;
 	text(runEndReasonText(metrics.endReason) + std::string("  -  ") +
 			 std::to_string(metrics.ticks) + " ticks",
 		 x + 34.0f, py, 15, label);
 
-	py += 44.0f;
+	py += 40.0f;
 	text("REACH", x + 34.0f, py, 15, heading);
-	py += 26.0f;
+	py += 24.0f;
 	row("systems reached", std::to_string(metrics.uniqueSystems) + " of " +
 							  std::to_string(metrics.catalogueSize) +
 							  "   (" + num(metrics.coveragePercent(), 2) + "%)", py);
-	py += 24.0f;
+	py += 22.0f;
 	row("frontier", num(metrics.frontierParsecs, 1) + " pc from Sol", py);
-	py += 24.0f;
+	py += 22.0f;
 	row("expansion rate", num(metrics.expansionRatePerThousandTicks(), 2) + " pc / 1000 ticks", py);
 
-	py += 40.0f;
+	py += 32.0f;
 	text("EFFICIENCY", x + 34.0f, py, 15, heading);
-	py += 26.0f;
-	row("efficiency", num(metrics.efficiency(), 3) + "   (1.000 = nothing wasted)", py);
 	py += 24.0f;
+	row("efficiency", num(metrics.efficiency(), 3) + "   (1.000 = nothing wasted)", py);
+	py += 22.0f;
 	row("wasted journeys", std::to_string(metrics.wastedJourneys()) + " of " +
 							   std::to_string(metrics.arrivals) + " arrivals", py);
-	py += 24.0f;
+	py += 22.0f;
 	row("cost per system", num(metrics.parsecsPerDiscovery(), 2) + " pc flown, " +
 							   num(metrics.probesPerDiscovery(), 2) + " probes built", py);
 
-	py += 40.0f;
+	py += 32.0f;
 	text("FLEET", x + 34.0f, py, 15, heading);
-	py += 26.0f;
+	py += 24.0f;
 	row("built / peak / alive", std::to_string(metrics.probesBuilt) + "  /  " +
 									std::to_string(metrics.peakPopulation) + "  /  " +
 									std::to_string(metrics.probesAlive), py);
-	py += 24.0f;
-	row("hit replication limit", std::to_string(metrics.stoppedAtReplicationLimit), py);
-	py += 24.0f;
-	row("nothing within range", std::to_string(metrics.stoppedWithNothingInRange), py);
+	py += 22.0f;
+	row("stopped: limit / stranded", std::to_string(metrics.stoppedAtReplicationLimit) + "  /  " +
+										 std::to_string(metrics.stoppedWithNothingInRange), py);
 
-	py += 44.0f;
+	// --- score, grade, and where it placed --------------------------------------
+	py += 34.0f;
 	sf::RectangleShape rule(sf::Vector2f(panelW - 68.0f, 1.0f));
 	rule.setPosition(x + 34.0f, py);
 	rule.setFillColor(sf::Color(48, 62, 82));
 	renderWindow.draw(rule);
 
-	py += 18.0f;
-	text("SCORE", x + 34.0f, py + 10.0f, 15, heading);
-	text(std::to_string(metrics.score()), x + 330.0f, py, 34, value);
-	text("GRADE", x + panelW - 210.0f, py + 10.0f, 15, heading);
-	text(metrics.grade(), x + panelW - 110.0f, py - 4.0f, 40, heading);
+	py += 14.0f;
+	text("SCORE", x + 34.0f, py + 12.0f, 15, heading);
+	text(std::to_string(metrics.score()), x + 130.0f, py, 32, value);
+	text("GRADE", x + 300.0f, py + 12.0f, 15, heading);
+	text(metrics.grade(), x + 380.0f, py - 4.0f, 36, heading);
+	if (newRank > 0)
+	{
+		text("NEW ENTRY  #" + std::to_string(newRank), x + 470.0f, py + 12.0f, 17, highlight);
+	}
 
-	text("arrows pan   wheel zooms   Esc closes", x + 34.0f, y + panelH - 30.0f, 14, label);
+	// --- the table --------------------------------------------------------------
+	py += 52.0f;
+	text("BEST EXPEDITIONS", x + 34.0f, py, 15, heading);
+	py += 22.0f;
+	text("score   grade   systems   eff.    radius  repl  speed   stars    when",
+		 x + 34.0f, py, 12, sf::Color(92, 104, 120));
+	py += 18.0f;
+
+	const size_t shown = std::min<size_t>(scores.entries().size(), 6);
+	for (size_t i = 0; i < shown; ++i)
+	{
+		const auto &e = scores.entries()[i];
+		const bool isThisRun = (static_cast<int>(i) + 1 == newRank);
+		std::ostringstream line;
+		line << std::left << std::setw(8) << e.score
+			 << std::setw(8) << e.grade
+			 << std::setw(10) << e.systems
+			 << std::setw(8) << std::fixed << std::setprecision(3) << e.efficiency
+			 << std::setw(8) << (num(e.searchRadiusParsecs, 1) + "pc")
+			 << std::setw(6) << e.replicationLimit
+			 << std::setw(8) << num(e.probeSpeed, 2)
+			 << std::setw(9) << e.starsLoaded
+			 << e.when;
+		text(line.str(), x + 34.0f, py, 13, isThisRun ? highlight : label);
+		py += 17.0f;
+	}
+	if (shown == 0)
+	{
+		text("none yet -- this is the first", x + 34.0f, py, 13, label);
+	}
+
+	// --- buttons ----------------------------------------------------------------
+	const float bw = 190.0f, bh = 42.0f, gap = 14.0f;
+	const float by = y + panelH - 62.0f;
+	debriefButtons.again = sf::FloatRect(x + 34.0f, by, bw, bh);
+	debriefButtons.close = sf::FloatRect(x + 34.0f + bw + gap, by, bw, bh);
+	debriefButtons.quit = sf::FloatRect(x + 34.0f + 2.0f * (bw + gap), by, bw, bh);
+	button(debriefButtons.again, "NEW EXPEDITION", true);
+	button(debriefButtons.close, "VIEW MAP  (F9)", false);
+	button(debriefButtons.quit, "QUIT  (Esc)", false);
 }

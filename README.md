@@ -69,6 +69,20 @@ arrivals. 1.000 means no journey was ever wasted. Because probes only know what
 they and their ancestors found, unrelated lineages revisit each other's systems -
 and this is the number that measures how much that costs.
 
+# High scores and running again
+
+The debrief has three buttons. NEW EXPEDITION returns to the setup screen with your
+last settings still in place, so you can change one slider and try again without
+restarting the program. VIEW MAP (also F9) hides the panel so you can pan and zoom
+around the finished map with nothing over the top of it; F9 again brings the panel
+back. QUIT (also Esc) closes the program.
+
+The top twelve runs are kept in `./content/highscores.json`, alongside the config,
+and survive between sessions - delete that file to start the table over. Each entry
+records the parameters that produced it, not just the result, so the table is a log
+of what actually worked rather than a list of numbers with no explanation. A run that
+places is highlighted in the table as NEW ENTRY #n.
+
 # How positions are drawn
 
 Stars are stored at their true positions in parsecs, taken from the catalogue's own
@@ -96,6 +110,7 @@ F2 - Toggle Probe Names<BR>
 F3 - Toggle Probe Trails<BR>
 F4 - Toggle Star Stalks (the lines showing height above/below the plane)<BR>
 F5 - Cycle the star sprite style<BR>
+F9 - At the debrief, hide or show the results panel over the map<BR>
 F12 - Toggle Debug (Shows Quadtree boundaries, FPS and the number of stars drawn)<BR>
 F11 - Toggle between windowed and borderless fullscreen<BR>
 Home - Reset the view to Sol at the configured zoom<BR>

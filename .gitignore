@@ -3,3 +3,7 @@ out
 .cache
 .idea
 .vs
+
+# Written by the program at runtime, next to config.json. Yours, not the repo's --
+# committing it would mean your scores conflicting on every pull.
+content/highscores.json
