@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include "Resources.h"
 
 // Why a run stopped. A simulation that only ends when you press Escape cannot be
 // compared with another one, because the numbers describe an arbitrary moment.
@@ -42,8 +43,17 @@ struct RunMetrics
 	size_t probesAlive = 0;
 	size_t stoppedAtReplicationLimit = 0;
 	size_t stoppedWithNothingInRange = 0;
+	size_t stoppedStranded = 0;     // ran dry -- the new way to fail
 	double wallClockSeconds = 0.0; // reported for interest only, never used in a metric
 	RunEndReason endReason = RunEndReason::StillRunning;
+
+	// --- the resource economy ---
+	bool resourcesEnabled = false;
+	Resources totalMined;            // everything dug out of every system
+	Resources resourcesSpentOnProbes; // what all that building cost
+	long long harvestTicks = 0;      // probe-ticks spent sitting still, mining
+	size_t systemsExhausted = 0;     // systems stripped to nothing
+	double peakFleetShareMining = 0.0; // busiest moment of the mining economy
 
 	// Ticks taken to reach each quarter of the catalogue; -1 if never reached.
 	long long ticksTo25 = -1, ticksTo50 = -1, ticksTo75 = -1;
@@ -58,6 +68,10 @@ struct RunMetrics
 	double parsecsPerDiscovery() const;
 	double probesPerDiscovery() const;
 	double expansionRatePerThousandTicks() const;
+	// Systems reached per 1000 units of everything mined. The resource-economy
+	// counterpart to efficiency: not "did the journey repeat one" but "was the
+	// galaxy's material turned into reach or into more probes".
+	double systemsPerThousandMined() const;
 	// Reach, weighted by how little was squandered getting there.
 	long long score() const;
 	const char *grade() const;

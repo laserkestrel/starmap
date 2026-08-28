@@ -387,7 +387,7 @@ void RenderSystem::renderDebrief(const RunMetrics &metrics, const HighScores &sc
 	const float height = static_cast<float>(renderWindow.getSize().y);
 
 	const float panelW = 900.0f;
-	const float panelH = 720.0f;
+	const float panelH = 820.0f; // + the ECONOMY block
 	const float x = (width - panelW) * 0.5f;
 	const float y = (height - panelH) * 0.5f;
 
@@ -474,8 +474,26 @@ void RenderSystem::renderDebrief(const RunMetrics &metrics, const HighScores &sc
 									std::to_string(metrics.peakPopulation) + "  /  " +
 									std::to_string(metrics.probesAlive), py);
 	py += 22.0f;
-	row("stopped: limit / stranded", std::to_string(metrics.stoppedAtReplicationLimit) + "  /  " +
-										 std::to_string(metrics.stoppedWithNothingInRange), py);
+	row("stopped: limit / no target / dry",
+		std::to_string(metrics.stoppedAtReplicationLimit) + "  /  " +
+			std::to_string(metrics.stoppedWithNothingInRange) + "  /  " +
+			std::to_string(metrics.stoppedStranded), py);
+
+	if (metrics.resourcesEnabled)
+	{
+		py += 32.0f;
+		text("ECONOMY", x + 34.0f, py, 15, heading);
+		py += 24.0f;
+		row("mined  met / vol / fis", num(metrics.totalMined.metals, 0) + "  /  " +
+										 num(metrics.totalMined.volatiles, 0) + "  /  " +
+										 num(metrics.totalMined.fissiles, 0), py);
+		py += 22.0f;
+		row("systems stripped bare", std::to_string(metrics.systemsExhausted) + " of " +
+										 std::to_string(metrics.uniqueSystems) + " reached", py);
+		py += 22.0f;
+		row("yield", num(metrics.systemsPerThousandMined(), 2) + " systems per 1000 mined, " +
+						 std::to_string(metrics.harvestTicks) + " probe-ticks mining", py);
+	}
 
 	// --- score, grade, and where it placed --------------------------------------
 	py += 34.0f;

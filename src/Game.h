@@ -75,6 +75,9 @@ private:
 
 	SetupUI setupUI;
 	int loadedStarLimit = 0;
+	// Richness the current galaxy was built with. Changing it on the setup screen
+	// means re-deriving every star's stocks, so it reloads like a size change does.
+	float loadedRichness = -1.0f;
 	int activeMaxProbes = 250000;
 	double simulationTimeInSeconds = 0.0;
 	int lastTicksPerFrame = 0;

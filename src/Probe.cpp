@@ -101,11 +101,49 @@ size_t Probe::getKnownSystemCount() const { return knowledge.knownCount(); }
 size_t Probe::getKnowledgeChainDepth() const { return knowledge.chainDepth(); }
 sf::Color Probe::getTrailColor() const { return trailColor; }
 
+bool Probe::canAffordReplication() const
+{
+	if (!settings->resourcesEnabled)
+		return true;
+	return cargo.covers(settings->replicationCost);
+}
+
+Resources Probe::payForReplication()
+{
+	if (!settings->resourcesEnabled)
+		return Resources();
+
+	cargo -= settings->replicationCost;
+
+	// The child leaves with a share of what the parent still holds, which is what
+	// stops a newborn stranding on its first hop. It comes out of the parent's tank,
+	// so a probe that keeps replicating fuels each child a little worse than the last.
+	const float share = std::max(0.0f, std::min(1.0f, settings->childFuelShare));
+	const Resources dowry(0.0f, cargo.volatiles * share, 0.0f);
+	cargo.volatiles -= dowry.volatiles;
+	return dowry;
+}
+
 void Probe::move()
 {
 	if (mode == ProbeMode::Travel)
 	{
 		const float distanceToTarget = distance3D(targetX, targetY, targetZ, x, y, z);
+		const float step = std::min(speed, distanceToTarget);
+
+		// Burn first, then move. A probe that cannot pay for this tick's step is
+		// adrift between stars: nothing to mine out there, so this is terminal.
+		if (settings->resourcesEnabled)
+		{
+			const float fuelForStep = step * settings->fuelPerParsec;
+			if (cargo.volatiles < fuelForStep)
+			{
+				cargo.volatiles = 0.0f;
+				shutdown(ShutdownReason::StrandedNoFuel);
+				return;
+			}
+			cargo.volatiles -= fuelForStep;
+		}
 
 		if (distanceToTarget <= speed)
 		{
@@ -113,14 +151,15 @@ void Probe::move()
 			setWorldPosition(targetX, targetY, targetZ);
 			totalDistanceTraveled += distanceToTarget;
 			recordVisit(targetStar, sf::Vector3f(x, y, z));
-
-			const bool firstArrival = isNewBorn();
 			setNewBorn(false);
 
-			if (firstArrival && !settings->replicateOnFirstArrival)
+			if (settings->resourcesEnabled)
 			{
-				// Establish itself here before it is allowed to build a copy.
-				setMode(ProbeMode::Seek);
+				// Mining takes time, so arriving is the start of the work rather
+				// than the end of it.
+				currentSystem = nullptr; // set by Game, which owns the star vector
+				harvestTicksHere = 0;
+				setMode(ProbeMode::Harvest);
 			}
 			else if (replicationCount >= settings->probeIndividualReplicationLimit)
 			{
@@ -141,6 +180,48 @@ void Probe::move()
 			totalDistanceTraveled += speed;
 		}
 	}
+	else if (mode == ProbeMode::Harvest)
+	{
+		// Sitting at a system, extracting. This is the tick cost that turns a
+		// wasted journey into a genuinely expensive mistake.
+		const float rate = std::max(0.0f, settings->harvestPerTick);
+		Resources got;
+		if (currentSystem != nullptr)
+		{
+			got = currentSystem->extract(Resources(rate, rate, rate));
+			cargo += got;
+			totalMined += got;
+		}
+		++harvestTicksHere;
+		++totalHarvestTicks;
+
+		const bool systemDry = got.empty();
+		const bool stayedTooLong = harvestTicksHere >= settings->maxHarvestTicks;
+		const bool haveEnough = cargo.covers(settings->replicationCost);
+
+		if (haveEnough || systemDry || stayedTooLong)
+		{
+			const bool firstArrival = trail.size() <= 1;
+			if (firstArrival && !settings->replicateOnFirstArrival)
+			{
+				setMode(ProbeMode::Seek);
+			}
+			else if (haveEnough && replicationCount < settings->probeIndividualReplicationLimit)
+			{
+				setMode(ProbeMode::Replicate);
+			}
+			else if (replicationCount >= settings->probeIndividualReplicationLimit)
+			{
+				shutdown(ShutdownReason::ReplicationLimitReached);
+			}
+			else
+			{
+				// Could not afford a copy here. Still useful as a scout -- move on
+				// and try to make up the shortfall at the next system.
+				setMode(ProbeMode::Seek);
+			}
+		}
+	}
 	else if (mode == ProbeMode::Replicate)
 	{
 		// The actual replication happens in Game::updateGameState, which can add
@@ -157,17 +238,39 @@ void Probe::move()
 		// only once per system, so siblings are never created simultaneously.
 		const Star *nearestStar = findNearestUnvisitedStar(quadTree->getRootNode(),
 														  settings->probeSearchRadiusParsecs);
-		if (nearestStar != nullptr)
-		{
-			setTargetPosition(nearestStar->getWorldX(), nearestStar->getWorldY(), nearestStar->getWorldZ());
-			setTargetStar(nearestStar->getID());
-			setMode(ProbeMode::Travel);
-		}
-		else
+		if (nearestStar == nullptr)
 		{
 			DEBUG_LOG("Probe found no unvisited star within its search radius.");
 			shutdown(ShutdownReason::NothingWithinRange);
+			return;
 		}
+
+		if (settings->resourcesEnabled)
+		{
+			// Can it actually pay for the trip? A probe that sets off without the
+			// fuel to arrive simply dies further from home, which helps nobody.
+			const float tripDistance = distance3D(nearestStar->getWorldX(), nearestStar->getWorldY(),
+												  nearestStar->getWorldZ(), x, y, z);
+			const float fuelNeeded = tripDistance * settings->fuelPerParsec * settings->fuelSafetyMargin;
+
+			if (cargo.volatiles < fuelNeeded)
+			{
+				// Try to top up where it stands, provided there is anything left here
+				// and it has not already given this system its allotted time.
+				if (currentSystem != nullptr && !currentSystem->isExhausted() &&
+					harvestTicksHere < settings->maxHarvestTicks)
+				{
+					setMode(ProbeMode::Harvest);
+					return;
+				}
+				shutdown(ShutdownReason::StrandedNoFuel);
+				return;
+			}
+		}
+
+		setTargetPosition(nearestStar->getWorldX(), nearestStar->getWorldY(), nearestStar->getWorldZ());
+		setTargetStar(nearestStar->getID());
+		setMode(ProbeMode::Travel);
 	}
 	else if (mode == ProbeMode::Shutdown)
 	{
@@ -177,6 +280,11 @@ void Probe::move()
 	{
 		std::cout << "Unknown mode.\n";
 	}
+}
+
+void Probe::setCurrentSystem(const Star *star)
+{
+	currentSystem = star;
 }
 
 void Probe::setBlackTrailColor()

@@ -58,21 +58,47 @@ double RunMetrics::expansionRatePerThousandTicks() const
 	return frontierParsecs / static_cast<double>(ticks) * 1000.0;
 }
 
+double RunMetrics::systemsPerThousandMined() const
+{
+	const double mined = static_cast<double>(totalMined.total());
+	if (mined <= 0.0)
+		return 0.0;
+	return 1000.0 * static_cast<double>(uniqueSystems) / mined;
+}
+
 long long RunMetrics::score() const
 {
-	// Systems discovered, scaled by the share of journeys that were not wasted.
-	// Reaching a lot by flailing scores no better than reaching less, cleanly.
-	return static_cast<long long>(std::llround(static_cast<double>(uniqueSystems) * efficiency()));
+	// Half the credit for reaching a system at all, half for not having wasted a
+	// journey doing it.
+	//
+	// This used to be reach x efficiency outright, which sounds fair and is not: it
+	// made efficiency the whole game. Measured over a 2,000 star catalogue, a fleet
+	// held to one copy each reached 38% of it with a perfect 1.00 -- every probe
+	// dies young, so lineages never overlap -- while a fleet allowed two copies
+	// reached 92% at 0.10. The old formula scored those 767 against 187, which says
+	// the sprawling run was four times worse despite reaching two and a half times
+	// as much of the galaxy. Nobody would choose to sprawl, so there was no decision
+	// left to make. Floored at a half, both are playable and the better choice
+	// genuinely depends on the galaxy -- careful wins in a small one it can finish,
+	// aggressive wins in a large one it cannot.
+	const double weighted = static_cast<double>(uniqueSystems) * (0.5 + 0.5 * efficiency());
+	return static_cast<long long>(std::llround(weighted));
 }
 
 const char *RunMetrics::grade() const
 {
-	const double e = efficiency();
-	const double c = coveragePercent();
-	if (e >= 0.85 && c >= 20.0) return "A";
-	if (e >= 0.70 && c >= 10.0) return "B";
-	if (e >= 0.55 && c >= 4.0)  return "C";
-	if (e >= 0.40)              return "D";
+	// Graded against the perfect run for THIS catalogue -- every system reached, no
+	// journey wasted -- so a grade means the same thing whether the galaxy holds 400
+	// stars or 50,000. Absolute thresholds could not do that: any fixed coverage
+	// figure is trivial in a small catalogue and unreachable in a large one.
+	if (catalogueSize == 0)
+		return "E";
+
+	const double achieved = static_cast<double>(score()) / static_cast<double>(catalogueSize);
+	if (achieved >= 0.80) return "A";
+	if (achieved >= 0.60) return "B";
+	if (achieved >= 0.40) return "C";
+	if (achieved >= 0.20) return "D";
 	return "E";
 }
 
@@ -105,7 +131,19 @@ void RunMetrics::printToConsole() const
 			  << "  peak population          " << peakPopulation << "\n"
 			  << "  still alive at the end   " << probesAlive << "\n"
 			  << "  stopped: replication limit reached  " << stoppedAtReplicationLimit << "\n"
-			  << "           nothing within range       " << stoppedWithNothingInRange << "\n";
+			  << "           nothing within range       " << stoppedWithNothingInRange << "\n"
+			  << "           stranded, out of fuel      " << stoppedStranded << "\n";
+
+	if (resourcesEnabled)
+	{
+		std::cout << "ECONOMY\n"
+				  << "  mined  metals/volatiles/fissiles  " << totalMined.metals << " / "
+				  << totalMined.volatiles << " / " << totalMined.fissiles << "\n"
+				  << "  spent building probes             " << resourcesSpentOnProbes.total() << "\n"
+				  << "  systems stripped bare             " << systemsExhausted << "\n"
+				  << "  probe-ticks spent mining          " << harvestTicks << "\n"
+				  << "  systems per 1000 mined            " << systemsPerThousandMined() << "\n";
+	}
 
 	std::cout << "RESULT\n"
 			  << "  score                    " << score() << "\n"

@@ -20,7 +20,9 @@ namespace
 	const sf::Color SEG_ON(52, 84, 126);
 
 	const float PANEL_W = 820.0f;
-	const float PANEL_H = 776.0f;
+	// Four more rows than the original layout: three economy sliders and the
+	// on/off control for them.
+	const float PANEL_H = 1000.0f;
 	const float PAD = 36.0f;
 	const float TRACK_X = 300.0f;   // relative to panel left
 	const float TRACK_W = 340.0f;
@@ -67,13 +69,22 @@ SetupUI::SetupUI()
 						   "Parsecs covered per tick. Faster reaches more, but replicates just as often on the way.",
 						   " pc/tick", 0.05f, 2.0f, 0.25f, 2, {}, {}};
 	sliders[FleetCap] = {"Fleet cap",
-						 "Safety ceiling. Replication is free, so without this the fleet grows until the machine gives up.",
+						 "Safety ceiling, and a backstop rather than a rule -- with the economy on, scarcity should be what ends a run.",
 						 "", 0.0f, 0.0f, 250000.0f, 0,
 						 {5000.f, 10000.f, 25000.f, 50000.f, 100000.f, 250000.f, 500000.f, 1000000.f}, {}};
 	sliders[GalaxySize] = {"Stars loaded",
 						   "Size of the catalogue, nearest first. Changing this reloads the data, which takes a moment.",
 						   "", 0.0f, 0.0f, 50000.0f, 0,
 						   {500.f, 1000.f, 2500.f, 5000.f, 10000.f, 25000.f, 50000.f}, {}};
+	sliders[SystemRichness] = {"System richness",
+							   "Material in an average system. Abundance breeds a bigger fleet, and a bigger fleet wastes more journeys: doubling this halved efficiency in testing.",
+							   " units", 25.0f, 400.0f, 100.0f, 0, {}, {}};
+	sliders[ProbeBuildCost] = {"Probe build cost",
+							   "What one copy costs, against the standard bill of materials. Dearer probes mean a smaller fleet that lives longer and treads on itself less.",
+							   "x", 0.25f, 3.0f, 1.0f, 2, {}, {}};
+	sliders[FuelBurn] = {"Fuel burn",
+						 "Volatiles spent per parsec flown. This is what makes distance dangerous -- a probe that runs dry between stars is simply lost.",
+						 " /pc", 0.25f, 6.0f, 1.5f, 2, {}, {}};
 	sliders[ViewTilt] = {"View tilt",
 						 "90 looks straight down and hides height entirely; lower leans back so the stalks become readable.",
 						 " deg", 30.0f, 90.0f, 75.0f, 0, {}, {}};
@@ -90,6 +101,11 @@ SetupUI::SetupUI()
 	firstArrival.help = "Whether a new probe may copy itself at the very first system it reaches, or must establish itself there first. Roughly doubles the growth exponent.";
 	firstArrival.options = {"No", "Yes"};
 	firstArrival.selected = 0;
+
+	economy.label = "Resource economy";
+	economy.help = "On, a copy has to be mined for and fuel runs out. Off restores free replication, where nothing but the fleet cap ever ends a run.";
+	economy.options = {"Off", "On"};
+	economy.selected = 1;
 
 	preset.label = "Expedition profile";
 	preset.help = "A starting point. Move any slider and it becomes Custom.";
@@ -175,6 +191,13 @@ void SetupUI::layout(const sf::Vector2u &windowSize)
 		y += ROW_H;
 	}
 
+	economy.boxes.clear();
+	for (size_t i = 0; i < economy.options.size(); ++i)
+	{
+		economy.boxes.push_back(sf::FloatRect(panel.left + TRACK_X + i * 92.0f, y - 4.0f, 86.0f, 26.0f));
+	}
+	y += ROW_H;
+
 	firstArrival.boxes.clear();
 	for (size_t i = 0; i < firstArrival.options.size(); ++i)
 	{
@@ -234,6 +257,15 @@ bool SetupUI::onMousePressed(const sf::Vector2f &p)
 		if (firstArrival.boxes[i].contains(p))
 		{
 			firstArrival.selected = static_cast<int>(i);
+			preset.selected = 3; // Custom
+			return true;
+		}
+	}
+	for (size_t i = 0; i < economy.boxes.size(); ++i)
+	{
+		if (economy.boxes[i].contains(p))
+		{
+			economy.selected = static_cast<int>(i);
 			preset.selected = 3; // Custom
 			return true;
 		}
@@ -349,6 +381,7 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 		text(format(s.value, s.decimals, s.suffix), s.track.left + s.track.width + 24.0f, s.track.top - 10.0f, 16, VALUE);
 	}
 
+	segments(economy, economy.boxes.empty() ? panel.top : economy.boxes[0].top + 4.0f);
 	segments(firstArrival, firstArrival.boxes.empty() ? panel.top : firstArrival.boxes[0].top + 4.0f);
 	segments(spriteStyle, spriteStyle.boxes.empty() ? panel.top : spriteStyle.boxes[0].top + 4.0f);
 

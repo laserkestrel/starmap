@@ -15,19 +15,23 @@
 enum class ProbeMode
 {
 	Travel,
+	Harvest,
 	Replicate,
 	Seek,
 	Shutdown
 };
 
-// Why a probe stopped. The split between these two is diagnostic: lots of the
-// first means the replication limit is what is holding exploration back, lots of
-// the second means the search radius is.
+// Why a probe stopped. Diagnostic, and worth reading as a set: lots of
+// ReplicationLimitReached means the replication limit is holding exploration back,
+// lots of NothingWithinRange means the search radius is, and lots of
+// StrandedNoFuel means the galaxy is too poor for the range being asked of it --
+// probes reaching for stars they cannot afford to arrive at.
 enum class ShutdownReason
 {
 	StillRunning,
 	ReplicationLimitReached,
-	NothingWithinRange
+	NothingWithinRange,
+	StrandedNoFuel
 };
 
 // One stop on a probe's own journey. Coordinates are world parsecs, so a trail can
@@ -70,6 +74,22 @@ public:
 	void forkKnowledgeInto(Probe &child);
 	void setRandomTrailColor();
 	void setBlackTrailColor();
+
+	// --- resources --------------------------------------------------------------
+	const Resources &getCargo() const { return cargo; }
+	void setCargo(const Resources &r) { cargo = r; }
+	int getHarvestTicks() const { return totalHarvestTicks; }
+	const Resources &getTotalMined() const { return totalMined; }
+	// Can this probe afford a copy right now?
+	bool canAffordReplication() const;
+	// Deducts the build cost and returns the starting cargo to hand the child.
+	// Called by Game at the moment the child is actually created, so a probe that
+	// is refused a copy (say by the population cap) is not charged for one.
+	Resources payForReplication();
+	// Game owns the star vector, so it is Game that tells a probe which system it
+	// has arrived at. Probe only ever reads through the pointer.
+	void setCurrentSystem(const Star *star);
+	const Star *getCurrentSystem() const { return currentSystem; }
 
 	// Getters
 	const std::string &getProbeName() const;
@@ -121,6 +141,15 @@ private:
 	float totalDistanceTraveled = 0.0f;
 	int replicationCount = 0;
 	sf::Color trailColor = sf::Color::White;
+
+	// What it is carrying, what it has dug up in total, and the system it is
+	// currently sitting in. The star pointer is into Game's galaxy vector, which
+	// outlives every probe and is never reallocated during a run.
+	Resources cargo;
+	Resources totalMined;
+	const Star *currentSystem = nullptr;
+	int harvestTicksHere = 0;
+	int totalHarvestTicks = 0;
 };
 
 #endif // PROBE_H

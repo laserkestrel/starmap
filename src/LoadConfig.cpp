@@ -95,6 +95,18 @@ int LoadConfig::getMaxProbes() const { return maxProbes; }
 int LoadConfig::getStarLabelMaxVisible() const { return starLabelMaxVisible; }
 float LoadConfig::getZoomMinPixelsPerParsec() const { return zoomMinPixelsPerParsec; }
 float LoadConfig::getZoomMaxPixelsPerParsec() const { return zoomMaxPixelsPerParsec; }
+bool LoadConfig::getResourcesEnabled() const { return resourcesEnabled; }
+float LoadConfig::getSystemResourceScale() const { return systemResourceScale; }
+float LoadConfig::getResourceFeatureParsecs() const { return resourceFeatureParsecs; }
+int LoadConfig::getResourceSeed() const { return resourceSeed; }
+float LoadConfig::getReplicationCostMetals() const { return replicationCostMetals; }
+float LoadConfig::getReplicationCostVolatiles() const { return replicationCostVolatiles; }
+float LoadConfig::getReplicationCostFissiles() const { return replicationCostFissiles; }
+float LoadConfig::getHarvestPerTick() const { return harvestPerTick; }
+int LoadConfig::getMaxHarvestTicks() const { return maxHarvestTicks; }
+float LoadConfig::getFuelPerParsec() const { return fuelPerParsec; }
+float LoadConfig::getFuelSafetyMargin() const { return fuelSafetyMargin; }
+float LoadConfig::getChildFuelShare() const { return childFuelShare; }
 
 void LoadConfig::loadFromFile()
 {
@@ -150,6 +162,19 @@ void LoadConfig::loadFromFile()
 		readBool(config, "replicateOnFirstArrival", replicateOnFirstArrival);
 		readBool(config, "summaryShowPerProbe", summaryShowPerProbe);
 		readBool(config, "summaryShowFooter", summaryShowFooter);
+
+		readBool(config, "resourcesEnabled", resourcesEnabled);
+		readNumber(config, "systemResourceScale", systemResourceScale);
+		readNumber(config, "resourceFeatureParsecs", resourceFeatureParsecs);
+		readNumber(config, "resourceSeed", resourceSeed);
+		readNumber(config, "replicationCostMetals", replicationCostMetals);
+		readNumber(config, "replicationCostVolatiles", replicationCostVolatiles);
+		readNumber(config, "replicationCostFissiles", replicationCostFissiles);
+		readNumber(config, "harvestPerTick", harvestPerTick);
+		readNumber(config, "maxHarvestTicks", maxHarvestTicks);
+		readNumber(config, "fuelPerParsec", fuelPerParsec);
+		readNumber(config, "fuelSafetyMargin", fuelSafetyMargin);
+		readNumber(config, "childFuelShare", childFuelShare);
 	}
 	catch (json::parse_error &e)
 	{

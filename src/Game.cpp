@@ -40,6 +40,15 @@ Game::Game(const LoadConfig &config)
 	settings.probeSpeedParsecsPerTick = config.getProbeSpeedParsecsPerTick();
 	settings.probeIndividualReplicationLimit = config.getprobeIndividualReplicationLimit();
 	settings.replicateOnFirstArrival = config.getReplicateOnFirstArrival();
+	settings.resourcesEnabled = config.getResourcesEnabled();
+	settings.replicationCost = Resources(config.getReplicationCostMetals(),
+										 config.getReplicationCostVolatiles(),
+										 config.getReplicationCostFissiles());
+	settings.harvestPerTick = config.getHarvestPerTick();
+	settings.maxHarvestTicks = config.getMaxHarvestTicks();
+	settings.fuelPerParsec = config.getFuelPerParsec();
+	settings.fuelSafetyMargin = config.getFuelSafetyMargin();
+	settings.childFuelShare = config.getChildFuelShare();
 	activeMaxProbes = config.getMaxProbes();
 
 	window.setVerticalSyncEnabled(config.getVerticalSync());
@@ -68,6 +77,11 @@ Game::Game(const LoadConfig &config)
 	setupUI.setValue(SetupUI::GalaxySize, static_cast<float>(config.getLoadStarsLimit()));
 	setupUI.setValue(SetupUI::ViewTilt, config.getViewTiltDegrees());
 	setupUI.setValue(SetupUI::ViewDepth, config.getViewDepthParsecs());
+	setupUI.setValue(SetupUI::SystemRichness, config.getSystemResourceScale());
+	setupUI.setValue(SetupUI::ProbeBuildCost, 1.0f); // config values ARE the 1.0x bill
+	setupUI.setValue(SetupUI::FuelBurn, config.getFuelPerParsec());
+	setupUI.setResourcesEnabled(config.getResourcesEnabled());
+	loadedRichness = config.getSystemResourceScale();
 	setupUI.setSpriteChoice(static_cast<int>(starSpriteStyleFromString(config.getStarSpriteStyle())));
 	setupUI.setReplicateOnFirstArrival(config.getReplicateOnFirstArrival());
 	// The catalogue was loaded at the config size, so record what the slider now
@@ -78,10 +92,12 @@ Game::Game(const LoadConfig &config)
 void Game::seedFirstProbe()
 {
 	// Clear what the previous run discovered. Without this a second expedition
-	// starts with the whole catalogue already explored.
+	// starts with the whole catalogue already explored -- and, now that systems can
+	// be mined out, in a galaxy the last run already stripped bare.
 	for (auto &star : galaxyVector)
 	{
 		star.setIsExplored(false);
+		star.restoreResources();
 	}
 
 	probeVector.clear();
@@ -90,6 +106,18 @@ void Game::seedFirstProbe()
 	firstProbe.setNewBorn(false);
 	firstProbe.setRandomTrailColor();
 	firstProbe.recordVisit(0, sf::Vector3f(0.0f, 0.0f, 0.0f));
+
+	// We build and fuel the first probe ourselves, so it launches with a tank but an
+	// empty hold: it has to find metals and fissiles before it can copy itself. Enough
+	// volatiles for a few hops at the current search radius, so the expedition does not
+	// die on the doorstep because of where Sol happens to sit.
+	if (settings.resourcesEnabled)
+	{
+		const float hop = settings.probeSearchRadiusParsecs * settings.fuelPerParsec *
+						  std::max(1.0f, settings.fuelSafetyMargin);
+		firstProbe.setCargo(Resources(0.0f, hop * 3.0f, 0.0f));
+	}
+
 	probeVector.push_back(std::move(firstProbe));
 	liveProbeCount = 1;
 	metrics = RunMetrics{};
@@ -98,7 +126,7 @@ void Game::seedFirstProbe()
 void Game::reloadGalaxy(int starLimit)
 {
 	LoadCSVData dataLoader;
-	galaxyVector = dataLoader.loadStarsFromCsv("./content/hygdata_v40.csv", config, starLimit);
+	galaxyVector = dataLoader.loadStarsFromCsv("./content/hygdata_v40.csv", config, starLimit, loadedRichness);
 	if (galaxyVector.empty())
 	{
 		std::cerr << "No stars loaded -- check ./content/hygdata_v40.csv" << std::endl;
@@ -303,13 +331,28 @@ void Game::runStartupScreen()
 	settings.probeSpeedParsecsPerTick = setupUI.value(SetupUI::ProbeSpeed);
 	settings.probeIndividualReplicationLimit = setupUI.intValue(SetupUI::ReplicationLimit);
 	settings.replicateOnFirstArrival = setupUI.replicateOnFirstArrival();
+	settings.resourcesEnabled = setupUI.resourcesEnabled();
+	settings.fuelPerParsec = setupUI.value(SetupUI::FuelBurn);
+	{
+		// The cost slider is a multiplier on the configured bill of materials, so
+		// the three resources keep their relative proportions.
+		const float costScale = setupUI.value(SetupUI::ProbeBuildCost);
+		settings.replicationCost = Resources(config.getReplicationCostMetals() * costScale,
+											 config.getReplicationCostVolatiles() * costScale,
+											 config.getReplicationCostFissiles() * costScale);
+	}
 	activeMaxProbes = setupUI.intValue(SetupUI::FleetCap);
 	projection.setTiltDegrees(setupUI.value(SetupUI::ViewTilt));
 	projection.setViewDepthParsecs(setupUI.value(SetupUI::ViewDepth));
 	renderSystem.setSpriteStyle(static_cast<StarSpriteStyle>(setupUI.spriteChoice()));
 
-	if (setupUI.intValue(SetupUI::GalaxySize) != loadedStarLimit)
+	// Richness is baked into the stars at load, so changing it has to reload the
+	// catalogue -- same as changing its size.
+	const float chosenRichness = setupUI.value(SetupUI::SystemRichness);
+	if (setupUI.intValue(SetupUI::GalaxySize) != loadedStarLimit ||
+		std::fabs(chosenRichness - loadedRichness) > 0.5f)
 	{
+		loadedRichness = chosenRichness;
 		reloadGalaxy(setupUI.intValue(SetupUI::GalaxySize));
 	}
 	// The first probe must carry the speed the sliders just chose.
@@ -560,12 +603,27 @@ void Game::updateGameState()
 			continue;
 		}
 
+		// It reached Replicate believing it could pay; check again here, because
+		// this is the moment the copy actually exists and gets charged for.
+		if (!probe.canAffordReplication())
+		{
+			probe.setMode(ProbeMode::Seek);
+			continue;
+		}
+
 		const std::string replicationLocationName = Utilities::getStarNameFromID(probe.getTargetStar());
 		const std::string newName = Utilities::probeNamer(probe.getProbeName(), replicationLocationName);
 
 		Probe replicatedProbe(newName, probe.getWorldX(), probe.getWorldY(), probe.getWorldZ(),
 							  settings.probeSpeedParsecsPerTick, *quadTree, settings);
 		replicatedProbe.setRandomTrailColor();
+
+		// Charge the parent and fuel the child out of what is left. Both probes are
+		// standing in the same system, so the child inherits it and can mine there too.
+		const Resources dowry = probe.payForReplication();
+		replicatedProbe.setCargo(dowry);
+		replicatedProbe.setCurrentSystem(probe.getCurrentSystem());
+		metrics.resourcesSpentOnProbes += settings.replicationCost;
 
 		// The child inherits its parent's knowledge, shared by pointer rather than
 		// copied. Copying it was O(everything the ancestry ever saw) per replication,
@@ -641,6 +699,15 @@ void Game::updateGameState()
 				continue;
 
 			Star &star = galaxyVector[it->second];
+
+			// Tell the probe which system it is standing in, so it can mine here next
+			// tick. Game owns the star vector, so this resolution belongs here rather
+			// than inside the probe.
+			if (j + 1 == trail.size())
+			{
+				probeVector[i].setCurrentSystem(&star);
+			}
+
 			if (star.tryMarkExplored())
 			{
 				// First time anyone has reached it. Anything else was a wasted trip.
@@ -713,10 +780,16 @@ void Game::finaliseMetrics()
 	metrics.probesAlive = 0;
 	metrics.stoppedAtReplicationLimit = 0;
 	metrics.stoppedWithNothingInRange = 0;
+	metrics.stoppedStranded = 0;
+	metrics.resourcesEnabled = settings.resourcesEnabled;
+	metrics.totalMined = Resources();
+	metrics.harvestTicks = 0;
 
 	for (const auto &probe : probeVector)
 	{
 		metrics.distanceFlownParsecs += probe.getTotalDistanceTraveled();
+		metrics.totalMined += probe.getTotalMined();
+		metrics.harvestTicks += probe.getHarvestTicks();
 		if (probe.getMode() != ProbeMode::Shutdown)
 		{
 			++metrics.probesAlive;
@@ -726,7 +799,18 @@ void Game::finaliseMetrics()
 		{
 		case ShutdownReason::ReplicationLimitReached: ++metrics.stoppedAtReplicationLimit; break;
 		case ShutdownReason::NothingWithinRange:      ++metrics.stoppedWithNothingInRange; break;
+		case ShutdownReason::StrandedNoFuel:          ++metrics.stoppedStranded; break;
 		default: break;
+		}
+	}
+
+	metrics.systemsExhausted = 0;
+	if (settings.resourcesEnabled)
+	{
+		for (const auto &star : galaxyVector)
+		{
+			if (star.getIsExplored() && star.isExhausted())
+				++metrics.systemsExhausted;
 		}
 	}
 

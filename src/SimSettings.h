@@ -1,6 +1,8 @@
 // SimSettings.h
 #pragma once
 
+#include "Resources.h"
+
 // Runtime simulation settings.
 //
 // These start from config.json but can be edited on the startup screen, so they
@@ -17,4 +19,15 @@ struct SimSettings
 	// establish itself there first and wait for the next one. A real lever on the
 	// growth curve: switching it on roughly doubles the exponent.
 	bool replicateOnFirstArrival = false;
+
+	// --- the resource economy ---------------------------------------------------
+	// Off restores the old behaviour: replication is free, and the population cap is
+	// the only thing that ends a run. Kept switchable so the two can be compared.
+	bool resourcesEnabled = true;
+	Resources replicationCost{55.0f, 35.0f, 8.0f};
+	float harvestPerTick = 6.0f;
+	int maxHarvestTicks = 60;
+	float fuelPerParsec = 1.5f;
+	float fuelSafetyMargin = 1.25f;
+	float childFuelShare = 0.35f;
 };

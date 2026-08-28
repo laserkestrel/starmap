@@ -204,7 +204,8 @@ sf::Color LoadCSVData::applyBrightness(const sf::Color &colour, float brightness
 					 colour.a);
 }
 
-std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, const LoadConfig &config, int starLimit)
+std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, const LoadConfig &config,
+												int starLimit, float richnessOverride)
 {
 	std::vector<Star> stars;
 	std::ifstream csvFile(csvFilePath);
@@ -328,6 +329,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		// Fall back to the spectral class only when B-V is missing or unparseable.
 		sf::Color rawStarColor;
 		bool haveColourIndex = false;
+		float colourIndexValue = 0.65f; // Sol-ish, used when the row has no B-V
 		const std::string colourIndexField = stripQuotes(fields[NAME_INDEX16]);
 		if (!colourIndexField.empty())
 		{
@@ -335,6 +337,7 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 			{
 				const float bv = std::stof(colourIndexField);
 				rawStarColor = temperatureToColour(colourIndexToTemperatureKelvin(bv));
+				colourIndexValue = bv;
 				haveColourIndex = true;
 			}
 			catch (...) {}
@@ -365,6 +368,16 @@ std::vector<Star> LoadCSVData::loadStarsFromCsv(const std::string &csvFilePath, 
 		}
 
 		stars.emplace_back(newStarID, worldX, worldY, worldZ, newStarName, adjStarColor, displayBrightness);
+
+		// Seed the system's stocks from the resource field. Done here rather than in
+		// Star's constructor because this is the only place that has both the position
+		// and the measured B-V in hand.
+		const float richness = (richnessOverride >= 0.0f) ? richnessOverride : config.getSystemResourceScale();
+		stars.back().setInitialResources(
+			ResourceField::forSystem(worldX, worldY, worldZ, colourIndexValue,
+									 richness,
+									 config.getResourceFeatureParsecs(),
+									 static_cast<uint32_t>(config.getResourceSeed())));
 	}
 
 	return stars;

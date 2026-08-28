@@ -61,6 +61,36 @@ public:
 	float getZoomMinPixelsPerParsec() const;
 	float getZoomMaxPixelsPerParsec() const;
 
+	// --- the resource economy ---------------------------------------------------
+	// Replication used to be free, which is why every run ended the same way: at
+	// the population cap. These give it a price.
+	bool getResourcesEnabled() const;
+	// Units of each resource in an averagely rich system.
+	float getSystemResourceScale() const;
+	// How big a rich or poor region is, in parsecs. Small values give a speckled
+	// galaxy where every neighbourhood averages the same; large values give broad
+	// lodes and deserts worth expanding towards or away from.
+	float getResourceFeatureParsecs() const;
+	// Fixes the galaxy's resource geography. The same seed gives the same galaxy on
+	// every run, which is what makes two runs with different parameters comparable.
+	int getResourceSeed() const;
+	// What one copy costs to build.
+	float getReplicationCostMetals() const;
+	float getReplicationCostVolatiles() const;
+	float getReplicationCostFissiles() const;
+	// Units of each resource a probe can take from a system per tick. Lower means
+	// longer stays and a slower, more deliberate expansion.
+	float getHarvestPerTick() const;
+	// Give up on a system after this many ticks even if it still holds something.
+	int getMaxHarvestTicks() const;
+	// Volatiles burnt per parsec flown. This is what makes distance dangerous.
+	float getFuelPerParsec() const;
+	// A probe will not depart unless it holds this multiple of the fuel the trip
+	// needs. Below 1.0 it will take trips it cannot finish.
+	float getFuelSafetyMargin() const;
+	// Share of the parent's remaining volatiles handed to a new probe.
+	float getChildFuelShare() const;
+
 	void loadFromFile();
 
 private:
@@ -93,6 +123,21 @@ private:
 	int maxProbes = 250000;
 	float zoomMinPixelsPerParsec = 0.5f;
 	float zoomMaxPixelsPerParsec = 4000.0f;
+
+	// Resource economy defaults. Tuned so an averagely rich system funds roughly
+	// one copy: expansion is possible everywhere but comfortable nowhere.
+	bool resourcesEnabled = true;
+	float systemResourceScale = 100.0f;
+	float resourceFeatureParsecs = 6.0f;
+	int resourceSeed = 20260828;
+	float replicationCostMetals = 55.0f;
+	float replicationCostVolatiles = 35.0f;
+	float replicationCostFissiles = 8.0f;
+	float harvestPerTick = 6.0f;
+	int maxHarvestTicks = 60;
+	float fuelPerParsec = 1.5f;
+	float fuelSafetyMargin = 1.25f;
+	float childFuelShare = 0.35f;
 
 	LoadConfig(const LoadConfig &) = delete;
 	LoadConfig &operator=(const LoadConfig &) = delete;

@@ -32,7 +32,20 @@ summaryShowFooter - print the full debrief to the console as well as drawing it 
 frameBudgetMillis - How much of each frame may be spent running simulation ticks. The display gets whatever is left, so it stays responsive instead of being dragged along at whatever rate the simulation manages. Replaces the old sleepTimeMillis.<BR>
 coverageTargetPercent - End the run once this share of the catalogue has been reached.<BR>
 frontierStallTicks - End the run if no new furthest system has been reached for this many ticks.<BR>
-maxProbes - Safety ceiling on fleet size. Replication currently costs nothing, so the fleet grows without bound - a 600-star galaxy reached 1.9 million probes in testing. Until something physical bounds it, this stops a run running away.<BR>
+maxProbes - Safety ceiling on fleet size. With the resource economy off this is the only thing that ends a run; with it on it should never be reached, and if it is, replication is too cheap for the galaxy you set.<BR>
+
+## The resource economy
+
+resourcesEnabled - Whether replication has to be paid for. Off restores the old behaviour, which is worth trying once for contrast: measured over the same 500-star catalogue, free replication built 25,738 probes in 127 ticks and reached 36% of the galaxy before hitting the cap, while the economy built 348 over 1,750 ticks and reached 92%. A fleet 74 times smaller explored two and a half times as much, because most of what a huge fleet does is retrace ground another lineage already covered.<BR>
+systemResourceScale - Material in an averagely rich system. Raising it does NOT help: doubling it halved efficiency in testing, because abundance buys more probes and more probes waste more journeys.<BR>
+resourceFeatureParsecs - How large a rich or poor region is. This is the setting that makes the galaxy have a geography rather than a texture: small values speckle richness so every neighbourhood averages the same and every lineage meets an identical galaxy, large values give broad lodes and deserts, so which way a lineage happens to expand decides whether it thrives.<BR>
+resourceSeed - Fixes that geography. The same seed gives the same galaxy every run, which is what makes two runs with different parameters comparable rather than a test of luck.<BR>
+replicationCostMetals / Volatiles / Fissiles - The bill of materials for one copy. The setup screen's "Probe build cost" slider scales all three together, so their proportions hold.<BR>
+harvestPerTick - Units of each resource a probe extracts per tick while parked at a system. Lower means longer stays and a slower, more deliberate expansion.<BR>
+maxHarvestTicks - Give up on a system after this long even if it still holds something.<BR>
+fuelPerParsec - Volatiles burnt per parsec flown. Volatiles are both a build material and the propellant, which is what makes distance genuinely dangerous rather than merely slow.<BR>
+fuelSafetyMargin - A probe will not depart unless it holds this multiple of the fuel the trip needs. Below 1.0 it will confidently set off on journeys it cannot finish.<BR>
+childFuelShare - Share of the parent's remaining volatiles handed to a new probe. It comes out of the parent's tank, so each successive child is fuelled a little worse than the last.<BR>
 
 # Beginning an expedition
 
@@ -51,7 +64,28 @@ slow but tidy), Swarm (replicates hard, looks no further than the doorstep), Sco
 profile becomes Custom. Same galaxy, very different scores.
 
 Changing "Stars loaded" re-reads the catalogue, so it waits until you release the
-slider rather than reloading mid-drag.
+slider rather than reloading mid-drag. "System richness" does the same, because a
+system's stocks are derived at load time from where it sits in the resource field.
+
+# What a probe actually does
+
+A probe with the economy on has something to do besides travel. It arrives at a
+system and starts mining, which takes ticks - so a wasted journey now costs real
+time as well as fuel. It leaves when it has enough for a copy, when the system is
+stripped, or when it has given the place long enough. If it cannot afford a copy it
+carries on anyway as a scout and tries to make up the shortfall at the next system.
+
+Volatiles are both a build material and the propellant. A probe will not set off
+unless it holds the fuel for the trip plus a margin, so a probe standing in a dry
+system with nothing in range simply stops. One that misjudges it - or is handed too
+thin a share by a parent that had already fuelled two other children - runs dry
+between stars and is lost. In testing that became the ordinary way to die: 248 of
+284 probes stranded, against 36 that reached their replication limit.
+
+Systems do not come back. A fleet strips its own neighbourhood - 367 of 378 systems
+reached were left with nothing - and then dies out. That is the run ending for a
+reason that came from inside the simulation rather than from a number in a config
+file, which is the whole point of the exercise.
 
 # Measuring a run
 
@@ -68,6 +102,26 @@ The number that matters most is EFFICIENCY: unique systems reached divided by to
 arrivals. 1.000 means no journey was ever wasted. Because probes only know what
 they and their ancestors found, unrelated lineages revisit each other's systems -
 and this is the number that measures how much that costs.
+
+SCORE is systems reached, with half the credit for arriving at all and half for not
+having wasted a journey doing it. It used to be reach multiplied by efficiency
+outright, which sounds fair and is not: it made efficiency the entire game. Over a
+2,000 star catalogue a fleet held to one copy each reached 38% of it at a perfect
+1.000 - every probe dies young, so lineages never overlap - while a fleet allowed
+two copies reached 92% at 0.10. The old formula scored those 767 against 187, which
+says the sprawling run was four times worse for reaching two and a half times as
+much. Nobody would ever choose to sprawl, so there was no decision left to make.
+
+With the floor at a half, both strategies are live and which one wins depends on
+the galaxy: careful expansion wins in a catalogue small enough to finish, and
+aggressive expansion wins in one it could never finish. GRADE is that score against
+the perfect run for the catalogue you actually loaded - every system, nothing
+wasted - so an A means the same thing at 400 stars as at 50,000.
+
+One honest caveat: probes mine in parallel across threads, and when two of them
+strip the same system in the same tick the order they win in is down to the
+scheduler. Two runs with identical parameters therefore land within about 3% of
+each other rather than matching exactly.
 
 # High scores and running again
 
