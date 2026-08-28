@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(starmap3 LANGUAGES CXX)
+project(starmap LANGUAGES CXX)
 
 # Output binaries to a predictable location
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -62,35 +62,35 @@ list(FILTER SOURCES EXCLUDE REGEX "/src/Platform/")
 message(STATUS "Found source files: ${SOURCES}")
 
 
-add_executable(starmap3 ${SOURCES})
+add_executable(starmap ${SOURCES})
 
-target_link_libraries(starmap3 PRIVATE sfml-graphics nlohmann_json::nlohmann_json)
+target_link_libraries(starmap PRIVATE sfml-graphics nlohmann_json::nlohmann_json)
 
-target_compile_features(starmap3 PRIVATE cxx_std_17)
+target_compile_features(starmap PRIVATE cxx_std_17)
 
 # ---- Warnings ----
 # Deliberately NOT -Werror: this turns the compiler into a reviewer without
 # blocking the build while the existing warnings get worked through.
 if (MSVC)
-    target_compile_options(starmap3 PRIVATE /W4)
+    target_compile_options(starmap PRIVATE /W4)
 else()
-    target_compile_options(starmap3 PRIVATE -Wall -Wextra)
+    target_compile_options(starmap PRIVATE -Wall -Wextra)
 endif()
 
 # Define _DEBUG only for Debug builds, in a portable way
-target_compile_definitions(starmap3 PRIVATE
+target_compile_definitions(starmap PRIVATE
     $<$<CONFIG:Debug>:_DEBUG>
 )
 
 # ---- Windows DLL handling ----
 if (WIN32)
     add_custom_command(
-        TARGET starmap3
+        TARGET starmap
         PRE_BUILD
         COMMENT "Copy OpenAL DLL"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${SFML_SOURCE_DIR}/extlibs/bin/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x64,x86>/openal32.dll
-            $<TARGET_FILE_DIR:starmap3>
+            $<TARGET_FILE_DIR:starmap>
     )
 endif()
 
@@ -107,14 +107,14 @@ else()
 endif()
 
 add_custom_command(
-    TARGET starmap3
+    TARGET starmap
     POST_BUILD
     COMMENT "Copy ./content next to the executable"
     COMMAND ${CMAKE_COMMAND} -E ${STARMAP_COPY_DIR_COMMAND}
         ${CMAKE_CURRENT_LIST_DIR}/content
-        $<TARGET_FILE_DIR:starmap3>/content
+        $<TARGET_FILE_DIR:starmap>/content
 )
 
 # ---- Install rule (optional, but fine) ----
-install(TARGETS starmap3)
+install(TARGETS starmap)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/content/ DESTINATION bin/content)

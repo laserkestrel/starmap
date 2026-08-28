@@ -295,18 +295,66 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 		renderWindow.draw(probeQuads, states);
 	}
 
-	if (showTextLabelsProbes)
+	if (showTextLabelsProbes && labelMaxVisible > 0)
 	{
+		// Picking WHICH probes get a name is the whole problem here.
+		//
+		// This used to walk the probe vector and label the first labelMaxVisible of
+		// them. That vector is in birth order, and birth order tracks distance from
+		// Sol -- the first probes built are the ones still near the middle -- so the
+		// entire label budget was spent on the oldest probes before the loop ever
+		// reached anything on the frontier. Trails ran to the edge of the galaxy;
+		// names never left the centre. It also never checked whether a probe was on
+		// screen, so at high zoom the budget went on labels nobody could see.
+		//
+		// Three fixes: skip anything off screen or outside the view slab, walk the
+		// fleet with a stride so the sample spans every generation rather than the
+		// first few thousand, and allow only one label per screen cell so they stop
+		// piling into an illegible heap.
+		const sf::Vector2u windowSize = renderWindow.getSize();
+		const float screenW = static_cast<float>(windowSize.x);
+		const float screenH = static_cast<float>(windowSize.y);
+
+		// About the width of a probe name at 10pt, so neighbouring labels do not overlap.
+		const float CELL_W = 86.0f;
+		const float CELL_H = 15.0f;
+		const int cellsAcross = std::max(1, static_cast<int>(screenW / CELL_W) + 1);
+
+		occupiedLabelCells.clear();
+
+		const size_t fleetSize = probes.size();
+		const size_t stride = (fleetSize > labelMaxVisible) ? (fleetSize / labelMaxVisible) : 1;
+
 		size_t drawn = 0;
-		for (const auto &probe : probes)
+		// Two passes over the strided sample: the first spreads labels across the
+		// whole fleet, the second spends any leftover budget on the probes the
+		// stride skipped, so a small fleet still gets every name it can fit.
+		for (int pass = 0; pass < 2 && drawn < labelMaxVisible; ++pass)
 		{
-			if (drawn++ >= labelMaxVisible)
-				break;
-			const sf::Vector2f p = projection.project(probe.getWorldX(), probe.getWorldY(), probe.getWorldZ());
-			sf::Text labelText(probe.getProbeName(), font, 10);
-			labelText.setPosition(p.x - 10.0f, p.y - 10.0f);
-			labelText.setFillColor(probe.getTrailColor());
-			renderWindow.draw(labelText);
+			const size_t step = (pass == 0) ? stride : 1;
+			for (size_t i = 0; i < fleetSize && drawn < labelMaxVisible; i += step)
+			{
+				const Probe &probe = probes[i];
+				if (!projection.withinViewDepth(probe.getWorldZ()))
+					continue;
+
+				const sf::Vector2f p = projection.project(probe.getWorldX(), probe.getWorldY(), probe.getWorldZ());
+				if (p.x < 0.0f || p.y < 0.0f || p.x > screenW || p.y > screenH)
+					continue;
+
+				const int cell = static_cast<int>(p.y / CELL_H) * cellsAcross +
+								 static_cast<int>(p.x / CELL_W);
+				if (!occupiedLabelCells.insert(cell).second)
+					continue; // something is already named here
+
+				sf::Text labelText(probe.getProbeName(), font, 10);
+				labelText.setPosition(p.x - 10.0f, p.y - 10.0f);
+				labelText.setFillColor(probe.getTrailColor());
+				renderWindow.draw(labelText);
+				++drawn;
+			}
+			if (stride == 1)
+				break; // the first pass already visited everything
 		}
 	}
 }

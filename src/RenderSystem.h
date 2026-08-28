@@ -13,6 +13,7 @@
 #include <SFML/Graphics.hpp>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -90,6 +91,9 @@ private:
 	std::vector<size_t> visibleScratch;
 	std::vector<size_t> visible;
 	std::vector<size_t> labelCandidates;
+	// Screen cells already carrying a probe name this frame. Kept as a member for
+	// the same reason as the vectors above: cleared and refilled, never reallocated.
+	std::unordered_set<int> occupiedLabelCells;
 	sf::VertexArray gridLines{sf::Lines};
 	sf::VertexArray stalkLines{sf::Lines};
 	sf::VertexArray starQuads{sf::Quads};
