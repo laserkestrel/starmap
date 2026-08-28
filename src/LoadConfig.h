@@ -91,6 +91,16 @@ public:
 	// Share of the parent's remaining volatiles handed to a new probe.
 	float getChildFuelShare() const;
 
+	// --- trail appearance -------------------------------------------------------
+	// "recency", "density" or "perProbe". F6 cycles them while running.
+	const std::string &getTrailColourMode() const;
+	// Index into the palette table in TrailStyle.cpp. F7 cycles them.
+	int getTrailPalette() const;
+	// Ticks for a trail to cool from white to dark in recency mode.
+	float getTrailFadeTicks() const;
+	// Arrivals at which a system is fully saturated in density mode.
+	float getTrailDensitySaturateAt() const;
+
 	void loadFromFile();
 
 private:
@@ -138,6 +148,10 @@ private:
 	float fuelPerParsec = 1.5f;
 	float fuelSafetyMargin = 1.25f;
 	float childFuelShare = 0.35f;
+	std::string trailColourMode = "recency";
+	int trailPalette = 0;
+	float trailFadeTicks = 600.0f;
+	float trailDensitySaturateAt = 60.0f;
 
 	LoadConfig(const LoadConfig &) = delete;
 	LoadConfig &operator=(const LoadConfig &) = delete;

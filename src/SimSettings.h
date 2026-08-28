@@ -30,4 +30,8 @@ struct SimSettings
 	float fuelPerParsec = 1.5f;
 	float fuelSafetyMargin = 1.25f;
 	float childFuelShare = 0.35f;
+
+	// Advanced by Game once per tick. Probes stamp their arrivals with it so the
+	// renderer can tell a leg flown moments ago from one flown a thousand ticks back.
+	long long currentTick = 0;
 };

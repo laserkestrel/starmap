@@ -47,12 +47,24 @@ fuelPerParsec - Volatiles burnt per parsec flown. Volatiles are both a build mat
 fuelSafetyMargin - A probe will not depart unless it holds this multiple of the fuel the trip needs. Below 1.0 it will confidently set off on journeys it cannot finish.<BR>
 childFuelShare - Share of the parent's remaining volatiles handed to a new probe. It comes out of the parent's tank, so each successive child is fuelled a little worse than the last.<BR>
 
+## Trail appearance
+
+trailColourMode - "recency", "density" or "perProbe". Also on the Display tab, and F6 cycles it live.<BR>
+trailPalette - Which of the eight colour ramps to use, 0-7. F7 cycles it live.<BR>
+trailFadeTicks - Ticks for a trail to cool from white to dark in recency mode. Short values leave only the expansion front lit.<BR>
+trailDensitySaturateAt - Arrivals at which a system is fully white in density mode. The scale is logarithmic, because arrival counts are heavy-tailed and a linear ramp leaves almost everything at the cold end. Default 60: with a typical mean around 12 arrivals per system, 24 washed most of the map out to white.<BR>
+
 # Beginning an expedition
 
 The setup screen is driven entirely by the MOUSE: drag the sliders, click the
 profile and sprite buttons, click LAUNCH (or press Enter). The arrow keys still pan
 the map behind it, so nothing competes for them - the old screen used Up/Down for
 both panning and editing values, which is why they fought.
+
+It has two tabs. SIMULATION holds everything that changes the outcome and therefore
+the score; DISPLAY holds everything that only changes how it looks. The split is not
+just tidiness - with them mixed it was easy to nudge a parameter while meaning to
+adjust the view, and then wonder why the score moved.
 
 Each control says what it does and which way it pushes the result, and the line
 above LAUNCH tells you how many systems sit within one hop of Sol at the current
@@ -137,6 +149,34 @@ records the parameters that produced it, not just the result, so the table is a 
 of what actually worked rather than a list of numbers with no explanation. A run that
 places is highlighted in the table as NEW ENTRY #n.
 
+# Reading the trails
+
+Trails draw as they happen. A probe's current leg is drawn from the last system it
+left to wherever it is right now, so you watch a journey being made rather than
+seeing it appear the moment it finished. It costs one line segment per moving probe
+- about 7% on top of geometry that was already being rebuilt every frame - which is
+why it was never worth not doing.
+
+Colouring used to be one random hue per probe, assigned at birth. It encoded
+nothing: siblings got unrelated colours, a parent and its child got unrelated
+colours, and a fleet in the thousands turned the map into confetti. That mode is
+still there as "Per probe" for comparison, and the comparison is not flattering.
+
+RECENCY fades a leg as it ages, over trailFadeTicks. Whatever is being flown right
+now is white, and history recedes to a dark ember, so the expansion front is
+obvious and you can follow individual journeys.
+
+DENSITY colours a leg by how many probes have ever arrived at the system it leads
+to. This is the wasted-journey figure made visible: in a typical run the interior
+burns white because it has been crossed dozens of times, while the frontier stays
+cool at one or two visits. If you want to see why efficiency sits around 0.08, this
+is the picture of it.
+
+Both use the same eight palettes, chosen on the Display tab or cycled with F7. Each
+ramp is a single hue running dark to white, deliberately not a rainbow: brightness
+ordering stays readable, where a rainbow looks livelier and is far harder to rank
+by eye.
+
 # How positions are drawn
 
 Stars are stored at their true positions in parsecs, taken from the catalogue's own
@@ -164,6 +204,8 @@ F2 - Toggle Probe Names<BR>
 F3 - Toggle Probe Trails<BR>
 F4 - Toggle Star Stalks (the lines showing height above/below the plane)<BR>
 F5 - Cycle the star sprite style<BR>
+F6 - Cycle trail colouring: recency, density, per probe<BR>
+F7 - Cycle the trail palette<BR>
 F9 - At the debrief, hide or show the results panel over the map<BR>
 F12 - Toggle Debug (Shows Quadtree boundaries, FPS and the number of stars drawn)<BR>
 F11 - Toggle between windowed and borderless fullscreen<BR>
@@ -175,10 +217,10 @@ ESC - Exit Program<BR>
 ## Useful build commands
 
 How to check if binary contains debug symbols
-nm -C starmap | grep ' [BD] '
+nm -C starmap3 | grep ' [BD] '
 
 Generate a memory profile for the binary. (needs debug symbols)
-valgrind --tool=callgrind ./starmap --fn-skip="0x*" --fn-skip="llvm*"
+valgrind --tool=callgrind ./starmap3 --fn-skip="0x*" --fn-skip="llvm*"
 
 View the output of valgrind
 kcachegrind callgrind.out.<PID>

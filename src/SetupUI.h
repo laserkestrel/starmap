@@ -16,6 +16,17 @@
 class SetupUI
 {
 public:
+	// Which tab a control belongs to. Splitting them matters for more than tidiness:
+	// everything on Simulation changes the result and therefore the score, everything
+	// on Display only changes how it looks. Mixing the two made it easy to nudge a
+	// parameter while meaning to adjust the view.
+	enum Tab
+	{
+		SimulationTab = 0,
+		DisplayTab,
+		TabCount
+	};
+
 	// Order matters: these index into the slider list.
 	enum SliderId
 	{
@@ -29,6 +40,7 @@ public:
 		FuelBurn,
 		ViewTilt,
 		ViewDepth,
+		TrailFade,
 		SliderCount
 	};
 
@@ -45,6 +57,7 @@ public:
 		// range would be useless -- a fleet cap wants 10k, 100k, 1m, not 431,772.
 		std::vector<float> allowed;
 		sf::FloatRect track;
+		Tab tab = SimulationTab;
 	};
 
 	struct Segmented
@@ -54,6 +67,11 @@ public:
 		std::vector<std::string> options;
 		int selected = 0;
 		std::vector<sf::FloatRect> boxes;
+		Tab tab = SimulationTab;
+		// The palette control has eight options and will not fit at the default
+		// width, so the box size is per control rather than a constant.
+		float boxWidth = 86.0f;
+		float boxSpacing = 92.0f;
 	};
 
 	SetupUI();
@@ -74,6 +92,10 @@ public:
 	void setReplicateOnFirstArrival(bool on) { firstArrival.selected = on ? 1 : 0; }
 	bool resourcesEnabled() const { return economy.selected == 1; }
 	void setResourcesEnabled(bool on) { economy.selected = on ? 1 : 0; }
+	int trailModeChoice() const { return trailMode.selected; }
+	void setTrailModeChoice(int index);
+	int trailPaletteChoice() const { return trailPaletteControl.selected; }
+	void setTrailPaletteChoice(int index);
 	int presetChoice() const { return preset.selected; }
 	void applyPreset(int index);
 	// Seeds a control from config so the screen opens showing what the file says
@@ -90,7 +112,12 @@ private:
 	Segmented firstArrival;
 	Segmented economy;
 	Segmented preset;
+	Segmented trailMode;
+	Segmented trailPaletteControl;
 	sf::FloatRect panel;
 	sf::FloatRect launchButton;
+	std::vector<sf::FloatRect> tabButtons;
+	Tab activeTab = SimulationTab;
+	sf::Vector2u lastWindowSize{1280, 720};
 	int draggingSlider = -1;
 };

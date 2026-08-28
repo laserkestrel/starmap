@@ -16,7 +16,8 @@ Star::Star(const Star &other)
 	  name(other.name), colour(other.colour), displayBrightness(other.displayBrightness),
 	  isExplored(other.isExplored.load()),
 	  metals(other.metals.load()), volatiles(other.volatiles.load()),
-	  fissiles(other.fissiles.load()), initialStock(other.initialStock)
+	  fissiles(other.fissiles.load()), arrivalCount(other.arrivalCount.load()),
+	  initialStock(other.initialStock)
 {
 }
 
@@ -35,6 +36,7 @@ Star &Star::operator=(const Star &other)
 		metals.store(other.metals.load());
 		volatiles.store(other.volatiles.load());
 		fissiles.store(other.fissiles.load());
+		arrivalCount.store(other.arrivalCount.load());
 		initialStock = other.initialStock;
 	}
 	return *this;
@@ -45,7 +47,8 @@ Star::Star(Star &&other) noexcept
 	  name(std::move(other.name)), colour(other.colour), displayBrightness(other.displayBrightness),
 	  isExplored(other.isExplored.load()),
 	  metals(other.metals.load()), volatiles(other.volatiles.load()),
-	  fissiles(other.fissiles.load()), initialStock(other.initialStock)
+	  fissiles(other.fissiles.load()), arrivalCount(other.arrivalCount.load()),
+	  initialStock(other.initialStock)
 {
 }
 
@@ -64,6 +67,7 @@ Star &Star::operator=(Star &&other) noexcept
 		metals.store(other.metals.load());
 		volatiles.store(other.volatiles.load());
 		fissiles.store(other.fissiles.load());
+		arrivalCount.store(other.arrivalCount.load());
 		initialStock = other.initialStock;
 	}
 	return *this;

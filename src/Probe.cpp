@@ -72,7 +72,8 @@ void Probe::setTargetStar(uint32_t starID) { targetStar = starID; }
 
 void Probe::recordVisit(uint32_t starID, const sf::Vector3f &coordinates)
 {
-	trail.push_back(VisitedStarSystem{starID, coordinates});
+	trail.push_back(VisitedStarSystem{starID, coordinates,
+									  settings != nullptr ? settings->currentTick : 0});
 	knowledge.learn(starID);
 }
 

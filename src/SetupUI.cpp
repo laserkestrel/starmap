@@ -1,5 +1,6 @@
 // SetupUI.cpp
 #include "SetupUI.h"
+#include "TrailStyle.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -20,9 +21,9 @@ namespace
 	const sf::Color SEG_ON(52, 84, 126);
 
 	const float PANEL_W = 820.0f;
-	// Four more rows than the original layout: three economy sliders and the
-	// on/off control for them.
-	const float PANEL_H = 1000.0f;
+	// Sized for the taller of the two tabs (Simulation), plus the tab bar. Splitting
+	// display settings out is what stops this growing every time something is added.
+	const float PANEL_H = 900.0f;
 	const float PAD = 36.0f;
 	const float TRACK_X = 300.0f;   // relative to panel left
 	const float TRACK_W = 340.0f;
@@ -87,15 +88,38 @@ SetupUI::SetupUI()
 						 " /pc", 0.25f, 6.0f, 1.5f, 2, {}, {}};
 	sliders[ViewTilt] = {"View tilt",
 						 "90 looks straight down and hides height entirely; lower leans back so the stalks become readable.",
-						 " deg", 30.0f, 90.0f, 75.0f, 0, {}, {}};
+						 " deg", 30.0f, 90.0f, 75.0f, 0, {}, {}, DisplayTab};
 	sliders[ViewDepth] = {"View depth",
 						  "How far above and below the plane the view reaches. Larger shows more, and more clutter.",
-						  " pc", 2.0f, 40.0f, 8.0f, 0, {}, {}};
+						  " pc", 2.0f, 40.0f, 8.0f, 0, {}, {}, DisplayTab};
+	sliders[TrailFade] = {"Trail fade",
+						  "How many ticks a trail takes to cool from white to dark, in Recency mode. Short values leave only the expansion front lit.",
+						  " ticks", 50.0f, 3000.0f, 600.0f, 0, {}, {}, DisplayTab};
 
 	spriteStyle.label = "Star sprite";
 	spriteStyle.help = "Purely cosmetic. F5 also cycles these while running.";
 	spriteStyle.options = {"Soft glow", "Core + halo", "Spikes", "Bloom ring"};
 	spriteStyle.selected = 1;
+	spriteStyle.tab = DisplayTab;
+
+	trailMode.label = "Trail colouring";
+	trailMode.help = "Recency fades a leg as it ages, so the expansion front glows. Density burns brightest where the most probes have arrived, which is where the wasted journeys are. Per probe is the old random colour, which encodes nothing. F6 cycles these while running.";
+	trailMode.options = {"Recency", "Density", "Per probe"};
+	trailMode.selected = 0;
+	trailMode.tab = DisplayTab;
+
+	trailPaletteControl.label = "Trail palette";
+	trailPaletteControl.help = "The hue the heat ramp runs through, dark to white. Applies to both Recency and Density. F7 cycles these while running.";
+	trailPaletteControl.options.clear();
+	for (int i = 0; i < trailPaletteCount(); ++i)
+	{
+		trailPaletteControl.options.push_back(trailPalettes()[i].name);
+	}
+	trailPaletteControl.selected = 0;
+	trailPaletteControl.tab = DisplayTab;
+	// Eight options will not fit at the default width.
+	trailPaletteControl.boxWidth = 54.0f;
+	trailPaletteControl.boxSpacing = 58.0f;
 
 	firstArrival.label = "Replicate at first star";
 	firstArrival.help = "Whether a new probe may copy itself at the very first system it reaches, or must establish itself there first. Roughly doubles the growth exponent.";
@@ -173,45 +197,86 @@ void SetupUI::applyPreset(int index)
 
 void SetupUI::layout(const sf::Vector2u &windowSize)
 {
+	lastWindowSize = windowSize; // so a tab switch can re-lay out without being handed it again
 	panel = sf::FloatRect((windowSize.x - PANEL_W) * 0.5f, (windowSize.y - PANEL_H) * 0.5f, PANEL_W, PANEL_H);
 
-	float y = panel.top + 118.0f;
+	// Controls not on the active tab are given empty rectangles rather than merely
+	// being skipped when drawing. sf::FloatRect::contains is false for a zero-sized
+	// rect, so this makes them genuinely unclickable -- leaving stale geometry behind
+	// would let an invisible control on the other tab swallow a click.
+	auto hide = [](Segmented &s) {
+		s.boxes.assign(s.options.size(), sf::FloatRect());
+	};
 
-	// preset row
+	float y = panel.top + 158.0f; // leaves room for the tab bar
+
 	preset.boxes.clear();
-	for (size_t i = 0; i < preset.options.size(); ++i)
+	if (activeTab == SimulationTab)
 	{
-		preset.boxes.push_back(sf::FloatRect(panel.left + TRACK_X + i * 92.0f, y - 4.0f, 86.0f, 26.0f));
+		for (size_t i = 0; i < preset.options.size(); ++i)
+		{
+			preset.boxes.push_back(sf::FloatRect(panel.left + TRACK_X + i * preset.boxSpacing,
+												 y - 4.0f, preset.boxWidth, 26.0f));
+		}
+		y += ROW_H;
 	}
-	y += ROW_H;
+	else
+	{
+		hide(preset);
+	}
 
 	for (auto &s : sliders)
 	{
+		if (s.tab != activeTab)
+		{
+			s.track = sf::FloatRect();
+			continue;
+		}
 		s.track = sf::FloatRect(panel.left + TRACK_X, y + 4.0f, TRACK_W, 6.0f);
 		y += ROW_H;
 	}
 
-	economy.boxes.clear();
-	for (size_t i = 0; i < economy.options.size(); ++i)
-	{
-		economy.boxes.push_back(sf::FloatRect(panel.left + TRACK_X + i * 92.0f, y - 4.0f, 86.0f, 26.0f));
-	}
-	y += ROW_H;
+	auto place = [&](Segmented &s) {
+		if (s.tab != activeTab)
+		{
+			hide(s);
+			return;
+		}
+		s.boxes.clear();
+		for (size_t i = 0; i < s.options.size(); ++i)
+		{
+			s.boxes.push_back(sf::FloatRect(panel.left + TRACK_X + i * s.boxSpacing,
+											y - 4.0f, s.boxWidth, 26.0f));
+		}
+		y += ROW_H;
+	};
 
-	firstArrival.boxes.clear();
-	for (size_t i = 0; i < firstArrival.options.size(); ++i)
-	{
-		firstArrival.boxes.push_back(sf::FloatRect(panel.left + TRACK_X + i * 92.0f, y - 4.0f, 86.0f, 26.0f));
-	}
-	y += ROW_H;
+	place(economy);
+	place(firstArrival);
+	place(trailMode);
+	place(trailPaletteControl);
+	place(spriteStyle);
 
-	spriteStyle.boxes.clear();
-	for (size_t i = 0; i < spriteStyle.options.size(); ++i)
+	// Tab bar, under the heading.
+	tabButtons.clear();
+	for (int i = 0; i < TabCount; ++i)
 	{
-		spriteStyle.boxes.push_back(sf::FloatRect(panel.left + TRACK_X + i * 92.0f, y - 4.0f, 86.0f, 26.0f));
+		tabButtons.push_back(sf::FloatRect(panel.left + PAD + i * 148.0f, panel.top + 104.0f, 140.0f, 32.0f));
 	}
 
 	launchButton = sf::FloatRect(panel.left + PANEL_W - PAD - 210.0f, panel.top + PANEL_H - 74.0f, 210.0f, 44.0f);
+}
+
+void SetupUI::setTrailModeChoice(int index)
+{
+	if (index >= 0 && index < static_cast<int>(trailMode.options.size()))
+		trailMode.selected = index;
+}
+
+void SetupUI::setTrailPaletteChoice(int index)
+{
+	if (index >= 0 && index < static_cast<int>(trailPaletteControl.options.size()))
+		trailPaletteControl.selected = index;
 }
 
 void SetupUI::setFromTrack(Slider &s, float mouseX)
@@ -236,6 +301,37 @@ void SetupUI::setFromTrack(Slider &s, float mouseX)
 
 bool SetupUI::onMousePressed(const sf::Vector2f &p)
 {
+	// Tabs first: switching one re-lays out every control, so nothing below should
+	// act on coordinates from the layout being replaced.
+	for (int i = 0; i < static_cast<int>(tabButtons.size()); ++i)
+	{
+		if (tabButtons[static_cast<size_t>(i)].contains(p))
+		{
+			if (activeTab != static_cast<Tab>(i))
+			{
+				activeTab = static_cast<Tab>(i);
+				layout(lastWindowSize);
+			}
+			return true;
+		}
+	}
+
+	for (size_t i = 0; i < trailMode.boxes.size(); ++i)
+	{
+		if (trailMode.boxes[i].contains(p))
+		{
+			trailMode.selected = static_cast<int>(i);
+			return true;
+		}
+	}
+	for (size_t i = 0; i < trailPaletteControl.boxes.size(); ++i)
+	{
+		if (trailPaletteControl.boxes[i].contains(p))
+		{
+			trailPaletteControl.selected = static_cast<int>(i);
+			return true;
+		}
+	}
 	for (size_t i = 0; i < preset.boxes.size(); ++i)
 	{
 		if (preset.boxes[i].contains(p))
@@ -322,7 +418,9 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 		t.setFillColor(c);
 		window.draw(t);
 	};
-	auto segments = [&](const Segmented &seg, float rowY) {
+	auto segments = [&](const Segmented &seg, float rowY, bool swatches = false) {
+		if (seg.tab != activeTab)
+			return;
 		text(seg.label, panel.left + PAD, rowY, 16, LABEL);
 		text(seg.help, panel.left + PAD, rowY + 19.0f, 12, HELP);
 		for (size_t i = 0; i < seg.boxes.size(); ++i)
@@ -333,8 +431,24 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 			box.setOutlineThickness(1.0f);
 			box.setOutlineColor(static_cast<int>(i) == seg.selected ? HEADING : PANEL_EDGE);
 			window.draw(box);
-			text(seg.options[i], seg.boxes[i].left + 9.0f, seg.boxes[i].top + 4.0f, 13,
-				 static_cast<int>(i) == seg.selected ? VALUE : LABEL);
+
+			if (swatches && static_cast<int>(i) < trailPaletteCount())
+			{
+				// Show the colour itself rather than only its name -- picking "Teal"
+				// from a word is guesswork until you have seen it on the map once.
+				const TrailPalette &p = trailPalettes()[i];
+				sf::RectangleShape swatch(sf::Vector2f(seg.boxes[i].width - 10.0f, 5.0f));
+				swatch.setPosition(seg.boxes[i].left + 5.0f, seg.boxes[i].top + 17.0f);
+				swatch.setFillColor(sf::Color(p.r, p.g, p.b));
+				window.draw(swatch);
+				text(seg.options[i], seg.boxes[i].left + 5.0f, seg.boxes[i].top + 1.0f, 11,
+					 static_cast<int>(i) == seg.selected ? VALUE : LABEL);
+			}
+			else
+			{
+				text(seg.options[i], seg.boxes[i].left + 9.0f, seg.boxes[i].top + 4.0f, 13,
+					 static_cast<int>(i) == seg.selected ? VALUE : LABEL);
+			}
 		}
 	};
 
@@ -342,10 +456,30 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 	text("Mouse sets the controls. Arrow keys still pan the map behind.",
 		 panel.left + PAD, panel.top + 68.0f, 13, HELP);
 
-	segments(preset, panel.top + 114.0f);
+	// --- tab bar ---------------------------------------------------------------
+	static const char *TAB_NAMES[] = {"SIMULATION", "DISPLAY"};
+	for (size_t i = 0; i < tabButtons.size(); ++i)
+	{
+		const bool on = (static_cast<int>(i) == static_cast<int>(activeTab));
+		sf::RectangleShape tab(sf::Vector2f(tabButtons[i].width, tabButtons[i].height));
+		tab.setPosition(tabButtons[i].left, tabButtons[i].top);
+		tab.setFillColor(on ? SEG_ON : SEG_OFF);
+		tab.setOutlineThickness(1.0f);
+		tab.setOutlineColor(on ? HEADING : PANEL_EDGE);
+		window.draw(tab);
+		text(TAB_NAMES[i], tabButtons[i].left + 14.0f, tabButtons[i].top + 7.0f, 15, on ? VALUE : LABEL);
+	}
+	text(activeTab == SimulationTab ? "These change the result, and so the score."
+									: "These only change how it looks. Nothing here affects the score.",
+		 panel.left + PAD + tabButtons.size() * 148.0f + 10.0f, panel.top + 113.0f, 12, HELP);
+
+	if (activeTab == SimulationTab)
+		segments(preset, panel.top + 154.0f);
 
 	for (const auto &s : sliders)
 	{
+		if (s.tab != activeTab)
+			continue;
 		const float rowY = s.track.top - 8.0f;
 		text(s.label, panel.left + PAD, rowY, 16, LABEL);
 		text(s.help, panel.left + PAD, rowY + 19.0f, 12, HELP);
@@ -381,9 +515,14 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 		text(format(s.value, s.decimals, s.suffix), s.track.left + s.track.width + 24.0f, s.track.top - 10.0f, 16, VALUE);
 	}
 
-	segments(economy, economy.boxes.empty() ? panel.top : economy.boxes[0].top + 4.0f);
-	segments(firstArrival, firstArrival.boxes.empty() ? panel.top : firstArrival.boxes[0].top + 4.0f);
-	segments(spriteStyle, spriteStyle.boxes.empty() ? panel.top : spriteStyle.boxes[0].top + 4.0f);
+	auto rowTop = [&](const Segmented &s) {
+		return s.boxes.empty() ? panel.top : s.boxes[0].top + 4.0f;
+	};
+	segments(economy, rowTop(economy));
+	segments(firstArrival, rowTop(firstArrival));
+	segments(trailMode, rowTop(trailMode));
+	segments(trailPaletteControl, rowTop(trailPaletteControl), true);
+	segments(spriteStyle, rowTop(spriteStyle));
 
 	sf::RectangleShape rule(sf::Vector2f(panel.width - 2.0f * PAD, 1.0f));
 	rule.setPosition(panel.left + PAD, panel.top + panel.height - 96.0f);

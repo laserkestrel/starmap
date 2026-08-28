@@ -259,23 +259,83 @@ void RenderSystem::renderStarfield(const std::vector<Star> &stars, const GalaxyQ
 	}
 }
 
+TrailColourMode RenderSystem::cycleTrailColourMode()
+{
+	const int next = (static_cast<int>(trailColourMode) + 1) % static_cast<int>(TrailColourMode::ModeCount);
+	trailColourMode = static_cast<TrailColourMode>(next);
+	return trailColourMode;
+}
+
+void RenderSystem::setTrailPalette(int index)
+{
+	const int count = trailPaletteCount();
+	if (count <= 0)
+		return;
+	// Wraps rather than clamps, so a "next palette" key can just add one.
+	trailPaletteIndex = ((index % count) + count) % count;
+}
+
 void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 {
 	if (showProbeTrails)
 	{
 		trailLines.clear();
+		const TrailPalette &palette = trailPalettes()[trailPaletteIndex];
+
 		for (const auto &probe : probes)
 		{
 			// The trail is now only where this probe itself went, so every
 			// consecutive pair is a real leg of its journey.
 			const auto &visited = probe.getTrail();
-			const sf::Color pathColor = probe.getTrailColor();
 			for (size_t i = 1; i < visited.size(); ++i)
 			{
-				const auto &a = visited[i - 1].coordinates;
-				const auto &b = visited[i].coordinates;
-				trailLines.append(sf::Vertex(projection.project(a.x, a.y, a.z), pathColor));
-				trailLines.append(sf::Vertex(projection.project(b.x, b.y, b.z), pathColor));
+				const auto &a = visited[i - 1];
+				const auto &b = visited[i];
+
+				sf::Color legColour;
+				switch (trailColourMode)
+				{
+				case TrailColourMode::Recency:
+					legColour = heatColour(recencyHeat(b.arrivalTick, currentTick, trailFadeTicks), palette);
+					break;
+				case TrailColourMode::Density:
+				{
+					// Heat comes from how many probes have arrived at the leg's
+					// DESTINATION, so a corridor that many lineages re-fly lights up.
+					unsigned int arrivals = 0;
+					if (densityStars != nullptr && densityIndex != nullptr)
+					{
+						const auto it = densityIndex->find(b.starID);
+						if (it != densityIndex->end() && it->second < densityStars->size())
+							arrivals = (*densityStars)[it->second].getArrivalCount();
+					}
+					legColour = heatColour(densityHeat(arrivals, trailDensitySaturateAt), palette);
+					break;
+				}
+				default:
+					legColour = probe.getTrailColor();
+					break;
+				}
+
+				trailLines.append(sf::Vertex(projection.project(a.coordinates.x, a.coordinates.y, a.coordinates.z), legColour));
+				trailLines.append(sf::Vertex(projection.project(b.coordinates.x, b.coordinates.y, b.coordinates.z), legColour));
+			}
+
+			// The leg currently being flown. Without this a journey only appeared
+			// once it had already finished, so the map always showed history and
+			// never the thing you were watching happen. It costs one segment per
+			// moving probe -- about 7% on top of geometry that is already being
+			// rebuilt every frame.
+			if (probe.getMode() == ProbeMode::Travel && !visited.empty())
+			{
+				const auto &from = visited.back();
+				const sf::Color liveColour =
+					(trailColourMode == TrailColourMode::PerProbe)
+						? probe.getTrailColor()
+						: heatColour(1.0f, palette); // in flight is as hot as it gets
+
+				trailLines.append(sf::Vertex(projection.project(from.coordinates.x, from.coordinates.y, from.coordinates.z), liveColour));
+				trailLines.append(sf::Vertex(projection.project(probe.getWorldX(), probe.getWorldY(), probe.getWorldZ()), liveColour));
 			}
 		}
 		renderWindow.draw(trailLines);

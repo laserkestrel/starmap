@@ -43,6 +43,13 @@ public:
 	// the state from not-explored -> explored.
 	bool tryMarkExplored();
 
+	// Every arrival here by anyone, first or otherwise. This is the raw material for
+	// the density trail view: a system with twenty arrivals cost nineteen wasted
+	// journeys, and drawing that is the only way to see where the waste actually is.
+	void recordArrival() const { arrivalCount.fetch_add(1, std::memory_order_relaxed); }
+	unsigned int getArrivalCount() const { return arrivalCount.load(std::memory_order_relaxed); }
+	void resetArrivalCount() { arrivalCount.store(0); }
+
 	// --- resources -----------------------------------------------------------
 	// Set the system's starting stock, and remember it so a later run can restore
 	// it. Stocks deplete, so without the second copy run 2 would start in the
@@ -83,6 +90,7 @@ private:
 	mutable std::atomic<float> metals{0.0f};
 	mutable std::atomic<float> volatiles{0.0f};
 	mutable std::atomic<float> fissiles{0.0f};
+	mutable std::atomic<unsigned int> arrivalCount{0};
 	Resources initialStock;
 };
 

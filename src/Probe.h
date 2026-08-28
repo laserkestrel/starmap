@@ -44,6 +44,10 @@ struct VisitedStarSystem
 {
 	uint32_t starID;
 	sf::Vector3f coordinates;
+	// The tick this arrival happened on. Four bytes per stop, and it is what lets the
+	// renderer fade a trail by age instead of drawing the whole history at one
+	// brightness -- which is why the expansion front was impossible to pick out.
+	long long arrivalTick = 0;
 };
 
 class Probe

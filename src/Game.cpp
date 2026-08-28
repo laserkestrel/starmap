@@ -81,6 +81,13 @@ Game::Game(const LoadConfig &config)
 	setupUI.setValue(SetupUI::ProbeBuildCost, 1.0f); // config values ARE the 1.0x bill
 	setupUI.setValue(SetupUI::FuelBurn, config.getFuelPerParsec());
 	setupUI.setResourcesEnabled(config.getResourcesEnabled());
+	setupUI.setValue(SetupUI::TrailFade, config.getTrailFadeTicks());
+	setupUI.setTrailModeChoice(static_cast<int>(trailColourModeFromString(config.getTrailColourMode())));
+	setupUI.setTrailPaletteChoice(config.getTrailPalette());
+	renderSystem.setTrailColourMode(trailColourModeFromString(config.getTrailColourMode()));
+	renderSystem.setTrailPalette(config.getTrailPalette());
+	renderSystem.setTrailFadeTicks(config.getTrailFadeTicks());
+	renderSystem.setTrailDensitySaturateAt(config.getTrailDensitySaturateAt());
 	loadedRichness = config.getSystemResourceScale();
 	setupUI.setSpriteChoice(static_cast<int>(starSpriteStyleFromString(config.getStarSpriteStyle())));
 	setupUI.setReplicateOnFirstArrival(config.getReplicateOnFirstArrival());
@@ -98,7 +105,9 @@ void Game::seedFirstProbe()
 	{
 		star.setIsExplored(false);
 		star.restoreResources();
+		star.resetArrivalCount();
 	}
+	settings.currentTick = 0;
 
 	probeVector.clear();
 	Probe firstProbe("SOL-SOL-AAA", 0.0f, 0.0f, 0.0f, settings.probeSpeedParsecsPerTick, *quadTree, settings);
@@ -144,6 +153,10 @@ void Game::reloadGalaxy(int starLimit)
 	{
 		starIndexMap[galaxyVector[i].getID()] = i;
 	}
+
+	// The density trail view resolves a leg's star ID to that star's arrival count,
+	// so it needs both. Re-pointed here because a reload moves the vector.
+	renderSystem.setDensitySource(&galaxyVector, &starIndexMap);
 
 	const sf::FloatRect bounds = computeCatalogueBounds();
 	quadTree = std::make_unique<GalaxyQuadTree>(bounds, config.getQuadTreeSearchSize());
@@ -228,6 +241,14 @@ void Game::initializeKeyBindings()
 	keyBindings[sf::Keyboard::F5] = [this]() {
 		const StarSpriteStyle style = renderSystem.cycleSpriteStyle();
 		std::cout << "Star sprite: " << starSpriteStyleName(style) << std::endl;
+	};
+	keyBindings[sf::Keyboard::F6] = [this]() {
+		const TrailColourMode mode = renderSystem.cycleTrailColourMode();
+		std::cout << "Trail colouring: " << trailColourModeName(mode) << std::endl;
+	};
+	keyBindings[sf::Keyboard::F7] = [this]() {
+		renderSystem.setTrailPalette(renderSystem.getTrailPalette() + 1);
+		std::cout << "Trail palette: " << trailPalettes()[renderSystem.getTrailPalette()].name << std::endl;
 	};
 	keyBindings[sf::Keyboard::F12] = [this]() { renderSystem.toggleDebugGraphics(); };
 	keyBindings[sf::Keyboard::Home] = [this]() { resetView(); };
@@ -345,6 +366,9 @@ void Game::runStartupScreen()
 	projection.setTiltDegrees(setupUI.value(SetupUI::ViewTilt));
 	projection.setViewDepthParsecs(setupUI.value(SetupUI::ViewDepth));
 	renderSystem.setSpriteStyle(static_cast<StarSpriteStyle>(setupUI.spriteChoice()));
+	renderSystem.setTrailColourMode(static_cast<TrailColourMode>(setupUI.trailModeChoice()));
+	renderSystem.setTrailPalette(setupUI.trailPaletteChoice());
+	renderSystem.setTrailFadeTicks(setupUI.value(SetupUI::TrailFade));
 
 	// Richness is baked into the stars at load, so changing it has to reload the
 	// catalogue -- same as changing its size.
@@ -699,6 +723,7 @@ void Game::updateGameState()
 				continue;
 
 			Star &star = galaxyVector[it->second];
+			star.recordArrival(); // feeds the density trail view
 
 			// Tell the probe which system it is standing in, so it can mine here next
 			// tick. Game owns the star vector, so this resolution belongs here rather
@@ -735,6 +760,8 @@ void Game::updateGameState()
 	}
 
 	++metrics.ticks;
+	// Probes stamp arrivals with this, and the renderer fades trails against it.
+	settings.currentTick = metrics.ticks;
 	metrics.peakPopulation = std::max(metrics.peakPopulation, probeVector.size());
 	const double coverage = metrics.coveragePercent();
 	if (metrics.ticksTo25 < 0 && coverage >= 25.0) metrics.ticksTo25 = metrics.ticks;
@@ -744,6 +771,7 @@ void Game::updateGameState()
 
 void Game::render()
 {
+	renderSystem.setCurrentTick(metrics.ticks);
 	renderSystem.renderStarfield(galaxyVector, *quadTree);
 	renderSystem.renderQuadtree(window, quadTree->getRootNode());
 	renderSystem.renderProbes(probeVector);

@@ -10,9 +10,11 @@
 #include "RunMetrics.h"
 #include "Star.h"
 #include "StarSprite.h"
+#include "TrailStyle.h"
 #include <SFML/Graphics.hpp>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -68,6 +70,25 @@ public:
 	StarSpriteStyle getSpriteStyle() const { return spriteStyle; }
 	StarSpriteStyle cycleSpriteStyle();
 
+	// --- trail appearance -------------------------------------------------------
+	void setTrailColourMode(TrailColourMode mode) { trailColourMode = mode; }
+	TrailColourMode getTrailColourMode() const { return trailColourMode; }
+	TrailColourMode cycleTrailColourMode();
+	void setTrailPalette(int index);
+	int getTrailPalette() const { return trailPaletteIndex; }
+	// Recency needs to know what "now" is; Game hands it the tick each frame.
+	void setCurrentTick(long long tick) { currentTick = tick; }
+	void setTrailFadeTicks(float ticks) { trailFadeTicks = ticks; }
+	void setTrailDensitySaturateAt(float arrivals) { trailDensitySaturateAt = arrivals; }
+	// Density reads arrival counts off the stars, so the renderer needs a way to get
+	// from a trail entry's star ID to the star. Set once per galaxy load, not per frame.
+	void setDensitySource(const std::vector<Star> *stars,
+						  const std::unordered_map<uint32_t, size_t> *index)
+	{
+		densityStars = stars;
+		densityIndex = index;
+	}
+
 	size_t getLastVisibleStarCount() const { return lastVisibleStarCount; }
 	// The setup screen draws its own controls and needs the loaded font.
 	const sf::Font &getFont() const { return font; }
@@ -94,6 +115,14 @@ private:
 	// Screen cells already carrying a probe name this frame. Kept as a member for
 	// the same reason as the vectors above: cleared and refilled, never reallocated.
 	std::unordered_set<int> occupiedLabelCells;
+
+	TrailColourMode trailColourMode = TrailColourMode::Recency;
+	int trailPaletteIndex = 0;
+	long long currentTick = 0;
+	float trailFadeTicks = 600.0f;
+	float trailDensitySaturateAt = 60.0f;
+	const std::vector<Star> *densityStars = nullptr;
+	const std::unordered_map<uint32_t, size_t> *densityIndex = nullptr;
 	sf::VertexArray gridLines{sf::Lines};
 	sf::VertexArray stalkLines{sf::Lines};
 	sf::VertexArray starQuads{sf::Quads};

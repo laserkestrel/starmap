@@ -107,6 +107,10 @@ int LoadConfig::getMaxHarvestTicks() const { return maxHarvestTicks; }
 float LoadConfig::getFuelPerParsec() const { return fuelPerParsec; }
 float LoadConfig::getFuelSafetyMargin() const { return fuelSafetyMargin; }
 float LoadConfig::getChildFuelShare() const { return childFuelShare; }
+const std::string &LoadConfig::getTrailColourMode() const { return trailColourMode; }
+int LoadConfig::getTrailPalette() const { return trailPalette; }
+float LoadConfig::getTrailFadeTicks() const { return trailFadeTicks; }
+float LoadConfig::getTrailDensitySaturateAt() const { return trailDensitySaturateAt; }
 
 void LoadConfig::loadFromFile()
 {
@@ -175,6 +179,11 @@ void LoadConfig::loadFromFile()
 		readNumber(config, "fuelPerParsec", fuelPerParsec);
 		readNumber(config, "fuelSafetyMargin", fuelSafetyMargin);
 		readNumber(config, "childFuelShare", childFuelShare);
+
+		readString(config, "trailColourMode", trailColourMode);
+		readNumber(config, "trailPalette", trailPalette);
+		readNumber(config, "trailFadeTicks", trailFadeTicks);
+		readNumber(config, "trailDensitySaturateAt", trailDensitySaturateAt);
 	}
 	catch (json::parse_error &e)
 	{

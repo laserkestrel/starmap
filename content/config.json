@@ -29,7 +29,6 @@
   "replicateOnFirstArrival": false,
   "probeSearchRadiusParsecs": 8.0,
   "probeSpeedParsecsPerTick": 0.25,
-
   "resourcesEnabled": true,
   "systemResourceScale": 100.0,
   "resourceFeatureParsecs": 6.0,
@@ -41,5 +40,9 @@
   "maxHarvestTicks": 60,
   "fuelPerParsec": 1.5,
   "fuelSafetyMargin": 1.25,
-  "childFuelShare": 0.35
+  "childFuelShare": 0.35,
+  "trailColourMode": "recency",
+  "trailPalette": 0,
+  "trailFadeTicks": 600,
+  "trailDensitySaturateAt": 60
 }
