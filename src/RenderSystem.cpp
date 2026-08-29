@@ -485,9 +485,10 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 		const float screenW = static_cast<float>(windowSize.x);
 		const float screenH = static_cast<float>(windowSize.y);
 
-		// About the width of a probe name at 10pt, so neighbouring labels do not overlap.
-		const float CELL_W = 86.0f;
-		const float CELL_H = 15.0f;
+		// Sized from the font so labels never overlap: a name is now a lineage path
+		// plus a birthplace, so it is far wider than the old three-group code.
+		const float CELL_W = static_cast<float>(probeLabelSize) * 8.0f;
+		const float CELL_H = static_cast<float>(probeLabelSize) * 1.4f;
 		const int cellsAcross = std::max(1, static_cast<int>(screenW / CELL_W) + 1);
 
 		occupiedLabelCells.clear();
@@ -517,8 +518,8 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 				if (!occupiedLabelCells.insert(cell).second)
 					continue; // something is already named here
 
-				sf::Text labelText(probe.getProbeName(), font, 10);
-				labelText.setPosition(p.x - 10.0f, p.y - 10.0f);
+				sf::Text labelText(probe.getDisplayName(), font, probeLabelSize);
+				labelText.setPosition(p.x + 8.0f, p.y - static_cast<float>(probeLabelSize));
 				labelText.setFillColor(probe.getLineageColour());
 				renderWindow.draw(labelText);
 				++drawn;

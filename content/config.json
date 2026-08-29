@@ -49,5 +49,6 @@
   "showStarNames": false,
   "showProbeNames": false,
   "showProbeTrails": false,
-  "lineageHueSpread": 1.0
+  "lineageHueSpread": 1.0,
+  "probeLabelSize": 15
 }

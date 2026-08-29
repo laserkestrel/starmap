@@ -103,6 +103,9 @@ public:
 	// How much of the colour wheel the whole family tree spans, 0..1.
 	float getLineageHueSpread() const;
 
+	// Point size for probe name labels.
+	int getProbeLabelSize() const;
+
 	// Which overlays start switched on. All four are also F keys at runtime.
 	bool getShowStarStalks() const;
 	bool getShowStarNames() const;
@@ -161,6 +164,7 @@ private:
 	float trailFadeTicks = 600.0f;
 	float trailDensitySaturateAt = 60.0f;
 	float lineageHueSpread = 1.0f;
+	int probeLabelSize = 15;
 	bool showStarStalks = true;
 	bool showStarNames = false;
 	bool showProbeNames = false;

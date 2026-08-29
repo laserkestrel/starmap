@@ -52,6 +52,7 @@ childFuelShare - Share of the parent's remaining volatiles handed to a new probe
 trailColourMode - "recency", "density" or "lineage" ("perProbe" is still accepted as the old name for lineage). Also on the Display tab, and F6 cycles it live.<BR>
 trailPalette - Which of the eight colour ramps to use, 0-7. F7 cycles it live.<BR>
 trailFadeTicks - Ticks for a trail to cool from white to dark in recency mode. Short values leave only the expansion front lit.<BR>
+probeLabelSize - Point size for probe name labels. The label declutter grid is sized from this, so a larger value shows fewer, bigger names rather than overlapping ones.<BR>
 lineageHueSpread - How much of the colour wheel the whole family tree spans, 0 to 1. At 1.0 the top-level branches are as far apart as they can be; lower values tint the entire fleet towards one part of the spectrum.<BR>
 showStarStalks / showStarNames / showProbeNames / showProbeTrails - Which overlays start switched on. All four are on the Display tab and on F4 / F1 / F2 / F3.<BR>
 trailDensitySaturateAt - Arrivals at which a system is fully white in density mode. The scale is logarithmic, because arrival counts are heavy-tailed and a linear ramp leaves almost everything at the cold end. Default 60: with a typical mean around 12 arrivals per system, 24 washed most of the map out to white.<BR>
@@ -175,18 +176,53 @@ burns white because it has been crossed dozens of times, while the frontier stay
 cool at one or two visits. If you want to see why efficiency sits around 0.08, this
 is the picture of it.
 
+# Probe names
+
+A probe is named for its path through the family tree and the system it was built
+at: `ABCAB@Gl 65A`. One letter per generation says which child it was, so the name
+is unique by construction, its LENGTH is the generation, and a shared prefix means
+shared ancestry -- ABCAB and ABCAA are siblings, ABCAB and BAA parted at the root.
+Unnamed catalogue entries fall back to `#<id>`.
+
+This replaced `<birth star, 3 chars>-<parent's birth star, 3 chars>-<code>`, which
+had three separate faults. The code was not an identifier but the generation depth,
+reached by incrementing the parent's, so every probe at a given depth carried the
+same one and names were never unique. Three characters collided constantly: "Gl 65A"
+and "Gl 244B" both truncate to "GL ". And 84 of the nearest 2,500 stars have no name
+in the catalogue at all, which left that group empty and produced names starting
+with a bare dash.
+
+The family tree turns out to be long and thin rather than bushy. If every probe made
+three copies, 1,800 probes would be about seven generations deep; in practice paths
+run past twenty, because a resource economy that only just affords one copy per probe
+produces a chain rather than a tree. Twenty-letter labels are unreadable, so paths
+longer than six letters are drawn as generation plus the last three branches --
+`21:AAA@GJ 3100` -- while the full path stays the identity in the console and the
+debrief. probeLabelSize sets the point size; the declutter grid sizes itself from it,
+so raising it thins labels out rather than letting them overlap.
+
+# Reading the trails
+
 LINEAGE gives each family its own band of the colour wheel. The root probe owns the
 whole wheel and every child is handed a slice of its parent's share, so a subtree
 always occupies one contiguous arc: how far apart two probes look is how far apart
 they are in the family tree. Green sweeping one half of the galaxy and magenta the
 other is two branches of one family dividing the work between them.
 
-A simpler scheme was tried first -- step the hue a fixed amount per generation --
-and it does not work. The drift accumulates, wraps the wheel every handful of
-generations, and distant strangers end up the same colour as close relatives, which
-is no better than the random colouring it replaced. The number of clearly distinct
-top-level colours is the replication limit plus one, since that is how many ways the
-root's arc gets divided.
+Two earlier attempts are worth recording because both looked right and were not.
+Stepping the hue a fixed amount per generation accumulates drift, wraps the wheel
+every handful of generations, and leaves distant strangers the same colour as close
+relatives -- no better than the random colouring it replaced. Then reserving a slice
+of each parent's arc for the parent itself, and splitting only what was left, left
+that slice never subdivided: with a replication limit of 3 the entire 0-90 degree
+wedge, every red, orange and yellow, became unreachable. Simulated over 3,000 probes
+it produced no hue at all between 0.02 and 0.22 of the wheel. Children now divide
+their parent's whole arc and a probe's own colour is the middle of its arc, which
+uses the full spectrum and keeps a parent away from the boundary it shares with a
+sibling subtree.
+
+A colour change where two trails meet is not always a probe changing colour: trails
+from different probes join at shared stars, so what looks like one path can be two.
 
 Recency and Density use the same eight palettes, chosen on the Display tab or cycled with F7. Each
 ramp is a single hue running dark to white, deliberately not a rainbow: brightness

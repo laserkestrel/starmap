@@ -76,20 +76,26 @@ public:
 	void recordKnown(uint32_t starID);
 	// Hands the child everything known so far, shared rather than copied.
 	void forkKnowledgeInto(Probe &child);
-	// --- lineage colour ---------------------------------------------------------
-	// Every probe carries a hue on the colour wheel. A child takes its parent's hue
-	// and steps a little way round, so a family reads as a band of related colours
-	// drifting through the spectrum and you can see which branch is working which
-	// part of the galaxy. This replaces an independent random colour per probe,
-	// which looked busy and encoded nothing at all: siblings were unrelated hues,
-	// and so were a parent and its own child.
-	// The root probe owns an arc of the colour wheel; each child is given a slice of
-	// its parent's arc. So a whole subtree occupies one contiguous band of hue, and
-	// how far apart two probes look is how far apart they are in the family tree.
+	// --- identity and lineage ---------------------------------------------------
+	// A probe's path through the family tree: one letter per generation, saying which
+	// child it was. Empty for the root. A child extends it by one letter, so every
+	// name is unique without a central registry, the length is the generation, and a
+	// shared prefix means shared ancestry.
+	void setLineagePath(const std::string &path) { lineagePath = path; }
+	const std::string &getLineagePath() const { return lineagePath; }
+	int getGeneration() const { return static_cast<int>(lineagePath.size()); }
+	void setProbeName(const std::string &name) { probeName = name; }
+	// Short form for drawing on the map; the full name stays the identity.
+	void setDisplayName(const std::string &name) { displayName = name; }
+	const std::string &getDisplayName() const { return displayName.empty() ? probeName : displayName; }
+
+	// The root probe owns an arc of the colour wheel and each child is given a slice
+	// of its parent's arc, so a whole subtree occupies one contiguous band of hue and
+	// how far apart two probes look is how far apart they are in the tree.
 	//
-	// A simple "step a fixed amount per generation" scheme was tried first and does
-	// not work: the drift accumulates, wraps the wheel every handful of generations,
-	// and distant strangers end up the same colour as close relatives.
+	// Stepping the hue a fixed amount per generation was tried first and does not
+	// work: the drift accumulates, wraps the wheel every few generations, and distant
+	// strangers end up the same colour as close relatives.
 	void setLineageArc(float arcStart, float arcWidth);
 	float getLineageHue() const { return lineageArcStart; }
 	// Hands `child` its slice. childIndex is how many copies this probe has already
@@ -172,6 +178,8 @@ private:
 	// the arc; its children divide up the rest.
 	float lineageArcStart = 0.0f;
 	float lineageArcWidth = 1.0f;
+	std::string lineagePath; // "" for the root; length is the generation
+	std::string displayName;
 
 	// What it is carrying, what it has dug up in total, and the system it is
 	// currently sitting in. The star pointer is into Game's galaxy vector, which

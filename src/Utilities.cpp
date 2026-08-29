@@ -25,48 +25,65 @@ std::string Utilities::getStarNameFromID(uint32_t starId)
 	return "Unknown"; // Return a default value if the ID is not found.
 }
 
-std::string Utilities::probeNamer(const std::string &str1, const std::string &str2)
+char Utilities::childLetter(int childIndex)
 {
-	/*
-	Each group (GRP) is 3 characters (Alphabetical A-Z)
-	Naming standard GRP1-GRP2-GRP3
-	GRP1 is parent probe name (tokens 1,2,3)
-	GRP2 is parent probe replication location (or this/self birthplace) (token 1,2,3)
-	GRP3 is a 3 character alphanumeric generation ID, consists A-Z, supports upto 17576 generations which can be derrived from parent probe name, if it expires, gets stuck at ZZZ)
-	Example: Probe from Sol to Proxima Centauri is SOL-SOL-AAA > replicates to PRO-SOL-AAB
-
-	*/
-	std::string abvParentBirplace = str1.substr(0, 3); // String 1 passed in from game is probe.getProbeName()
-	std::string abvChildBirplace = str2.substr(0, 3);  // String 2 passed in from game is probe.getTargetStar()
-	std::string abvGenerationID = str1.substr(str1.length() - 3);
-	std::string currentSequence = abvGenerationID;
-	std::string nextSequence = getNextSequence(currentSequence);
-	std::string newName = abvChildBirplace + "-" + abvParentBirplace + "-" + nextSequence;
-	std::transform(newName.begin(), newName.end(), newName.begin(), ::toupper); // Convert to uppercase
-	return newName;
+	// A..Z covers every replication limit the setup screen offers; anything beyond
+	// that wraps rather than producing punctuation.
+	const int i = ((childIndex % 26) + 26) % 26;
+	return static_cast<char>('A' + i);
 }
 
-std::string Utilities::getNextSequence(const std::string &sequence)
+std::string Utilities::makeLineagePath(const std::string &parentPath, int childIndex)
 {
-	std::string result = sequence;
+	return parentPath + childLetter(childIndex);
+}
 
-	// Increment the sequence
-	if (sequence[2] < 'Z')
-	{
-		result[2]++;
-	}
-	else if (sequence[1] < 'Z')
-	{
-		result[1]++;
-		result[2] = 'A';
-	}
-	else if (sequence[0] < 'Z')
-	{
-		result[0]++;
-		result[1] = 'A';
-		result[2] = 'A';
-	}
-	// Handle any other cases based on your requirements
+std::string Utilities::displayStarName(const std::string &rawName, uint32_t starID)
+{
+	std::string name = rawName;
 
-	return result;
+	// Trim whitespace; several catalogue entries carry trailing spaces.
+	const size_t first = name.find_first_not_of(" \t");
+	const size_t last = name.find_last_not_of(" \t");
+	name = (first == std::string::npos) ? std::string() : name.substr(first, last - first + 1);
+
+	// 84 of the nearest 2,500 stars have no name at all, and "Unknown" is what the
+	// ID lookup returns when it has never heard of one. Neither makes a usable label,
+	// so fall back to the catalogue number, which at least identifies the system.
+	if (name.empty() || name == "Unknown")
+	{
+		return "#" + std::to_string(starID);
+	}
+
+	// Long proper names would swamp the label. Rare -- only 406 stars in the
+	// catalogue have one -- but "Rigil Kentaurus" is 15 characters on its own.
+	const size_t MaxLength = 12;
+	if (name.size() > MaxLength)
+	{
+		name = name.substr(0, MaxLength);
+	}
+	return name;
+}
+
+std::string Utilities::probeLabelFor(const std::string &lineagePath, const std::string &birthStarLabel)
+{
+	const size_t FullPathUpTo = 6;
+	const size_t TailLetters = 3;
+
+	if (lineagePath.empty())
+	{
+		return "ROOT@" + birthStarLabel;
+	}
+	if (lineagePath.size() <= FullPathUpTo)
+	{
+		return lineagePath + "@" + birthStarLabel;
+	}
+	return std::to_string(lineagePath.size()) + ":" +
+		   lineagePath.substr(lineagePath.size() - TailLetters) + "@" + birthStarLabel;
+}
+
+std::string Utilities::makeProbeName(const std::string &parentPath, int childIndex,
+									 const std::string &birthStarName, uint32_t birthStarID)
+{
+	return makeLineagePath(parentPath, childIndex) + "@" + displayStarName(birthStarName, birthStarID);
 }

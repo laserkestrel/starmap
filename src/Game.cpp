@@ -89,6 +89,7 @@ Game::Game(const LoadConfig &config)
 	renderSystem.setTrailPalette(config.getTrailPalette());
 	renderSystem.setTrailFadeTicks(config.getTrailFadeTicks());
 	renderSystem.setTrailDensitySaturateAt(config.getTrailDensitySaturateAt());
+	renderSystem.setProbeLabelSize(static_cast<unsigned int>(std::max(6, config.getProbeLabelSize())));
 	renderSystem.setStarStalks(config.getShowStarStalks());
 	renderSystem.setTextLabelsStars(config.getShowStarNames());
 	renderSystem.setTextLabelsProbes(config.getShowProbeNames());
@@ -119,12 +120,14 @@ void Game::seedFirstProbe()
 	settings.currentTick = 0;
 
 	probeVector.clear();
-	Probe firstProbe("SOL-SOL-AAA", 0.0f, 0.0f, 0.0f, settings.probeSpeedParsecsPerTick, *quadTree, settings);
+	// Generation zero: an empty path, and Sol as its birthplace.
+	Probe firstProbe("ROOT@Sol", 0.0f, 0.0f, 0.0f, settings.probeSpeedParsecsPerTick, *quadTree, settings);
 	firstProbe.setMode(ProbeMode::Seek);
 	firstProbe.setNewBorn(false);
 	// The root owns the whole colour wheel (or the fraction config allows); every
 	// other probe gets a slice of its parent's share.
 	firstProbe.setLineageArc(0.0f, settings.lineageHueSpread);
+	firstProbe.setDisplayName("ROOT@Sol");
 	firstProbe.recordVisit(0, sf::Vector3f(0.0f, 0.0f, 0.0f));
 
 	// We build and fuel the first probe ourselves, so it launches with a tank but an
@@ -673,14 +676,24 @@ void Game::updateGameState()
 			continue;
 		}
 
-		const std::string replicationLocationName = Utilities::getStarNameFromID(probe.getTargetStar());
-		const std::string newName = Utilities::probeNamer(probe.getProbeName(), replicationLocationName);
+		// The child is built where its parent is standing, so that system is its
+		// birthplace. Its path is the parent's plus one letter for which copy it is.
+		const uint32_t birthStarID = probe.getTargetStar();
+		const std::string birthStarName = Utilities::getStarNameFromID(birthStarID);
+		const std::string childPath = Utilities::makeLineagePath(probe.getLineagePath(),
+																 probe.getReplicationCount());
+		const std::string newName = Utilities::makeProbeName(probe.getLineagePath(),
+															 probe.getReplicationCount(),
+															 birthStarName, birthStarID);
 
 		Probe replicatedProbe(newName, probe.getWorldX(), probe.getWorldY(), probe.getWorldZ(),
 							  settings.probeSpeedParsecsPerTick, *quadTree, settings);
-		// The child's colour comes from its parent's, stepped round the wheel by how
-		// many copies that parent has already made. Done before payForReplication so
-		// getReplicationCount() is still the index of THIS child.
+		// Colour and path both come from the parent, and both use getReplicationCount()
+		// as the index of THIS child -- it is not incremented until the probe's own
+		// move() runs later in the tick.
+		replicatedProbe.setLineagePath(childPath);
+		replicatedProbe.setDisplayName(
+			Utilities::probeLabelFor(childPath, Utilities::displayStarName(birthStarName, birthStarID)));
 		probe.deriveLineageInto(replicatedProbe, probe.getReplicationCount(),
 								settings.probeIndividualReplicationLimit);
 

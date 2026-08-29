@@ -81,6 +81,11 @@ public:
 	// gracefully as you zoom out rather than disappearing all at once.
 	void setLabelMaxVisible(size_t limit) { labelMaxVisible = limit; }
 	size_t getLabelMaxVisible() const { return labelMaxVisible; }
+	// Probe names were a hardcoded 10pt, which is unreadable at any sensible viewing
+	// distance and got worse once names carried a birthplace. The declutter grid sizes
+	// itself from this, so raising it thins the labels out rather than overlapping them.
+	void setProbeLabelSize(unsigned int points) { probeLabelSize = std::max(6u, points); }
+	unsigned int getProbeLabelSize() const { return probeLabelSize; }
 
 	void setSpriteStyle(StarSpriteStyle style);
 	StarSpriteStyle getSpriteStyle() const { return spriteStyle; }
@@ -150,6 +155,7 @@ private:
 
 	size_t lastVisibleStarCount = 0;
 	size_t labelMaxVisible = 120;
+	unsigned int probeLabelSize = 15;
 	DebriefButtons debriefButtons;
 
 	bool showTextLabelsStars = false;
