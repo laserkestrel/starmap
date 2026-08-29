@@ -17,7 +17,7 @@ window.width / window.height - Only used when displayMode is "windowed".<BR>
 startingViewRadiusParsecs - The starting zoom, given as the radius around Sol that is guaranteed to be in frame. Defining it as a radius rather than "parsecs across the window" keeps the opening view the same neighbourhood on any resolution or aspect ratio - a wider monitor simply shows more to either side instead of a shorter strip. Home returns to it at any time. (1 Parsec ~ 3.26156 Light Years.)<BR>
 starLabelMaxVisible - How many star labels to draw at once. The brightest visible stars are chosen, so names thin out gracefully as you zoom out rather than disappearing all at once. Each label is its own draw call, so this also bounds their cost.<BR>
 viewTiltDegrees - The map is a tilted view of the equatorial plane. 90 is straight down, where height above the plane is invisible; 0 is edge on. Around 75 reads well.<BR>
-viewDepthParsecs - How far above and below the plane the view reaches. An orthographic view is unbounded in depth, so without this every distant star projects into frame and the stalks become a solid curtain.<BR>
+viewDepthParsecs - How far above and below the plane the view reaches. An orthographic view is unbounded in depth, so without this every distant star projects into frame and the stalks become a solid curtain. It is a bigger decision than it looks: at 50,000 stars an 8 pc slab hides 88% of the catalogue, and the probes still fly out there. Startup prints exactly how many stars the current value is hiding, so check that line rather than guessing.<BR>
 sleepTimeMillis - Debugging, introduce artificial pause between each loop of code. Should be 0 for full performance.<BR>
 loadStarsLimit - Load only the nearest N stars from the catalogue.<BR>
 quadtreeSearchSize - Stars per quadtree leaf before it splits. Default 128.<BR>
@@ -176,6 +176,33 @@ Both use the same eight palettes, chosen on the Display tab or cycled with F7. E
 ramp is a single hue running dark to white, deliberately not a rainbow: brightness
 ordering stays readable, where a rainbow looks livelier and is far harder to rank
 by eye.
+
+## Probes that appear to fly into empty space
+
+Watch the trails for a while and you may see a probe set off into blackness and
+seemingly replicate in the middle of nowhere. Nothing is wrong with the simulation:
+instrumenting every replication in a 2,500 star run gave 1,765 of them at a distance
+of exactly 0.000 pc from a catalogue star. Probes only ever replicate at a system.
+
+What was wrong was the drawing. Stars outside viewDepthParsecs are culled, and for a
+long time probes and trails were not, so a probe travelling to a star deeper than the
+slab appeared to head into empty space and arrive nowhere. The space was never empty
+- it was full of stars that are not drawn. The scale of it is easy to underestimate:
+
+    nearest    500 stars, 8 pc slab ->  13.6% of the catalogue hidden
+    nearest  2,500 stars, 8 pc slab ->  44.5% hidden
+    nearest 50,000 stars, 8 pc slab ->  88.5% hidden
+
+So at the default 50,000 stars, seven eighths of the galaxy the probes are working in
+is invisible. Probes and trails now fade out as they leave the slab instead of being
+drawn at full strength, so a journey heading out of the visible slice reads as
+leaving rather than as going nowhere, and the map is one coherent slice of space.
+The console reports on startup how much the current depth is hiding.
+
+A newborn's opening leg is also drawn now, from the point where it was built. Its
+trail is empty until it reaches its first system, so previously a child detached from
+its parent's star and drifted off with no line behind it - which is the other half of
+what made replication look like it was happening in interstellar space.
 
 # How positions are drawn
 

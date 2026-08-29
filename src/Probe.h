@@ -95,6 +95,11 @@ public:
 	void setCurrentSystem(const Star *star);
 	const Star *getCurrentSystem() const { return currentSystem; }
 
+	// Where this probe was built. A newborn's trail is empty until it reaches its
+	// first system, so without this its opening leg could not be drawn at all -- the
+	// child appeared to detach from its parent and drift off unattached.
+	sf::Vector3f getBirthPosition() const { return birthPosition; }
+
 	// Getters
 	const std::string &getProbeName() const;
 	float getWorldX() const;
@@ -151,6 +156,7 @@ private:
 	// outlives every probe and is never reallocated during a run.
 	Resources cargo;
 	Resources totalMined;
+	sf::Vector3f birthPosition;
 	const Star *currentSystem = nullptr;
 	int harvestTicksHere = 0;
 	int totalHarvestTicks = 0;

@@ -179,6 +179,28 @@ void Game::reloadGalaxy(int starLimit)
 	}
 	std::cout << "." << std::endl;
 
+	// How much of what we just loaded the view slab will never show. Worth saying out
+	// loud: at 50,000 stars with an 8 pc depth it is 88% of the catalogue, and a probe
+	// heading for one of those looks like it is setting off into empty space for no
+	// reason. The space is not empty -- it is full of stars that are not drawn.
+	{
+		size_t beyondDepth = 0;
+		for (const auto &star : galaxyVector)
+		{
+			if (!projection.withinViewDepth(star.getWorldZ()))
+				++beyondDepth;
+		}
+		if (!galaxyVector.empty())
+		{
+			std::cout << "View depth " << projection.getViewDepthParsecs() << " pc hides "
+					  << beyondDepth << " of " << galaxyVector.size() << " loaded stars ("
+					  << std::fixed << std::setprecision(1)
+					  << (100.0 * static_cast<double>(beyondDepth) / static_cast<double>(galaxyVector.size()))
+					  << "%), which probes still travel to." << std::endl;
+			std::cout.unsetf(std::ios_base::floatfield);
+		}
+	}
+
 	loadedStarLimit = starLimit;
 	seedFirstProbe();
 }

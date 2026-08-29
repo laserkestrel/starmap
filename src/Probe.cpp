@@ -39,7 +39,8 @@ Probe::Probe(const std::string &probeName, float startX, float startY, float sta
 	: probeName(probeName), x(startX), y(startY), z(startZ),
 	  targetX(startX), targetY(startY), targetZ(startZ),
 	  speed(speedParsecsPerTick), mode(ProbeMode::Seek),
-	  quadTree(&quadTree), settings(&settings)
+	  quadTree(&quadTree), settings(&settings),
+	  birthPosition(startX, startY, startZ)
 {
 }
 

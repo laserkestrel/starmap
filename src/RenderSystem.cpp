@@ -259,6 +259,21 @@ void RenderSystem::renderStarfield(const std::vector<Star> &stars, const GalaxyQ
 	}
 }
 
+// 1 inside the view slab, falling to 0 across a margin just outside it. Stars are
+// culled hard at the slab edge; probes and trails fade instead, so a journey leaving
+// the visible slice reads as leaving rather than as stopping.
+float RenderSystem::depthFade(float worldZ) const
+{
+	const float depth = projection.getViewDepthParsecs();
+	const float az = std::abs(worldZ);
+	if (az <= depth)
+		return 1.0f;
+	const float margin = std::max(1.0f, depth * 0.5f);
+	if (az >= depth + margin)
+		return 0.0f;
+	return 1.0f - (az - depth) / margin;
+}
+
 TrailColourMode RenderSystem::cycleTrailColourMode()
 {
 	const int next = (static_cast<int>(trailColourMode) + 1) % static_cast<int>(TrailColourMode::ModeCount);
@@ -317,8 +332,19 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 					break;
 				}
 
-				trailLines.append(sf::Vertex(projection.project(a.coordinates.x, a.coordinates.y, a.coordinates.z), legColour));
-				trailLines.append(sf::Vertex(projection.project(b.coordinates.x, b.coordinates.y, b.coordinates.z), legColour));
+				// Fade each end by its own depth, so a leg running out of the slab
+				// dims along its length instead of being drawn at full strength to a
+				// star that is not on screen.
+				sf::Color colourA = legColour, colourB = legColour;
+				const float fadeA = depthFade(a.coordinates.z);
+				const float fadeB = depthFade(b.coordinates.z);
+				if (fadeA <= 0.0f && fadeB <= 0.0f)
+					continue;
+				colourA.a = static_cast<sf::Uint8>(legColour.a * fadeA);
+				colourB.a = static_cast<sf::Uint8>(legColour.a * fadeB);
+
+				trailLines.append(sf::Vertex(projection.project(a.coordinates.x, a.coordinates.y, a.coordinates.z), colourA));
+				trailLines.append(sf::Vertex(projection.project(b.coordinates.x, b.coordinates.y, b.coordinates.z), colourB));
 			}
 
 			// The leg currently being flown. Without this a journey only appeared
@@ -326,27 +352,54 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 			// never the thing you were watching happen. It costs one segment per
 			// moving probe -- about 7% on top of geometry that is already being
 			// rebuilt every frame.
-			if (probe.getMode() == ProbeMode::Travel && !visited.empty())
+			//
+			// A newborn's trail is empty until it reaches its first system, so its
+			// opening leg is drawn from where it was BUILT. Without that a child
+			// detached from its parent's star and drifted off with no line behind it,
+			// which read as a probe appearing out of nowhere in interstellar space.
+			if (probe.getMode() == ProbeMode::Travel)
 			{
-				const auto &from = visited.back();
-				const sf::Color liveColour =
+				const sf::Vector3f from = visited.empty() ? probe.getBirthPosition() : visited.back().coordinates;
+				sf::Color liveColour =
 					(trailColourMode == TrailColourMode::PerProbe)
 						? probe.getTrailColor()
 						: heatColour(1.0f, palette); // in flight is as hot as it gets
 
-				trailLines.append(sf::Vertex(projection.project(from.coordinates.x, from.coordinates.y, from.coordinates.z), liveColour));
-				trailLines.append(sf::Vertex(projection.project(probe.getWorldX(), probe.getWorldY(), probe.getWorldZ()), liveColour));
+				const float fadeFrom = depthFade(from.z);
+				const float fadeTo = depthFade(probe.getWorldZ());
+				if (fadeFrom > 0.0f || fadeTo > 0.0f)
+				{
+					sf::Color cFrom = liveColour, cTo = liveColour;
+					cFrom.a = static_cast<sf::Uint8>(liveColour.a * fadeFrom);
+					cTo.a = static_cast<sf::Uint8>(liveColour.a * fadeTo);
+					trailLines.append(sf::Vertex(projection.project(from.x, from.y, from.z), cFrom));
+					trailLines.append(sf::Vertex(projection.project(probe.getWorldX(), probe.getWorldY(), probe.getWorldZ()), cTo));
+				}
 			}
 		}
 		renderWindow.draw(trailLines);
 	}
 
 	// Probes share the star sprite, so thousands of them are still one draw call.
+	//
+	// Depth matters here. Stars outside the view slab are culled, and for a long time
+	// probes were not -- so a probe travelling to a star deeper than viewDepthParsecs
+	// appeared to set off into empty space and, on arrival, to replicate in the middle
+	// of nowhere. The space was never empty; the destination simply was not drawn. At
+	// 50,000 stars with an 8 pc slab that is 88% of the catalogue invisible.
+	//
+	// Rather than hide out-of-slab probes outright, which would make them blink out
+	// mid-journey, they fade with depth. A probe dimming as it goes now means "this
+	// one is leaving the slice you are looking at", which is true and readable.
 	probeQuads.clear();
 	for (const auto &probe : probes)
 	{
+		const float fade = depthFade(probe.getWorldZ());
+		if (fade <= 0.0f)
+			continue;
 		const sf::Vector2f p = projection.project(probe.getWorldX(), probe.getWorldY(), probe.getWorldZ());
-		appendSpriteQuad(probeQuads, p, PROBE_SIZE_PIXELS, sf::Color(150, 205, 255));
+		appendSpriteQuad(probeQuads, p, PROBE_SIZE_PIXELS,
+						 sf::Color(150, 205, 255, static_cast<sf::Uint8>(255.0f * fade)));
 	}
 	{
 		sf::RenderStates states;

@@ -95,6 +95,9 @@ public:
 
 private:
 	void appendSpriteQuad(sf::VertexArray &target, const sf::Vector2f &centre, float sizePixels, const sf::Color &colour) const;
+	// 1 inside the view slab, fading to 0 just outside it. Keeps probes and trails
+	// consistent with the star culling, which they previously ignored.
+	float depthFade(float worldZ) const;
 
 	sf::RenderWindow &renderWindow;
 	const Projection &projection;
