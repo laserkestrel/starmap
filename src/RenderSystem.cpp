@@ -384,6 +384,11 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 					legColour = heatColour(densityHeat(arrivals, trailDensitySaturateAt), palette);
 					break;
 				}
+				case TrailColourMode::Trait:
+					// The whole leg takes the flying probe's trait value, so a strategy
+					// spreading through the fleet shows as the map changing colour.
+					legColour = heatColour(traitFraction(probe.getGenome(), traitToColour), palette);
+					break;
 				default:
 					legColour = probe.getLineageColour();
 					break;
@@ -606,7 +611,7 @@ void RenderSystem::renderDebrief(const RunMetrics &metrics, const HighScores &sc
 	const float height = static_cast<float>(renderWindow.getSize().y);
 
 	const float panelW = 900.0f;
-	const float panelH = 820.0f; // + the ECONOMY block
+	const float panelH = 960.0f; // + the ECONOMY and EVOLUTION blocks
 	const float x = (width - panelW) * 0.5f;
 	const float y = (height - panelH) * 0.5f;
 
@@ -712,6 +717,48 @@ void RenderSystem::renderDebrief(const RunMetrics &metrics, const HighScores &sc
 		py += 22.0f;
 		row("yield", num(metrics.systemsPerThousandMined(), 2) + " systems per 1000 mined, " +
 						 std::to_string(metrics.harvestTicks) + " probe-ticks mining", py);
+	}
+
+	if (metrics.evolutionEnabled && !metrics.generations.empty())
+	{
+		py += 32.0f;
+		text("EVOLUTION", x + 34.0f, py, 15, heading);
+		py += 24.0f;
+
+		const int last = metrics.lastPopulousGeneration();
+		for (int i = 0; i < static_cast<int>(Trait::TraitCount); ++i)
+		{
+			const Trait t = static_cast<Trait>(i);
+			const TraitInfo &info = traitInfo(t);
+			const float a = traitValue(metrics.founderGenome, t);
+			const float b = traitValue(metrics.generations[static_cast<size_t>(last)].mean, t);
+			const float pct = (a != 0.0f) ? 100.0f * (b - a) / a : 0.0f;
+
+			row(info.name, num(a, info.decimals) + "  ->  " + num(b, info.decimals) +
+							   "   (" + (pct >= 0 ? "+" : "") + num(pct, 1) + "%)", py);
+
+			// A sparkline of the generation-by-generation mean, scaled to the trait's
+			// own range so all four are comparable. The endpoints alone cannot tell a
+			// steady climb from a late lurch, which is the whole reason it is here.
+			const float plotX = x + 620.0f;
+			const float plotW = 200.0f;
+			const float plotH = 14.0f;
+			sf::VertexArray spark(sf::LineStrip);
+			const size_t gens = metrics.generations.size();
+			for (size_t g = 0; g < gens; ++g)
+			{
+				if (metrics.generations[g].population == 0)
+					continue;
+				const float f = traitFraction(metrics.generations[g].mean, t);
+				const float px = plotX + plotW * (gens > 1 ? static_cast<float>(g) / static_cast<float>(gens - 1) : 0.0f);
+				const float pyy = py + plotH - f * plotH + 2.0f;
+				spark.append(sf::Vertex(sf::Vector2f(px, pyy), sf::Color(150, 190, 235, 210)));
+			}
+			renderWindow.draw(spark);
+			py += 22.0f;
+		}
+		row("generations", std::to_string(metrics.generations.size() - 1) +
+							   "   mutation " + num(metrics.mutationStrength * 100.0f, 0) + "% per generation", py);
 	}
 
 	// --- score, grade, and where it placed --------------------------------------

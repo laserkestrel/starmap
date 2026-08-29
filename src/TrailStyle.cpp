@@ -28,6 +28,7 @@ const char *trailColourModeName(TrailColourMode mode)
 	case TrailColourMode::Recency: return "recency";
 	case TrailColourMode::Density: return "density";
 	case TrailColourMode::Lineage: return "lineage";
+	case TrailColourMode::Trait: return "trait";
 	default: return "recency";
 	}
 }
@@ -35,6 +36,7 @@ const char *trailColourModeName(TrailColourMode mode)
 TrailColourMode trailColourModeFromString(const std::string &name)
 {
 	if (name == "density") return TrailColourMode::Density;
+	if (name == "trait") return TrailColourMode::Trait;
 	// "perProbe" was this mode's name back when the colour was random per probe.
 	if (name == "lineage" || name == "perProbe" || name == "perprobe") return TrailColourMode::Lineage;
 	return TrailColourMode::Recency;

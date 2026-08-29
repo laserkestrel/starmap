@@ -17,6 +17,7 @@
 #include <SFML/Graphics.hpp>
 #include <functional>
 #include <memory>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -78,6 +79,9 @@ private:
 	// Richness the current galaxy was built with. Changing it on the setup screen
 	// means re-deriving every star's stocks, so it reloads like a size change does.
 	float loadedRichness = -1.0f;
+	// Mutation happens in the single-threaded replication phase, so one generator is
+	// enough and a fixed seed keeps two runs of the same settings comparable.
+	std::mt19937 mutationRng{20260829u};
 	int activeMaxProbes = 250000;
 	double simulationTimeInSeconds = 0.0;
 	int lastTicksPerFrame = 0;

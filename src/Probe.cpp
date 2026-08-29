@@ -109,7 +109,7 @@ Resources Probe::payForReplication()
 	// The child leaves with a share of what the parent still holds, which is what
 	// stops a newborn stranding on its first hop. It comes out of the parent's tank,
 	// so a probe that keeps replicating fuels each child a little worse than the last.
-	const float share = std::max(0.0f, std::min(1.0f, settings->childFuelShare));
+	const float share = std::max(0.0f, std::min(1.0f, genome.childFuelShare));
 	const Resources dowry(0.0f, cargo.volatiles * share, 0.0f);
 	cargo.volatiles -= dowry.volatiles;
 	return dowry;
@@ -152,7 +152,7 @@ void Probe::move()
 				harvestTicksHere = 0;
 				setMode(ProbeMode::Harvest);
 			}
-			else if (replicationCount >= settings->probeIndividualReplicationLimit)
+			else if (replicationCount >= genome.replicationLimitInt())
 			{
 				shutdown(ShutdownReason::ReplicationLimitReached);
 			}
@@ -187,7 +187,7 @@ void Probe::move()
 		++totalHarvestTicks;
 
 		const bool systemDry = got.empty();
-		const bool stayedTooLong = harvestTicksHere >= settings->maxHarvestTicks;
+		const bool stayedTooLong = harvestTicksHere >= genome.harvestPatienceInt();
 		const bool haveEnough = cargo.covers(settings->replicationCost);
 
 		if (haveEnough || systemDry || stayedTooLong)
@@ -197,11 +197,11 @@ void Probe::move()
 			{
 				setMode(ProbeMode::Seek);
 			}
-			else if (haveEnough && replicationCount < settings->probeIndividualReplicationLimit)
+			else if (haveEnough && replicationCount < genome.replicationLimitInt())
 			{
 				setMode(ProbeMode::Replicate);
 			}
-			else if (replicationCount >= settings->probeIndividualReplicationLimit)
+			else if (replicationCount >= genome.replicationLimitInt())
 			{
 				shutdown(ShutdownReason::ReplicationLimitReached);
 			}
@@ -228,7 +228,7 @@ void Probe::move()
 		// it never once executed. The premise was moot anyway: a parent replicates
 		// only once per system, so siblings are never created simultaneously.
 		const Star *nearestStar = findNearestUnvisitedStar(quadTree->getRootNode(),
-														  settings->probeSearchRadiusParsecs);
+														  genome.searchRadiusParsecs);
 		if (nearestStar == nullptr)
 		{
 			DEBUG_LOG("Probe found no unvisited star within its search radius.");
@@ -249,7 +249,7 @@ void Probe::move()
 				// Try to top up where it stands, provided there is anything left here
 				// and it has not already given this system its allotted time.
 				if (currentSystem != nullptr && !currentSystem->isExhausted() &&
-					harvestTicksHere < settings->maxHarvestTicks)
+					harvestTicksHere < genome.harvestPatienceInt())
 				{
 					setMode(ProbeMode::Harvest);
 					return;

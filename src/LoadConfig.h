@@ -103,6 +103,17 @@ public:
 	// How much of the colour wheel the whole family tree spans, 0..1.
 	float getLineageHueSpread() const;
 
+	// --- evolution ---------------------------------------------------------------
+	// Off, every probe uses the founder's genome unchanged. On, a child's traits are
+	// its parent's nudged, and survival decides which values spread.
+	bool getEvolutionEnabled() const;
+	// Largest proportional change one trait can take in a single generation.
+	float getMutationStrength() const;
+	// Seed for the mutation generator. Fixed so a run is repeatable, and settable so
+	// the same experiment can be repeated independently -- which is the only way to
+	// tell selection from drift.
+	int getMutationSeed() const;
+
 	// Point size for probe name labels.
 	int getProbeLabelSize() const;
 
@@ -164,6 +175,9 @@ private:
 	float trailFadeTicks = 600.0f;
 	float trailDensitySaturateAt = 60.0f;
 	float lineageHueSpread = 1.0f;
+	bool evolutionEnabled = true;
+	float mutationStrength = 0.08f;
+	int mutationSeed = 20260829;
 	int probeLabelSize = 15;
 	bool showStarStalks = true;
 	bool showStarNames = false;

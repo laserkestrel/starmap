@@ -50,5 +50,8 @@
   "showProbeNames": false,
   "showProbeTrails": false,
   "lineageHueSpread": 1.0,
-  "probeLabelSize": 15
+  "probeLabelSize": 15,
+  "evolutionEnabled": true,
+  "mutationStrength": 0.08,
+  "mutationSeed": 20260829
 }

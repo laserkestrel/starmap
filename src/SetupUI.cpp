@@ -1,6 +1,7 @@
 // SetupUI.cpp
 #include "SetupUI.h"
 #include "TrailStyle.h"
+#include "Genome.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -23,7 +24,7 @@ namespace
 	const float PANEL_W = 820.0f;
 	// Sized for the taller of the two tabs (Simulation), plus the tab bar. Splitting
 	// display settings out is what stops this growing every time something is added.
-	const float PANEL_H = 900.0f;
+	const float PANEL_H = 1010.0f;
 	const float PAD = 36.0f;
 	const float TRACK_X = 300.0f;   // relative to panel left
 	const float TRACK_W = 340.0f;
@@ -86,6 +87,9 @@ SetupUI::SetupUI()
 	sliders[FuelBurn] = {"Fuel burn",
 						 "Volatiles spent per parsec flown. This is what makes distance dangerous -- a probe that runs dry between stars is simply lost.",
 						 " /pc", 0.25f, 6.0f, 1.5f, 2, {}, {}};
+	sliders[MutationStrength] = {"Mutation",
+								 "How far a child's traits may drift from its parent's, per generation. Zero means every probe is a copy of the founder; too high and inheritance stops meaning anything.",
+								 "%", 0.0f, 30.0f, 8.0f, 0, {}, {}};
 	sliders[ViewTilt] = {"View tilt",
 						 "90 looks straight down and hides height entirely; lower leans back so the stalks become readable.",
 						 " deg", 30.0f, 90.0f, 75.0f, 0, {}, {}, DisplayTab};
@@ -103,8 +107,8 @@ SetupUI::SetupUI()
 	spriteStyle.tab = DisplayTab;
 
 	trailMode.label = "Trail colouring";
-	trailMode.help = "Recency fades a leg as it ages. Density burns brightest where the most probes have arrived, which is where the waste is. Lineage gives each family its own band of hue. F6 cycles them live.";
-	trailMode.options = {"Recency", "Density", "Lineage"};
+	trailMode.help = "Recency fades a leg as it ages. Density burns brightest where the most probes have arrived, which is where the waste is. Lineage gives each family its own band of hue. Trait colours by the genome value chosen below. F6 cycles them live.";
+	trailMode.options = {"Recency", "Density", "Lineage", "Trait"};
 	trailMode.selected = 0;
 	trailMode.tab = DisplayTab;
 
@@ -120,6 +124,21 @@ SetupUI::SetupUI()
 	// Eight options will not fit at the default width.
 	trailPaletteControl.boxWidth = 54.0f;
 	trailPaletteControl.boxSpacing = 58.0f;
+
+	evolution.label = "Evolution";
+	evolution.help = "On, a child inherits its parent's traits with a small random change and nothing else selects -- whichever values produce surviving descendants become common. The sliders above then set what the FIRST probe believes, not fleet-wide law.";
+	evolution.options = {"Off", "On"};
+	evolution.selected = 1;
+
+	traitColour.label = "Colour trails by";
+	traitColour.help = "Which trait the Trait trail mode shows. The map starts mottled and converges towards one colour if a strategy is taking over.";
+	traitColour.options.clear();
+	for (int i = 0; i < static_cast<int>(Trait::TraitCount); ++i)
+		traitColour.options.push_back(traitInfo(static_cast<Trait>(i)).shortName);
+	traitColour.selected = 0;
+	traitColour.tab = DisplayTab;
+	traitColour.boxWidth = 78.0f;
+	traitColour.boxSpacing = 84.0f;
 
 	overlays.label = "Overlays";
 	overlays.help = "Also F keys while running, and F8 lists every binding on screen.";
@@ -261,7 +280,9 @@ void SetupUI::layout(const sf::Vector2u &windowSize)
 	};
 
 	place(economy);
+	place(evolution);
 	place(firstArrival);
+	place(traitColour);
 	place(trailMode);
 	place(trailPaletteControl);
 	place(overlays);
@@ -289,6 +310,12 @@ void SetupUI::setOverlay(OverlayBit bit, bool on)
 		overlays.mask |= static_cast<unsigned int>(bit);
 	else
 		overlays.mask &= ~static_cast<unsigned int>(bit);
+}
+
+void SetupUI::setTraitColourChoice(int index)
+{
+	if (index >= 0 && index < static_cast<int>(traitColour.options.size()))
+		traitColour.selected = index;
 }
 
 void SetupUI::setTrailPaletteChoice(int index)
@@ -339,6 +366,23 @@ bool SetupUI::onMousePressed(const sf::Vector2f &p)
 		if (overlays.boxes[i].contains(p))
 		{
 			overlays.mask ^= (1u << i); // each chip is independent
+			return true;
+		}
+	}
+	for (size_t i = 0; i < evolution.boxes.size(); ++i)
+	{
+		if (evolution.boxes[i].contains(p))
+		{
+			evolution.selected = static_cast<int>(i);
+			preset.selected = 3; // Custom
+			return true;
+		}
+	}
+	for (size_t i = 0; i < traitColour.boxes.size(); ++i)
+	{
+		if (traitColour.boxes[i].contains(p))
+		{
+			traitColour.selected = static_cast<int>(i);
 			return true;
 		}
 	}
@@ -547,6 +591,8 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 		return s.boxes.empty() ? panel.top : s.boxes[0].top + 4.0f;
 	};
 	segments(economy, rowTop(economy));
+	segments(evolution, rowTop(evolution));
+	segments(traitColour, rowTop(traitColour));
 	segments(firstArrival, rowTop(firstArrival));
 	segments(trailMode, rowTop(trailMode));
 	segments(trailPaletteControl, rowTop(trailPaletteControl), true);

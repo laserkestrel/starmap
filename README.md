@@ -52,6 +52,9 @@ childFuelShare - Share of the parent's remaining volatiles handed to a new probe
 trailColourMode - "recency", "density" or "lineage" ("perProbe" is still accepted as the old name for lineage). Also on the Display tab, and F6 cycles it live.<BR>
 trailPalette - Which of the eight colour ramps to use, 0-7. F7 cycles it live.<BR>
 trailFadeTicks - Ticks for a trail to cool from white to dark in recency mode. Short values leave only the expansion front lit.<BR>
+evolutionEnabled - Whether children inherit their parent's traits with mutation, or every probe simply uses the founder's genome. Off restores the previous fleet-wide behaviour exactly.<BR>
+mutationStrength - Largest proportional change one trait can take in a generation, as a fraction (0.08 is 8%). Zero means no evolution; too high and inheritance stops meaning anything, because a child resembles its parent no more than a stranger. Also a slider on the Simulation tab, in percent.<BR>
+mutationSeed - Fixes the mutation sequence so a run repeats exactly. Change it to get an independent replicate of the same experiment, which is the only way to tell selection from drift.<BR>
 probeLabelSize - Point size for probe name labels. The label declutter grid is sized from this, so a larger value shows fewer, bigger names rather than overlapping ones.<BR>
 lineageHueSpread - How much of the colour wheel the whole family tree spans, 0 to 1. At 1.0 the top-level branches are as far apart as they can be; lower values tint the entire fleet towards one part of the spectrum.<BR>
 showStarStalks / showStarNames / showProbeNames / showProbeTrails - Which overlays start switched on. All four are on the Display tab and on F4 / F1 / F2 / F3.<BR>
@@ -176,6 +179,47 @@ burns white because it has been crossed dozens of times, while the frontier stay
 cool at one or two visits. If you want to see why efficiency sits around 0.08, this
 is the picture of it.
 
+# Evolution
+
+Each probe carries its own copy of four behavioural traits -- search radius, child
+fuel share, replication limit and harvest patience -- and a child inherits its
+parent's values nudged by up to mutationStrength either way. There is no fitness
+function anywhere. Selection was already in the simulation the moment replication
+started costing resources: a probe that over-reaches strands and stops reproducing,
+one that hoards gets outbred, one that mines a poor system dry wastes ticks a rival
+spends travelling. The work was not adding selection, it was removing the fleet-wide
+settings that prevented it.
+
+The setup sliders therefore stop being law and become the FOUNDER'S genome. You are
+no longer setting how probes behave, you are choosing what the first one believes.
+
+## Does it actually work? Partly, and only one trait so far
+
+Traits move in every run, but drift moves traits too. The test is whether five runs
+of the same galaxy from the same founder, differing only in mutationSeed, move a
+trait in the SAME direction. Measured over 2,500 stars and about 21 generations:
+
+    trait                 mean       spread   same direction
+    Search radius        + 7.1%      10.1%      3 of 5
+    Child fuel share     +15.0%       9.9%      5 of 5
+    Replication limit    + 4.1%      10.3%      3 of 5
+    Harvest patience     + 6.1%      13.0%      3 of 5
+
+Only CHILD FUEL SHARE is doing something real: every run raised it, and the mean
+move stands clear of the run-to-run spread. That is exactly what the death figures
+predict -- around 1,500 of 1,750 probes die stranded, so fuel is the binding
+constraint and a parent that provisions its children better has children that
+survive their first hop.
+
+The other three are indistinguishable from drift at this scale. Three runs out of
+five in one direction is what a coin does, and their means are smaller than their
+spread. That does not mean those traits do not matter; it means twenty generations
+is not long enough to prove it either way. Longer runs -- bigger catalogues, more
+generations -- are where to look.
+
+So read the debrief's EVOLUTION block as a measurement with error bars, not a
+result. A single run showing a trait up 40% is showing you one sample.
+
 # Probe names
 
 A probe is named for its path through the family tree and the system it was built
@@ -202,6 +246,10 @@ debrief. probeLabelSize sets the point size; the declutter grid sizes itself fro
 so raising it thins labels out rather than letting them overlap.
 
 # Reading the trails
+
+TRAIT colours by a genome value, chosen on the Display tab. The map starts mottled
+and converges towards one colour if a strategy is taking over -- selection rendered
+directly on the starfield.
 
 LINEAGE gives each family its own band of the colour wheel. The root probe owns the
 whole wheel and every child is handed a slice of its parent's share, so a subtree
@@ -283,7 +331,7 @@ F2 - Toggle Probe Names<BR>
 F3 - Toggle Probe Trails<BR>
 F4 - Toggle Star Stalks (the lines showing height above/below the plane)<BR>
 F5 - Cycle the star sprite style<BR>
-F6 - Cycle trail colouring: recency, density, lineage<BR>
+F6 - Cycle trail colouring: recency, density, lineage, trait<BR>
 F7 - Cycle the trail palette<BR>
 F8 - Show this list of keys on screen<BR>
 F9 - At the debrief, hide or show the results panel over the map<BR>

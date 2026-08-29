@@ -38,6 +38,7 @@ public:
 		SystemRichness,
 		ProbeBuildCost,
 		FuelBurn,
+		MutationStrength,
 		ViewTilt,
 		ViewDepth,
 		TrailFade,
@@ -95,6 +96,10 @@ public:
 	int spriteChoice() const { return spriteStyle.selected; }
 	bool replicateOnFirstArrival() const { return firstArrival.selected == 1; }
 	void setReplicateOnFirstArrival(bool on) { firstArrival.selected = on ? 1 : 0; }
+	bool evolutionEnabled() const { return evolution.selected == 1; }
+	void setEvolutionEnabled(bool on) { evolution.selected = on ? 1 : 0; }
+	int traitColourChoice() const { return traitColour.selected; }
+	void setTraitColourChoice(int index);
 	bool resourcesEnabled() const { return economy.selected == 1; }
 	void setResourcesEnabled(bool on) { economy.selected = on ? 1 : 0; }
 	int trailModeChoice() const { return trailMode.selected; }
@@ -131,6 +136,8 @@ private:
 	Segmented trailMode;
 	Segmented trailPaletteControl;
 	Segmented overlays;
+	Segmented evolution;
+	Segmented traitColour;
 	sf::FloatRect panel;
 	sf::FloatRect launchButton;
 	std::vector<sf::FloatRect> tabButtons;

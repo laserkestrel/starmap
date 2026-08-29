@@ -112,6 +112,9 @@ int LoadConfig::getTrailPalette() const { return trailPalette; }
 float LoadConfig::getTrailFadeTicks() const { return trailFadeTicks; }
 float LoadConfig::getTrailDensitySaturateAt() const { return trailDensitySaturateAt; }
 float LoadConfig::getLineageHueSpread() const { return lineageHueSpread; }
+bool LoadConfig::getEvolutionEnabled() const { return evolutionEnabled; }
+float LoadConfig::getMutationStrength() const { return mutationStrength; }
+int LoadConfig::getMutationSeed() const { return mutationSeed; }
 int LoadConfig::getProbeLabelSize() const { return probeLabelSize; }
 bool LoadConfig::getShowStarStalks() const { return showStarStalks; }
 bool LoadConfig::getShowStarNames() const { return showStarNames; }
@@ -191,6 +194,9 @@ void LoadConfig::loadFromFile()
 		readNumber(config, "trailFadeTicks", trailFadeTicks);
 		readNumber(config, "trailDensitySaturateAt", trailDensitySaturateAt);
 		readNumber(config, "lineageHueSpread", lineageHueSpread);
+		readBool(config, "evolutionEnabled", evolutionEnabled);
+		readNumber(config, "mutationStrength", mutationStrength);
+		readNumber(config, "mutationSeed", mutationSeed);
 		readNumber(config, "probeLabelSize", probeLabelSize);
 		readBool(config, "showStarStalks", showStarStalks);
 		readBool(config, "showStarNames", showStarNames);

@@ -11,6 +11,7 @@
 #include "Star.h"
 #include "StarSprite.h"
 #include "TrailStyle.h"
+#include "Genome.h"
 #include <SFML/Graphics.hpp>
 #include <sstream>
 #include <string>
@@ -101,6 +102,9 @@ public:
 	void setCurrentTick(long long tick) { currentTick = tick; }
 	void setTrailFadeTicks(float ticks) { trailFadeTicks = ticks; }
 	void setTrailDensitySaturateAt(float arrivals) { trailDensitySaturateAt = arrivals; }
+	// Which genome value the Trait mode shows.
+	void setTraitToColour(Trait t) { traitToColour = t; }
+	Trait getTraitToColour() const { return traitToColour; }
 	// Density reads arrival counts off the stars, so the renderer needs a way to get
 	// from a trail entry's star ID to the star. Set once per galaxy load, not per frame.
 	void setDensitySource(const std::vector<Star> *stars,
@@ -145,6 +149,7 @@ private:
 	long long currentTick = 0;
 	float trailFadeTicks = 600.0f;
 	float trailDensitySaturateAt = 60.0f;
+	Trait traitToColour = Trait::SearchRadius;
 	const std::vector<Star> *densityStars = nullptr;
 	const std::unordered_map<uint32_t, size_t> *densityIndex = nullptr;
 	sf::VertexArray gridLines{sf::Lines};

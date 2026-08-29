@@ -50,6 +50,12 @@ Game::Game(const LoadConfig &config)
 	settings.fuelSafetyMargin = config.getFuelSafetyMargin();
 	settings.childFuelShare = config.getChildFuelShare();
 	settings.lineageHueSpread = config.getLineageHueSpread();
+	settings.evolutionEnabled = config.getEvolutionEnabled();
+	settings.mutationStrength = config.getMutationStrength();
+	settings.founderGenome.searchRadiusParsecs = config.getProbeSearchRadiusParsecs();
+	settings.founderGenome.childFuelShare = config.getChildFuelShare();
+	settings.founderGenome.replicationLimit = static_cast<float>(config.getprobeIndividualReplicationLimit());
+	settings.founderGenome.harvestPatience = static_cast<float>(config.getMaxHarvestTicks());
 	activeMaxProbes = config.getMaxProbes();
 
 	window.setVerticalSyncEnabled(config.getVerticalSync());
@@ -83,6 +89,8 @@ Game::Game(const LoadConfig &config)
 	setupUI.setValue(SetupUI::FuelBurn, config.getFuelPerParsec());
 	setupUI.setResourcesEnabled(config.getResourcesEnabled());
 	setupUI.setValue(SetupUI::TrailFade, config.getTrailFadeTicks());
+	setupUI.setValue(SetupUI::MutationStrength, config.getMutationStrength() * 100.0f);
+	setupUI.setEvolutionEnabled(config.getEvolutionEnabled());
 	setupUI.setTrailModeChoice(static_cast<int>(trailColourModeFromString(config.getTrailColourMode())));
 	setupUI.setTrailPaletteChoice(config.getTrailPalette());
 	renderSystem.setTrailColourMode(trailColourModeFromString(config.getTrailColourMode()));
@@ -128,6 +136,10 @@ void Game::seedFirstProbe()
 	// other probe gets a slice of its parent's share.
 	firstProbe.setLineageArc(0.0f, settings.lineageHueSpread);
 	firstProbe.setDisplayName("ROOT@Sol");
+	// Generation zero carries exactly what the setup screen asked for. Everything
+	// after this is that genome plus whatever mutation and survival make of it.
+	firstProbe.setGenome(settings.founderGenome);
+	mutationRng.seed(static_cast<unsigned int>(config.getMutationSeed()));
 	firstProbe.recordVisit(0, sf::Vector3f(0.0f, 0.0f, 0.0f));
 
 	// We build and fuel the first probe ourselves, so it launches with a tank but an
@@ -386,6 +398,12 @@ void Game::runStartupScreen()
 
 	// Everything the sliders decide, applied in one place.
 	settings.probeSearchRadiusParsecs = setupUI.value(SetupUI::SearchRadius);
+	settings.evolutionEnabled = setupUI.evolutionEnabled();
+	settings.mutationStrength = setupUI.value(SetupUI::MutationStrength) * 0.01f; // slider is a percentage
+	settings.founderGenome.searchRadiusParsecs = setupUI.value(SetupUI::SearchRadius);
+	settings.founderGenome.replicationLimit = setupUI.value(SetupUI::ReplicationLimit);
+	settings.founderGenome.childFuelShare = config.getChildFuelShare();
+	settings.founderGenome.harvestPatience = static_cast<float>(config.getMaxHarvestTicks());
 	settings.probeSpeedParsecsPerTick = setupUI.value(SetupUI::ProbeSpeed);
 	settings.probeIndividualReplicationLimit = setupUI.intValue(SetupUI::ReplicationLimit);
 	settings.replicateOnFirstArrival = setupUI.replicateOnFirstArrival();
@@ -406,6 +424,7 @@ void Game::runStartupScreen()
 	renderSystem.setTrailColourMode(static_cast<TrailColourMode>(setupUI.trailModeChoice()));
 	renderSystem.setTrailPalette(setupUI.trailPaletteChoice());
 	renderSystem.setTrailFadeTicks(setupUI.value(SetupUI::TrailFade));
+	renderSystem.setTraitToColour(static_cast<Trait>(setupUI.traitColourChoice()));
 	renderSystem.setStarStalks(setupUI.overlayOn(SetupUI::OverlayStalks));
 	renderSystem.setTextLabelsStars(setupUI.overlayOn(SetupUI::OverlayStarNames));
 	renderSystem.setTextLabelsProbes(setupUI.overlayOn(SetupUI::OverlayProbeNames));
@@ -662,7 +681,7 @@ void Game::updateGameState()
 	{
 		Probe &probe = probeVector[index];
 
-		if (probe.getReplicationCount() >= settings.probeIndividualReplicationLimit)
+		if (probe.getReplicationCount() >= probe.getGenome().replicationLimitInt())
 		{
 			probe.shutdown(ShutdownReason::ReplicationLimitReached);
 			continue;
@@ -691,11 +710,14 @@ void Game::updateGameState()
 		// Colour and path both come from the parent, and both use getReplicationCount()
 		// as the index of THIS child -- it is not incremented until the probe's own
 		// move() runs later in the tick.
+		replicatedProbe.setGenome(settings.evolutionEnabled
+									  ? mutated(probe.getGenome(), settings.mutationStrength, mutationRng)
+									  : probe.getGenome());
 		replicatedProbe.setLineagePath(childPath);
 		replicatedProbe.setDisplayName(
 			Utilities::probeLabelFor(childPath, Utilities::displayStarName(birthStarName, birthStarID)));
 		probe.deriveLineageInto(replicatedProbe, probe.getReplicationCount(),
-								settings.probeIndividualReplicationLimit);
+								probe.getGenome().replicationLimitInt());
 
 		// Charge the parent and fuel the child out of what is left. Both probes are
 		// standing in the same system, so the child inherits it and can mine there too.
@@ -886,6 +908,38 @@ void Game::finaliseMetrics()
 		case ShutdownReason::StrandedNoFuel:          ++metrics.stoppedStranded; break;
 		default: break;
 		}
+	}
+
+	// Bucket every probe ever born by generation and average its genome. Shut-down
+	// probes stay in the vector, so this is the complete family record, not a survey
+	// of survivors -- which matters, because a survivors-only view would hide exactly
+	// the lineages that selection removed.
+	metrics.evolutionEnabled = settings.evolutionEnabled;
+	metrics.mutationStrength = settings.mutationStrength;
+	metrics.founderGenome = settings.founderGenome;
+	metrics.generations.clear();
+	for (const auto &probe : probeVector)
+	{
+		const size_t g = static_cast<size_t>(probe.getGeneration());
+		if (metrics.generations.size() <= g)
+			metrics.generations.resize(g + 1);
+		auto &bucket = metrics.generations[g];
+		const Genome &gen = probe.getGenome();
+		bucket.mean.searchRadiusParsecs += gen.searchRadiusParsecs;
+		bucket.mean.childFuelShare += gen.childFuelShare;
+		bucket.mean.replicationLimit += gen.replicationLimit;
+		bucket.mean.harvestPatience += gen.harvestPatience;
+		++bucket.population;
+	}
+	for (auto &bucket : metrics.generations)
+	{
+		if (bucket.population == 0)
+			continue;
+		const float n = static_cast<float>(bucket.population);
+		bucket.mean.searchRadiusParsecs /= n;
+		bucket.mean.childFuelShare /= n;
+		bucket.mean.replicationLimit /= n;
+		bucket.mean.harvestPatience /= n;
 	}
 
 	metrics.systemsExhausted = 0;

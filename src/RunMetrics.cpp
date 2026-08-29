@@ -58,6 +58,16 @@ double RunMetrics::expansionRatePerThousandTicks() const
 	return frontierParsecs / static_cast<double>(ticks) * 1000.0;
 }
 
+int RunMetrics::lastPopulousGeneration(size_t minimumPopulation) const
+{
+	for (int g = static_cast<int>(generations.size()) - 1; g >= 0; --g)
+	{
+		if (generations[static_cast<size_t>(g)].population >= minimumPopulation)
+			return g;
+	}
+	return generations.empty() ? 0 : static_cast<int>(generations.size()) - 1;
+}
+
 double RunMetrics::systemsPerThousandMined() const
 {
 	const double mined = static_cast<double>(totalMined.total());
@@ -143,6 +153,27 @@ void RunMetrics::printToConsole() const
 				  << "  systems stripped bare             " << systemsExhausted << "\n"
 				  << "  probe-ticks spent mining          " << harvestTicks << "\n"
 				  << "  systems per 1000 mined            " << systemsPerThousandMined() << "\n";
+	}
+
+	if (evolutionEnabled && !generations.empty())
+	{
+		const int last = lastPopulousGeneration();
+		const Genome &start = founderGenome;
+		const Genome &end = generations[static_cast<size_t>(last)].mean;
+		std::cout << "EVOLUTION  (mutation " << (mutationStrength * 100.0f) << "% per generation)\n";
+		for (int i = 0; i < static_cast<int>(Trait::TraitCount); ++i)
+		{
+			const Trait t = static_cast<Trait>(i);
+			const TraitInfo &info = traitInfo(t);
+			const float a = traitValue(start, t);
+			const float b = traitValue(end, t);
+			const float change = (a != 0.0f) ? 100.0f * (b - a) / a : 0.0f;
+			std::cout << "  " << info.name;
+			for (size_t pad = std::string(info.name).size(); pad < 22; ++pad) std::cout << ' ';
+			std::cout << "founder " << a << "  ->  gen " << last << " " << b
+					  << "   (" << (change >= 0 ? "+" : "") << change << "%)\n";
+		}
+		std::cout << "  generations reached      " << (generations.size() - 1) << "\n";
 	}
 
 	std::cout << "RESULT\n"

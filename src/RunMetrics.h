@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <string>
 #include "Resources.h"
+#include "Genome.h"
+#include <vector>
 
 // Why a run stopped. A simulation that only ends when you press Escape cannot be
 // compared with another one, because the numbers describe an arbitrary moment.
@@ -57,6 +59,26 @@ struct RunMetrics
 
 	// Ticks taken to reach each quarter of the catalogue; -1 if never reached.
 	long long ticksTo25 = -1, ticksTo50 = -1, ticksTo75 = -1;
+
+	// --- evolution ---
+	// Population-average traits per generation, taken from every probe ever born.
+	// Bucketing by generation gives the whole trajectory for free: probes are never
+	// removed from the fleet vector when they shut down, so at the end of a run the
+	// vector IS the complete family record.
+	struct GenerationTraits
+	{
+		size_t population = 0;
+		Genome mean;
+	};
+	bool evolutionEnabled = false;
+	float mutationStrength = 0.0f;
+	Genome founderGenome;
+	std::vector<GenerationTraits> generations; // index is the generation number
+
+	// The last generation with a meaningful population, so the report compares the
+	// founder against a generation that actually had members rather than a tail of
+	// one or two stragglers.
+	int lastPopulousGeneration(size_t minimumPopulation = 5) const;
 
 	// --- derived ---
 	double coveragePercent() const;

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Resources.h"
+#include "Genome.h"
 
 // Runtime simulation settings.
 //
@@ -30,6 +31,17 @@ struct SimSettings
 	float fuelPerParsec = 1.5f;
 	float fuelSafetyMargin = 1.25f;
 	float childFuelShare = 0.35f;
+
+	// --- evolution ---------------------------------------------------------------
+	// Off, every probe uses the founder's genome unchanged and the simulation behaves
+	// as it did before. On, a child's traits are its parent's nudged by up to
+	// mutationStrength either way, and nothing else selects: whichever values produce
+	// surviving descendants become common.
+	bool evolutionEnabled = true;
+	float mutationStrength = 0.08f;
+	// What the first probe believes. The setup sliders write here, so they set the
+	// starting point rather than fleet-wide law.
+	Genome founderGenome;
 
 	// How much of the colour wheel the whole family tree spans. 1.0 uses all of it,
 	// which separates the top-level branches as far as possible; lower values tint

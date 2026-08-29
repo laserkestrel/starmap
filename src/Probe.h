@@ -6,6 +6,7 @@
 #include "GalaxyQuadTree.h"
 #include "Knowledge.h"
 #include "SimSettings.h"
+#include "Genome.h"
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/System/Vector3.hpp>
 #include <cstdint>
@@ -103,6 +104,13 @@ public:
 	void deriveLineageInto(Probe &child, int childIndex, int maxChildren) const;
 	void setBlackTrailColor();
 
+	// --- genome -----------------------------------------------------------------
+	// Behaviour a probe carries itself rather than reading from fleet-wide settings,
+	// so a child can inherit it with a nudge and the galaxy can settle which values
+	// survive. See Genome.h for why there is no fitness function.
+	const Genome &getGenome() const { return genome; }
+	void setGenome(const Genome &g) { genome = g; }
+
 	// --- resources --------------------------------------------------------------
 	const Resources &getCargo() const { return cargo; }
 	void setCargo(const Resources &r) { cargo = r; }
@@ -184,6 +192,7 @@ private:
 	// What it is carrying, what it has dug up in total, and the system it is
 	// currently sitting in. The star pointer is into Game's galaxy vector, which
 	// outlives every probe and is never reallocated during a run.
+	Genome genome;
 	Resources cargo;
 	Resources totalMined;
 	sf::Vector3f birthPosition;
