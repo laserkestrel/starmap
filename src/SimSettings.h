@@ -31,6 +31,11 @@ struct SimSettings
 	float fuelSafetyMargin = 1.25f;
 	float childFuelShare = 0.35f;
 
+	// How much of the colour wheel the whole family tree spans. 1.0 uses all of it,
+	// which separates the top-level branches as far as possible; lower values tint
+	// the entire fleet towards one part of the spectrum.
+	float lineageHueSpread = 1.0f;
+
 	// Advanced by Game once per tick. Probes stamp their arrivals with it so the
 	// renderer can tell a leg flown moments ago from one flown a thousand ticks back.
 	long long currentTick = 0;

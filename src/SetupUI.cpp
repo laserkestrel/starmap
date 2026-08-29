@@ -103,8 +103,8 @@ SetupUI::SetupUI()
 	spriteStyle.tab = DisplayTab;
 
 	trailMode.label = "Trail colouring";
-	trailMode.help = "Recency fades a leg as it ages, so the expansion front glows. Density burns brightest where the most probes have arrived, which is where the wasted journeys are. Per probe is the old random colour, which encodes nothing. F6 cycles these while running.";
-	trailMode.options = {"Recency", "Density", "Per probe"};
+	trailMode.help = "Recency fades a leg as it ages. Density burns brightest where the most probes have arrived, which is where the waste is. Lineage gives each family its own band of hue. F6 cycles them live.";
+	trailMode.options = {"Recency", "Density", "Lineage"};
 	trailMode.selected = 0;
 	trailMode.tab = DisplayTab;
 
@@ -120,6 +120,15 @@ SetupUI::SetupUI()
 	// Eight options will not fit at the default width.
 	trailPaletteControl.boxWidth = 54.0f;
 	trailPaletteControl.boxSpacing = 58.0f;
+
+	overlays.label = "Overlays";
+	overlays.help = "Also F keys while running, and F8 lists every binding on screen.";
+	overlays.options = {"Stalks F4", "Star names F1", "Probe names F2", "Trails F3"};
+	overlays.tab = DisplayTab;
+	overlays.multiToggle = true;
+	overlays.mask = OverlayStalks; // stalks on, the rest off -- the old defaults
+	overlays.boxWidth = 108.0f;
+	overlays.boxSpacing = 114.0f;
 
 	firstArrival.label = "Replicate at first star";
 	firstArrival.help = "Whether a new probe may copy itself at the very first system it reaches, or must establish itself there first. Roughly doubles the growth exponent.";
@@ -255,6 +264,7 @@ void SetupUI::layout(const sf::Vector2u &windowSize)
 	place(firstArrival);
 	place(trailMode);
 	place(trailPaletteControl);
+	place(overlays);
 	place(spriteStyle);
 
 	// Tab bar, under the heading.
@@ -271,6 +281,14 @@ void SetupUI::setTrailModeChoice(int index)
 {
 	if (index >= 0 && index < static_cast<int>(trailMode.options.size()))
 		trailMode.selected = index;
+}
+
+void SetupUI::setOverlay(OverlayBit bit, bool on)
+{
+	if (on)
+		overlays.mask |= static_cast<unsigned int>(bit);
+	else
+		overlays.mask &= ~static_cast<unsigned int>(bit);
 }
 
 void SetupUI::setTrailPaletteChoice(int index)
@@ -316,6 +334,14 @@ bool SetupUI::onMousePressed(const sf::Vector2f &p)
 		}
 	}
 
+	for (size_t i = 0; i < overlays.boxes.size(); ++i)
+	{
+		if (overlays.boxes[i].contains(p))
+		{
+			overlays.mask ^= (1u << i); // each chip is independent
+			return true;
+		}
+	}
 	for (size_t i = 0; i < trailMode.boxes.size(); ++i)
 	{
 		if (trailMode.boxes[i].contains(p))
@@ -425,11 +451,13 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 		text(seg.help, panel.left + PAD, rowY + 19.0f, 12, HELP);
 		for (size_t i = 0; i < seg.boxes.size(); ++i)
 		{
+			const bool on = seg.multiToggle ? ((seg.mask & (1u << i)) != 0)
+										    : (static_cast<int>(i) == seg.selected);
 			sf::RectangleShape box(sf::Vector2f(seg.boxes[i].width, seg.boxes[i].height));
 			box.setPosition(seg.boxes[i].left, seg.boxes[i].top);
-			box.setFillColor(static_cast<int>(i) == seg.selected ? SEG_ON : SEG_OFF);
+			box.setFillColor(on ? SEG_ON : SEG_OFF);
 			box.setOutlineThickness(1.0f);
-			box.setOutlineColor(static_cast<int>(i) == seg.selected ? HEADING : PANEL_EDGE);
+			box.setOutlineColor(on ? HEADING : PANEL_EDGE);
 			window.draw(box);
 
 			if (swatches && static_cast<int>(i) < trailPaletteCount())
@@ -442,12 +470,12 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 				swatch.setFillColor(sf::Color(p.r, p.g, p.b));
 				window.draw(swatch);
 				text(seg.options[i], seg.boxes[i].left + 5.0f, seg.boxes[i].top + 1.0f, 11,
-					 static_cast<int>(i) == seg.selected ? VALUE : LABEL);
+					 on ? VALUE : LABEL);
 			}
 			else
 			{
 				text(seg.options[i], seg.boxes[i].left + 9.0f, seg.boxes[i].top + 4.0f, 13,
-					 static_cast<int>(i) == seg.selected ? VALUE : LABEL);
+					 on ? VALUE : LABEL);
 			}
 		}
 	};
@@ -522,6 +550,7 @@ void SetupUI::draw(sf::RenderWindow &window, const sf::Font &font, const std::st
 	segments(firstArrival, rowTop(firstArrival));
 	segments(trailMode, rowTop(trailMode));
 	segments(trailPaletteControl, rowTop(trailPaletteControl), true);
+	segments(overlays, rowTop(overlays));
 	segments(spriteStyle, rowTop(spriteStyle));
 
 	sf::RectangleShape rule(sf::Vector2f(panel.width - 2.0f * PAD, 1.0f));

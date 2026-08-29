@@ -100,6 +100,14 @@ public:
 	float getTrailFadeTicks() const;
 	// Arrivals at which a system is fully saturated in density mode.
 	float getTrailDensitySaturateAt() const;
+	// How much of the colour wheel the whole family tree spans, 0..1.
+	float getLineageHueSpread() const;
+
+	// Which overlays start switched on. All four are also F keys at runtime.
+	bool getShowStarStalks() const;
+	bool getShowStarNames() const;
+	bool getShowProbeNames() const;
+	bool getShowProbeTrails() const;
 
 	void loadFromFile();
 
@@ -152,6 +160,11 @@ private:
 	int trailPalette = 0;
 	float trailFadeTicks = 600.0f;
 	float trailDensitySaturateAt = 60.0f;
+	float lineageHueSpread = 1.0f;
+	bool showStarStalks = true;
+	bool showStarNames = false;
+	bool showProbeNames = false;
+	bool showProbeTrails = false;
 
 	LoadConfig(const LoadConfig &) = delete;
 	LoadConfig &operator=(const LoadConfig &) = delete;

@@ -49,9 +49,11 @@ childFuelShare - Share of the parent's remaining volatiles handed to a new probe
 
 ## Trail appearance
 
-trailColourMode - "recency", "density" or "perProbe". Also on the Display tab, and F6 cycles it live.<BR>
+trailColourMode - "recency", "density" or "lineage" ("perProbe" is still accepted as the old name for lineage). Also on the Display tab, and F6 cycles it live.<BR>
 trailPalette - Which of the eight colour ramps to use, 0-7. F7 cycles it live.<BR>
 trailFadeTicks - Ticks for a trail to cool from white to dark in recency mode. Short values leave only the expansion front lit.<BR>
+lineageHueSpread - How much of the colour wheel the whole family tree spans, 0 to 1. At 1.0 the top-level branches are as far apart as they can be; lower values tint the entire fleet towards one part of the spectrum.<BR>
+showStarStalks / showStarNames / showProbeNames / showProbeTrails - Which overlays start switched on. All four are on the Display tab and on F4 / F1 / F2 / F3.<BR>
 trailDensitySaturateAt - Arrivals at which a system is fully white in density mode. The scale is logarithmic, because arrival counts are heavy-tailed and a linear ramp leaves almost everything at the cold end. Default 60: with a typical mean around 12 arrivals per system, 24 washed most of the map out to white.<BR>
 
 # Beginning an expedition
@@ -62,7 +64,8 @@ the map behind it, so nothing competes for them - the old screen used Up/Down fo
 both panning and editing values, which is why they fought.
 
 It has two tabs. SIMULATION holds everything that changes the outcome and therefore
-the score; DISPLAY holds everything that only changes how it looks. The split is not
+the score; DISPLAY holds everything that only changes how it looks, including the
+four overlay toggles that are otherwise F1 to F4. The split is not
 just tidiness - with them mixed it was easy to nudge a parameter while meaning to
 adjust the view, and then wonder why the score moved.
 
@@ -172,7 +175,20 @@ burns white because it has been crossed dozens of times, while the frontier stay
 cool at one or two visits. If you want to see why efficiency sits around 0.08, this
 is the picture of it.
 
-Both use the same eight palettes, chosen on the Display tab or cycled with F7. Each
+LINEAGE gives each family its own band of the colour wheel. The root probe owns the
+whole wheel and every child is handed a slice of its parent's share, so a subtree
+always occupies one contiguous arc: how far apart two probes look is how far apart
+they are in the family tree. Green sweeping one half of the galaxy and magenta the
+other is two branches of one family dividing the work between them.
+
+A simpler scheme was tried first -- step the hue a fixed amount per generation --
+and it does not work. The drift accumulates, wraps the wheel every handful of
+generations, and distant strangers end up the same colour as close relatives, which
+is no better than the random colouring it replaced. The number of clearly distinct
+top-level colours is the replication limit plus one, since that is how many ways the
+root's arc gets divided.
+
+Recency and Density use the same eight palettes, chosen on the Display tab or cycled with F7. Each
 ramp is a single hue running dark to white, deliberately not a rainbow: brightness
 ordering stays readable, where a rainbow looks livelier and is far harder to rank
 by eye.
@@ -231,8 +247,9 @@ F2 - Toggle Probe Names<BR>
 F3 - Toggle Probe Trails<BR>
 F4 - Toggle Star Stalks (the lines showing height above/below the plane)<BR>
 F5 - Cycle the star sprite style<BR>
-F6 - Cycle trail colouring: recency, density, per probe<BR>
+F6 - Cycle trail colouring: recency, density, lineage<BR>
 F7 - Cycle the trail palette<BR>
+F8 - Show this list of keys on screen<BR>
 F9 - At the debrief, hide or show the results panel over the map<BR>
 F12 - Toggle Debug (Shows Quadtree boundaries, FPS and the number of stars drawn)<BR>
 F11 - Toggle between windowed and borderless fullscreen<BR>

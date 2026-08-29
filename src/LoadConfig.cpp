@@ -111,6 +111,11 @@ const std::string &LoadConfig::getTrailColourMode() const { return trailColourMo
 int LoadConfig::getTrailPalette() const { return trailPalette; }
 float LoadConfig::getTrailFadeTicks() const { return trailFadeTicks; }
 float LoadConfig::getTrailDensitySaturateAt() const { return trailDensitySaturateAt; }
+float LoadConfig::getLineageHueSpread() const { return lineageHueSpread; }
+bool LoadConfig::getShowStarStalks() const { return showStarStalks; }
+bool LoadConfig::getShowStarNames() const { return showStarNames; }
+bool LoadConfig::getShowProbeNames() const { return showProbeNames; }
+bool LoadConfig::getShowProbeTrails() const { return showProbeTrails; }
 
 void LoadConfig::loadFromFile()
 {
@@ -184,6 +189,11 @@ void LoadConfig::loadFromFile()
 		readNumber(config, "trailPalette", trailPalette);
 		readNumber(config, "trailFadeTicks", trailFadeTicks);
 		readNumber(config, "trailDensitySaturateAt", trailDensitySaturateAt);
+		readNumber(config, "lineageHueSpread", lineageHueSpread);
+		readBool(config, "showStarStalks", showStarStalks);
+		readBool(config, "showStarNames", showStarNames);
+		readBool(config, "showProbeNames", showProbeNames);
+		readBool(config, "showProbeTrails", showProbeTrails);
 	}
 	catch (json::parse_error &e)
 	{

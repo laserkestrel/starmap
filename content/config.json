@@ -44,5 +44,10 @@
   "trailColourMode": "recency",
   "trailPalette": 0,
   "trailFadeTicks": 600,
-  "trailDensitySaturateAt": 60
+  "trailDensitySaturateAt": 60,
+  "showStarStalks": true,
+  "showStarNames": false,
+  "showProbeNames": false,
+  "showProbeTrails": false,
+  "lineageHueSpread": 1.0
 }

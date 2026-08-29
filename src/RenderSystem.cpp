@@ -274,6 +274,63 @@ float RenderSystem::depthFade(float worldZ) const
 	return 1.0f - (az - depth) / margin;
 }
 
+void RenderSystem::renderKeyHelp()
+{
+	if (!showKeyHelp)
+		return;
+
+	// A list of every binding, on F8. The alternative is remembering ten function
+	// keys, which nobody does -- and the Display tab's toggles only help before a
+	// run starts, not while one is going.
+	static const std::pair<const char *, const char *> KEYS[] = {
+		{"F1", "star names"},
+		{"F2", "probe names"},
+		{"F3", "probe trails"},
+		{"F4", "star stalks (height above the plane)"},
+		{"F5", "star sprite style"},
+		{"F6", "trail colouring: recency / density / lineage"},
+		{"F7", "trail palette"},
+		{"F8", "this list"},
+		{"F9", "at the debrief: hide or show the results"},
+		{"F11", "windowed or borderless fullscreen"},
+		{"F12", "debug: quadtree, FPS, stars drawn"},
+		{"Home", "reset the view to Sol"},
+		{"Arrows", "pan (hold Shift to go faster)"},
+		{"Wheel", "zoom on the cursor"},
+		{"Esc", "quit"},
+	};
+	const size_t rows = sizeof(KEYS) / sizeof(KEYS[0]);
+
+	const float rowHeight = 22.0f;
+	const float panelW = 470.0f;
+	const float panelH = rows * rowHeight + 58.0f;
+	const float x = 40.0f;
+	const float y = (static_cast<float>(renderWindow.getSize().y) - panelH) * 0.5f;
+
+	sf::RectangleShape panel(sf::Vector2f(panelW, panelH));
+	panel.setPosition(x, y);
+	panel.setFillColor(sf::Color(10, 13, 18, 238));
+	panel.setOutlineThickness(1.0f);
+	panel.setOutlineColor(sf::Color(70, 92, 120));
+	renderWindow.draw(panel);
+
+	auto label = [&](const std::string &s, float tx, float ty, unsigned size, const sf::Color &c) {
+		sf::Text t(s, font, size);
+		t.setPosition(std::floor(tx), std::floor(ty));
+		t.setFillColor(c);
+		renderWindow.draw(t);
+	};
+
+	label("KEYS", x + 20.0f, y + 16.0f, 17, sf::Color(150, 190, 235));
+	float ry = y + 46.0f;
+	for (size_t i = 0; i < rows; ++i)
+	{
+		label(KEYS[i].first, x + 20.0f, ry, 14, sf::Color(228, 232, 238));
+		label(KEYS[i].second, x + 96.0f, ry, 14, sf::Color(132, 146, 164));
+		ry += rowHeight;
+	}
+}
+
 TrailColourMode RenderSystem::cycleTrailColourMode()
 {
 	const int next = (static_cast<int>(trailColourMode) + 1) % static_cast<int>(TrailColourMode::ModeCount);
@@ -328,7 +385,7 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 					break;
 				}
 				default:
-					legColour = probe.getTrailColor();
+					legColour = probe.getLineageColour();
 					break;
 				}
 
@@ -361,8 +418,8 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 			{
 				const sf::Vector3f from = visited.empty() ? probe.getBirthPosition() : visited.back().coordinates;
 				sf::Color liveColour =
-					(trailColourMode == TrailColourMode::PerProbe)
-						? probe.getTrailColor()
+					(trailColourMode == TrailColourMode::Lineage)
+						? probe.getLineageColour()
 						: heatColour(1.0f, palette); // in flight is as hot as it gets
 
 				const float fadeFrom = depthFade(from.z);
@@ -462,7 +519,7 @@ void RenderSystem::renderProbes(const std::vector<Probe> &probes)
 
 				sf::Text labelText(probe.getProbeName(), font, 10);
 				labelText.setPosition(p.x - 10.0f, p.y - 10.0f);
-				labelText.setFillColor(probe.getTrailColor());
+				labelText.setFillColor(probe.getLineageColour());
 				renderWindow.draw(labelText);
 				++drawn;
 			}

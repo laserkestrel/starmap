@@ -68,6 +68,11 @@ public:
 		int selected = 0;
 		std::vector<sf::FloatRect> boxes;
 		Tab tab = SimulationTab;
+		// When set, every box is an independent on/off chip and `mask` holds their
+		// states, rather than `selected` naming one winner. Lets four related toggles
+		// share a single row instead of taking four.
+		bool multiToggle = false;
+		unsigned int mask = 0;
 		// The palette control has eight options and will not fit at the default
 		// width, so the box size is per control rather than a constant.
 		float boxWidth = 86.0f;
@@ -96,6 +101,17 @@ public:
 	void setTrailModeChoice(int index);
 	int trailPaletteChoice() const { return trailPaletteControl.selected; }
 	void setTrailPaletteChoice(int index);
+
+	// Overlay toggles, so the F keys do not have to be remembered.
+	enum OverlayBit
+	{
+		OverlayStalks = 1 << 0,
+		OverlayStarNames = 1 << 1,
+		OverlayProbeNames = 1 << 2,
+		OverlayTrails = 1 << 3
+	};
+	bool overlayOn(OverlayBit bit) const { return (overlays.mask & static_cast<unsigned int>(bit)) != 0; }
+	void setOverlay(OverlayBit bit, bool on);
 	int presetChoice() const { return preset.selected; }
 	void applyPreset(int index);
 	// Seeds a control from config so the screen opens showing what the file says
@@ -114,6 +130,7 @@ private:
 	Segmented preset;
 	Segmented trailMode;
 	Segmented trailPaletteControl;
+	Segmented overlays;
 	sf::FloatRect panel;
 	sf::FloatRect launchButton;
 	std::vector<sf::FloatRect> tabButtons;

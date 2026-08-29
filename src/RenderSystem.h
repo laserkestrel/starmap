@@ -57,6 +57,22 @@ public:
 	void toggleDebugGraphics();
 	void toggleStarStalks();
 
+	// Explicit setters as well as toggles: the Display tab needs to put these into a
+	// known state, which a toggle cannot do.
+	void setTextLabelsStars(bool on) { showTextLabelsStars = on; }
+	void setTextLabelsProbes(bool on) { showTextLabelsProbes = on; }
+	void setProbeTrails(bool on) { showProbeTrails = on; }
+	void setStarStalks(bool on) { showStarStalks = on; }
+	bool getTextLabelsStars() const { return showTextLabelsStars; }
+	bool getTextLabelsProbes() const { return showTextLabelsProbes; }
+	bool getProbeTrails() const { return showProbeTrails; }
+	bool getStarStalks() const { return showStarStalks; }
+
+	// On-screen list of every key binding, so they do not have to be memorised.
+	void toggleKeyHelp() { showKeyHelp = !showKeyHelp; }
+	bool getKeyHelp() const { return showKeyHelp; }
+	void renderKeyHelp();
+
 	// Recreating the window can invalidate the GL resources these hold, so the
 	// font and sprite are rebuilt after any display-mode change.
 	void reloadGraphicsResources();
@@ -141,6 +157,7 @@ private:
 	bool showProbeTrails = false;
 	bool showDebugGraphics = false;
 	bool showStarStalks = true;
+	bool showKeyHelp = false;
 };
 
 #endif // RENDERSYSTEM_H

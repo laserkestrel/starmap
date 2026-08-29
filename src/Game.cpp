@@ -49,6 +49,7 @@ Game::Game(const LoadConfig &config)
 	settings.fuelPerParsec = config.getFuelPerParsec();
 	settings.fuelSafetyMargin = config.getFuelSafetyMargin();
 	settings.childFuelShare = config.getChildFuelShare();
+	settings.lineageHueSpread = config.getLineageHueSpread();
 	activeMaxProbes = config.getMaxProbes();
 
 	window.setVerticalSyncEnabled(config.getVerticalSync());
@@ -88,6 +89,14 @@ Game::Game(const LoadConfig &config)
 	renderSystem.setTrailPalette(config.getTrailPalette());
 	renderSystem.setTrailFadeTicks(config.getTrailFadeTicks());
 	renderSystem.setTrailDensitySaturateAt(config.getTrailDensitySaturateAt());
+	renderSystem.setStarStalks(config.getShowStarStalks());
+	renderSystem.setTextLabelsStars(config.getShowStarNames());
+	renderSystem.setTextLabelsProbes(config.getShowProbeNames());
+	renderSystem.setProbeTrails(config.getShowProbeTrails());
+	setupUI.setOverlay(SetupUI::OverlayStalks, config.getShowStarStalks());
+	setupUI.setOverlay(SetupUI::OverlayStarNames, config.getShowStarNames());
+	setupUI.setOverlay(SetupUI::OverlayProbeNames, config.getShowProbeNames());
+	setupUI.setOverlay(SetupUI::OverlayTrails, config.getShowProbeTrails());
 	loadedRichness = config.getSystemResourceScale();
 	setupUI.setSpriteChoice(static_cast<int>(starSpriteStyleFromString(config.getStarSpriteStyle())));
 	setupUI.setReplicateOnFirstArrival(config.getReplicateOnFirstArrival());
@@ -113,7 +122,9 @@ void Game::seedFirstProbe()
 	Probe firstProbe("SOL-SOL-AAA", 0.0f, 0.0f, 0.0f, settings.probeSpeedParsecsPerTick, *quadTree, settings);
 	firstProbe.setMode(ProbeMode::Seek);
 	firstProbe.setNewBorn(false);
-	firstProbe.setRandomTrailColor();
+	// The root owns the whole colour wheel (or the fraction config allows); every
+	// other probe gets a slice of its parent's share.
+	firstProbe.setLineageArc(0.0f, settings.lineageHueSpread);
 	firstProbe.recordVisit(0, sf::Vector3f(0.0f, 0.0f, 0.0f));
 
 	// We build and fuel the first probe ourselves, so it launches with a tank but an
@@ -272,6 +283,7 @@ void Game::initializeKeyBindings()
 		renderSystem.setTrailPalette(renderSystem.getTrailPalette() + 1);
 		std::cout << "Trail palette: " << trailPalettes()[renderSystem.getTrailPalette()].name << std::endl;
 	};
+	keyBindings[sf::Keyboard::F8] = [this]() { renderSystem.toggleKeyHelp(); };
 	keyBindings[sf::Keyboard::F12] = [this]() { renderSystem.toggleDebugGraphics(); };
 	keyBindings[sf::Keyboard::Home] = [this]() { resetView(); };
 	keyBindings[sf::Keyboard::F11] = [this]() {
@@ -391,6 +403,10 @@ void Game::runStartupScreen()
 	renderSystem.setTrailColourMode(static_cast<TrailColourMode>(setupUI.trailModeChoice()));
 	renderSystem.setTrailPalette(setupUI.trailPaletteChoice());
 	renderSystem.setTrailFadeTicks(setupUI.value(SetupUI::TrailFade));
+	renderSystem.setStarStalks(setupUI.overlayOn(SetupUI::OverlayStalks));
+	renderSystem.setTextLabelsStars(setupUI.overlayOn(SetupUI::OverlayStarNames));
+	renderSystem.setTextLabelsProbes(setupUI.overlayOn(SetupUI::OverlayProbeNames));
+	renderSystem.setProbeTrails(setupUI.overlayOn(SetupUI::OverlayTrails));
 
 	// Richness is baked into the stars at load, so changing it has to reload the
 	// catalogue -- same as changing its size.
@@ -662,7 +678,11 @@ void Game::updateGameState()
 
 		Probe replicatedProbe(newName, probe.getWorldX(), probe.getWorldY(), probe.getWorldZ(),
 							  settings.probeSpeedParsecsPerTick, *quadTree, settings);
-		replicatedProbe.setRandomTrailColor();
+		// The child's colour comes from its parent's, stepped round the wheel by how
+		// many copies that parent has already made. Done before payForReplication so
+		// getReplicationCount() is still the index of THIS child.
+		probe.deriveLineageInto(replicatedProbe, probe.getReplicationCount(),
+								settings.probeIndividualReplicationLimit);
 
 		// Charge the parent and fuel the child out of what is left. Both probes are
 		// standing in the same system, so the child inherits it and can mine there too.
@@ -799,6 +819,7 @@ void Game::render()
 	renderSystem.renderProbes(probeVector);
 	renderSystem.renderHud(cameraHudText());
 	renderSystem.calculateAndDisplayFPS();
+	renderSystem.renderKeyHelp();
 	window.display();
 }
 

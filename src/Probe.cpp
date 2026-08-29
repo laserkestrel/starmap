@@ -6,20 +6,9 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
-#include <random>
 
 namespace
 {
-	// Seeded once per thread rather than once per call. The old code built a
-	// std::random_device and a fresh std::mt19937 -- about 2.5 KB of state --
-	// every time a newborn probe moved, and used the non-thread-safe std::rand()
-	// for trail colours while probes were being updated in parallel.
-	std::mt19937 &rng()
-	{
-		static thread_local std::mt19937 generator{std::random_device{}()};
-		return generator;
-	}
-
 	float distance3D(float ax, float ay, float az, float bx, float by, float bz)
 	{
 		const float dx = ax - bx, dy = ay - by, dz = az - bz;
@@ -101,7 +90,7 @@ int Probe::getReplicationCount() const { return replicationCount; }
 const std::vector<VisitedStarSystem> &Probe::getTrail() const { return trail; }
 size_t Probe::getKnownSystemCount() const { return knowledge.knownCount(); }
 size_t Probe::getKnowledgeChainDepth() const { return knowledge.chainDepth(); }
-sf::Color Probe::getTrailColor() const { return trailColor; }
+sf::Color Probe::getLineageColour() const { return lineageColour; }
 
 bool Probe::canAffordReplication() const
 {
@@ -291,36 +280,62 @@ void Probe::setCurrentSystem(const Star *star)
 
 void Probe::setBlackTrailColor()
 {
-	trailColor = sf::Color(0, 0, 0);
+	lineageColour = sf::Color(0, 0, 0);
 }
 
-void Probe::setRandomTrailColor()
+namespace
 {
-	const float minBrightness = 100.0f; // keep trails readable against the background
-	std::uniform_int_distribution<int> channel(0, 255);
-
-	float red = static_cast<float>(channel(rng()));
-	float green = static_cast<float>(channel(rng()));
-	float blue = static_cast<float>(channel(rng()));
-
-	const float brightness = 0.299f * red + 0.587f * green + 0.114f * blue;
-	if (brightness > 0.0f && brightness < minBrightness)
+	// Hue in turns (0..1) to RGB, at fixed saturation and value. Fixing those two is
+	// deliberate: a label has to stay readable against a black starfield, and letting
+	// the generator wander into dark or washed-out colours would trade legibility for
+	// variety nobody asked for.
+	sf::Color hueToColour(float hue, float saturation, float value)
 	{
-		// Guarded: an all-zero colour used to divide by zero here, producing inf
-		// and then undefined behaviour on the cast back to an integer.
-		const float ratio = minBrightness / brightness;
-		red = std::min(255.0f, red * ratio);
-		green = std::min(255.0f, green * ratio);
-		blue = std::min(255.0f, blue * ratio);
-	}
-	else if (brightness <= 0.0f)
-	{
-		red = green = blue = minBrightness;
-	}
+		hue -= std::floor(hue); // wrap into 0..1
+		const float h = hue * 6.0f;
+		const int sector = static_cast<int>(h) % 6;
+		const float f = h - std::floor(h);
+		const float p = value * (1.0f - saturation);
+		const float q = value * (1.0f - saturation * f);
+		const float t = value * (1.0f - saturation * (1.0f - f));
 
-	trailColor = sf::Color(static_cast<sf::Uint8>(red), static_cast<sf::Uint8>(green), static_cast<sf::Uint8>(blue));
+		float r = 0.0f, g = 0.0f, b = 0.0f;
+		switch (sector)
+		{
+		case 0: r = value; g = t;     b = p;     break;
+		case 1: r = q;     g = value; b = p;     break;
+		case 2: r = p;     g = value; b = t;     break;
+		case 3: r = p;     g = q;     b = value; break;
+		case 4: r = t;     g = p;     b = value; break;
+		default: r = value; g = p;    b = q;     break;
+		}
+		return sf::Color(static_cast<sf::Uint8>(r * 255.0f),
+						 static_cast<sf::Uint8>(g * 255.0f),
+						 static_cast<sf::Uint8>(b * 255.0f));
+	}
+} // namespace
+
+void Probe::setLineageArc(float arcStart, float arcWidth)
+{
+	lineageArcStart = arcStart - std::floor(arcStart);
+	lineageArcWidth = std::max(0.0f, arcWidth);
+	lineageColour = hueToColour(lineageArcStart, 0.72f, 1.0f);
 }
 
+void Probe::deriveLineageInto(Probe &child, int childIndex, int maxChildren) const
+{
+	// Divide this probe's arc into (maxChildren + 1) slices: the first is the one it
+	// keeps for itself, and the rest go to its children in birth order. Sibling
+	// subtrees therefore never overlap, and every descendant of a given probe stays
+	// inside that probe's band of the wheel.
+	const int slices = std::max(2, maxChildren + 1);
+	const float sliceWidth = lineageArcWidth / static_cast<float>(slices);
+	const int slot = std::min(childIndex + 1, slices - 1);
+	child.setLineageArc(lineageArcStart + sliceWidth * static_cast<float>(slot), sliceWidth);
+}
+
+// Nearest unvisited star by TRUE 3D distance. The quadtree prunes in x/y only,
+// which is safe -- see the note in GalaxyQuadTreeNode.h.
 const Star *Probe::findNearestUnvisitedStar(const GalaxyQuadTreeNode *node, float searchRadiusParsecs) const
 {
 	if (node == nullptr || node->starVec == nullptr)
