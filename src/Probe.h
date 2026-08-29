@@ -110,6 +110,10 @@ public:
 	// survive. See Genome.h for why there is no fitness function.
 	const Genome &getGenome() const { return genome; }
 	void setGenome(const Genome &g) { genome = g; }
+	// What actually drives behaviour. Normally the probe's own genome; under the
+	// neutral control it is the founder's, so traits still mutate and are still
+	// reported but cannot influence survival.
+	const Genome &behaviour() const;
 
 	// --- resources --------------------------------------------------------------
 	const Resources &getCargo() const { return cargo; }

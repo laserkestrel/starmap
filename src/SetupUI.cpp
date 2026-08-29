@@ -126,8 +126,8 @@ SetupUI::SetupUI()
 	trailPaletteControl.boxSpacing = 58.0f;
 
 	evolution.label = "Evolution";
-	evolution.help = "On, a child inherits its parent's traits with a small random change and nothing else selects -- whichever values produce surviving descendants become common. The sliders above then set what the FIRST probe believes, not fleet-wide law.";
-	evolution.options = {"Off", "On"};
+	evolution.help = "On, a child inherits its parent's traits nudged, and survival decides which spread. Neutral is the control: traits still mutate and are still reported, but every probe behaves as the founder did, so anything the report shows is drift. Run both to know which you are looking at.";
+	evolution.options = {"Off", "On", "Neutral"};
 	evolution.selected = 1;
 
 	traitColour.label = "Colour trails by";
@@ -310,6 +310,12 @@ void SetupUI::setOverlay(OverlayBit bit, bool on)
 		overlays.mask |= static_cast<unsigned int>(bit);
 	else
 		overlays.mask &= ~static_cast<unsigned int>(bit);
+}
+
+void SetupUI::setEvolutionChoice(int index)
+{
+	if (index >= 0 && index < static_cast<int>(evolution.options.size()))
+		evolution.selected = index;
 }
 
 void SetupUI::setTraitColourChoice(int index)

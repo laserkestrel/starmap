@@ -92,6 +92,11 @@ size_t Probe::getKnownSystemCount() const { return knowledge.knownCount(); }
 size_t Probe::getKnowledgeChainDepth() const { return knowledge.chainDepth(); }
 sf::Color Probe::getLineageColour() const { return lineageColour; }
 
+const Genome &Probe::behaviour() const
+{
+	return (settings != nullptr && settings->neutralControl) ? settings->founderGenome : genome;
+}
+
 bool Probe::canAffordReplication() const
 {
 	if (!settings->resourcesEnabled)
@@ -109,7 +114,7 @@ Resources Probe::payForReplication()
 	// The child leaves with a share of what the parent still holds, which is what
 	// stops a newborn stranding on its first hop. It comes out of the parent's tank,
 	// so a probe that keeps replicating fuels each child a little worse than the last.
-	const float share = std::max(0.0f, std::min(1.0f, genome.childFuelShare));
+	const float share = std::max(0.0f, std::min(1.0f, behaviour().childFuelShare));
 	const Resources dowry(0.0f, cargo.volatiles * share, 0.0f);
 	cargo.volatiles -= dowry.volatiles;
 	return dowry;
@@ -152,7 +157,7 @@ void Probe::move()
 				harvestTicksHere = 0;
 				setMode(ProbeMode::Harvest);
 			}
-			else if (replicationCount >= genome.replicationLimitInt())
+			else if (replicationCount >= behaviour().replicationLimitInt())
 			{
 				shutdown(ShutdownReason::ReplicationLimitReached);
 			}
@@ -187,7 +192,7 @@ void Probe::move()
 		++totalHarvestTicks;
 
 		const bool systemDry = got.empty();
-		const bool stayedTooLong = harvestTicksHere >= genome.harvestPatienceInt();
+		const bool stayedTooLong = harvestTicksHere >= behaviour().harvestPatienceInt();
 		const bool haveEnough = cargo.covers(settings->replicationCost);
 
 		if (haveEnough || systemDry || stayedTooLong)
@@ -197,11 +202,11 @@ void Probe::move()
 			{
 				setMode(ProbeMode::Seek);
 			}
-			else if (haveEnough && replicationCount < genome.replicationLimitInt())
+			else if (haveEnough && replicationCount < behaviour().replicationLimitInt())
 			{
 				setMode(ProbeMode::Replicate);
 			}
-			else if (replicationCount >= genome.replicationLimitInt())
+			else if (replicationCount >= behaviour().replicationLimitInt())
 			{
 				shutdown(ShutdownReason::ReplicationLimitReached);
 			}
@@ -228,7 +233,7 @@ void Probe::move()
 		// it never once executed. The premise was moot anyway: a parent replicates
 		// only once per system, so siblings are never created simultaneously.
 		const Star *nearestStar = findNearestUnvisitedStar(quadTree->getRootNode(),
-														  genome.searchRadiusParsecs);
+														  behaviour().searchRadiusParsecs);
 		if (nearestStar == nullptr)
 		{
 			DEBUG_LOG("Probe found no unvisited star within its search radius.");
@@ -249,7 +254,7 @@ void Probe::move()
 				// Try to top up where it stands, provided there is anything left here
 				// and it has not already given this system its allotted time.
 				if (currentSystem != nullptr && !currentSystem->isExhausted() &&
-					harvestTicksHere < genome.harvestPatienceInt())
+					harvestTicksHere < behaviour().harvestPatienceInt())
 				{
 					setMode(ProbeMode::Harvest);
 					return;

@@ -107,6 +107,10 @@ public:
 	// Off, every probe uses the founder's genome unchanged. On, a child's traits are
 	// its parent's nudged, and survival decides which values spread.
 	bool getEvolutionEnabled() const;
+	// The control condition: traits mutate and are reported but do not affect
+	// behaviour, so whatever the report shows is drift. Run it alongside a normal run
+	// to find out whether a trait move means anything.
+	bool getNeutralControl() const;
 	// Largest proportional change one trait can take in a single generation.
 	float getMutationStrength() const;
 	// Seed for the mutation generator. Fixed so a run is repeatable, and settable so
@@ -176,6 +180,7 @@ private:
 	float trailDensitySaturateAt = 60.0f;
 	float lineageHueSpread = 1.0f;
 	bool evolutionEnabled = true;
+	bool neutralControl = false;
 	float mutationStrength = 0.08f;
 	int mutationSeed = 20260829;
 	int probeLabelSize = 15;

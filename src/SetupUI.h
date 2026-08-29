@@ -96,8 +96,9 @@ public:
 	int spriteChoice() const { return spriteStyle.selected; }
 	bool replicateOnFirstArrival() const { return firstArrival.selected == 1; }
 	void setReplicateOnFirstArrival(bool on) { firstArrival.selected = on ? 1 : 0; }
-	bool evolutionEnabled() const { return evolution.selected == 1; }
-	void setEvolutionEnabled(bool on) { evolution.selected = on ? 1 : 0; }
+	// 0 off, 1 on, 2 neutral control.
+	int evolutionChoice() const { return evolution.selected; }
+	void setEvolutionChoice(int index);
 	int traitColourChoice() const { return traitColour.selected; }
 	void setTraitColourChoice(int index);
 	bool resourcesEnabled() const { return economy.selected == 1; }

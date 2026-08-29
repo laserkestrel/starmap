@@ -160,7 +160,9 @@ void RunMetrics::printToConsole() const
 		const int last = lastPopulousGeneration();
 		const Genome &start = founderGenome;
 		const Genome &end = generations[static_cast<size_t>(last)].mean;
-		std::cout << "EVOLUTION  (mutation " << (mutationStrength * 100.0f) << "% per generation)\n";
+		std::cout << "EVOLUTION  (mutation " << (mutationStrength * 100.0f) << "% per generation"
+				  << (neutralControl ? ", NEUTRAL CONTROL -- traits do not affect behaviour" : "")
+				  << ")\n";
 		for (int i = 0; i < static_cast<int>(Trait::TraitCount); ++i)
 		{
 			const Trait t = static_cast<Trait>(i);
@@ -173,7 +175,12 @@ void RunMetrics::printToConsole() const
 			std::cout << "founder " << a << "  ->  gen " << last << " " << b
 					  << "   (" << (change >= 0 ? "+" : "") << change << "%)\n";
 		}
-		std::cout << "  generations reached      " << (generations.size() - 1) << "\n";
+		// Population per generation decides how much drift alone can move the mean, so
+		// it belongs next to the trait figures rather than being left to guesswork.
+		size_t peakGen = 0;
+		for (const auto &g : generations) peakGen = std::max(peakGen, g.population);
+		std::cout << "  generations reached      " << (generations.size() - 1)
+				  << "   (peak " << peakGen << " probes in one generation)\n";
 	}
 
 	std::cout << "RESULT\n"

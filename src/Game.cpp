@@ -51,6 +51,7 @@ Game::Game(const LoadConfig &config)
 	settings.childFuelShare = config.getChildFuelShare();
 	settings.lineageHueSpread = config.getLineageHueSpread();
 	settings.evolutionEnabled = config.getEvolutionEnabled();
+	settings.neutralControl = config.getNeutralControl();
 	settings.mutationStrength = config.getMutationStrength();
 	settings.founderGenome.searchRadiusParsecs = config.getProbeSearchRadiusParsecs();
 	settings.founderGenome.childFuelShare = config.getChildFuelShare();
@@ -90,7 +91,7 @@ Game::Game(const LoadConfig &config)
 	setupUI.setResourcesEnabled(config.getResourcesEnabled());
 	setupUI.setValue(SetupUI::TrailFade, config.getTrailFadeTicks());
 	setupUI.setValue(SetupUI::MutationStrength, config.getMutationStrength() * 100.0f);
-	setupUI.setEvolutionEnabled(config.getEvolutionEnabled());
+	setupUI.setEvolutionChoice(config.getNeutralControl() ? 2 : (config.getEvolutionEnabled() ? 1 : 0));
 	setupUI.setTrailModeChoice(static_cast<int>(trailColourModeFromString(config.getTrailColourMode())));
 	setupUI.setTrailPaletteChoice(config.getTrailPalette());
 	renderSystem.setTrailColourMode(trailColourModeFromString(config.getTrailColourMode()));
@@ -398,7 +399,8 @@ void Game::runStartupScreen()
 
 	// Everything the sliders decide, applied in one place.
 	settings.probeSearchRadiusParsecs = setupUI.value(SetupUI::SearchRadius);
-	settings.evolutionEnabled = setupUI.evolutionEnabled();
+	settings.evolutionEnabled = setupUI.evolutionChoice() != 0;
+	settings.neutralControl = setupUI.evolutionChoice() == 2;
 	settings.mutationStrength = setupUI.value(SetupUI::MutationStrength) * 0.01f; // slider is a percentage
 	settings.founderGenome.searchRadiusParsecs = setupUI.value(SetupUI::SearchRadius);
 	settings.founderGenome.replicationLimit = setupUI.value(SetupUI::ReplicationLimit);
@@ -681,7 +683,7 @@ void Game::updateGameState()
 	{
 		Probe &probe = probeVector[index];
 
-		if (probe.getReplicationCount() >= probe.getGenome().replicationLimitInt())
+		if (probe.getReplicationCount() >= probe.behaviour().replicationLimitInt())
 		{
 			probe.shutdown(ShutdownReason::ReplicationLimitReached);
 			continue;
@@ -717,7 +719,7 @@ void Game::updateGameState()
 		replicatedProbe.setDisplayName(
 			Utilities::probeLabelFor(childPath, Utilities::displayStarName(birthStarName, birthStarID)));
 		probe.deriveLineageInto(replicatedProbe, probe.getReplicationCount(),
-								probe.getGenome().replicationLimitInt());
+								probe.behaviour().replicationLimitInt());
 
 		// Charge the parent and fuel the child out of what is left. Both probes are
 		// standing in the same system, so the child inherits it and can mine there too.
@@ -915,6 +917,7 @@ void Game::finaliseMetrics()
 	// of survivors -- which matters, because a survivors-only view would hide exactly
 	// the lineages that selection removed.
 	metrics.evolutionEnabled = settings.evolutionEnabled;
+	metrics.neutralControl = settings.neutralControl;
 	metrics.mutationStrength = settings.mutationStrength;
 	metrics.founderGenome = settings.founderGenome;
 	metrics.generations.clear();

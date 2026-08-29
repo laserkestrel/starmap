@@ -53,6 +53,7 @@ trailColourMode - "recency", "density" or "lineage" ("perProbe" is still accepte
 trailPalette - Which of the eight colour ramps to use, 0-7. F7 cycles it live.<BR>
 trailFadeTicks - Ticks for a trail to cool from white to dark in recency mode. Short values leave only the expansion front lit.<BR>
 evolutionEnabled - Whether children inherit their parent's traits with mutation, or every probe simply uses the founder's genome. Off restores the previous fleet-wide behaviour exactly.<BR>
+neutralControl - The control condition. Traits still mutate and are still reported, but every probe behaves as the founder did, so the genome cannot affect survival. Whatever the report shows in this mode is drift. Also the third option on the setup screen's Evolution control.<BR>
 mutationStrength - Largest proportional change one trait can take in a generation, as a fraction (0.08 is 8%). Zero means no evolution; too high and inheritance stops meaning anything, because a child resembles its parent no more than a stranger. Also a slider on the Simulation tab, in percent.<BR>
 mutationSeed - Fixes the mutation sequence so a run repeats exactly. Change it to get an independent replicate of the same experiment, which is the only way to tell selection from drift.<BR>
 probeLabelSize - Point size for probe name labels. The label declutter grid is sized from this, so a larger value shows fewer, bigger names rather than overlapping ones.<BR>
@@ -193,32 +194,46 @@ settings that prevented it.
 The setup sliders therefore stop being law and become the FOUNDER'S genome. You are
 no longer setting how probes behave, you are choosing what the first one believes.
 
-## Does it actually work? Partly, and only one trait so far
+## Does it actually work? Not proven, and here is how to check
 
-Traits move in every run, but drift moves traits too. The test is whether five runs
-of the same galaxy from the same founder, differing only in mutationSeed, move a
-trait in the SAME direction. Measured over 2,500 stars and about 21 generations:
+Traits move in every run. Drift moves traits too, so movement on its own means
+nothing -- and the numbers involved are much larger than they look. A neutral model
+of the same mutation over 65 generations with a population of 25 per generation puts
+the 95th percentile of DRIFT ALONE at +62%, and its maximum at +120%. A single run
+showing a trait up 110% is inside that envelope.
 
-    trait                 mean       spread   same direction
-    Search radius        + 7.1%      10.1%      3 of 5
-    Child fuel share     +15.0%       9.9%      5 of 5
-    Replication limit    + 4.1%      10.3%      3 of 5
-    Harvest patience     + 6.1%      13.0%      3 of 5
+So the simulation carries its own control. Set Evolution to NEUTRAL and traits still
+mutate and are still reported, but every probe behaves as the founder did, so the
+genome cannot affect who survives. Anything the report shows in that mode is drift,
+measured in a real run's real branching structure rather than approximated outside
+it. Run the same settings both ways and compare.
 
-Only CHILD FUEL SHARE is doing something real: every run raised it, and the mean
-move stands clear of the run-to-run spread. That is exactly what the death figures
-predict -- around 1,500 of 1,750 probes die stranded, so fuel is the binding
-constraint and a parent that provisions its children better has children that
-survive their first hop.
+Doing exactly that over a 10,000 star catalogue, three runs each, roughly 35
+generations:
 
-The other three are indistinguishable from drift at this scale. Three runs out of
-five in one direction is what a coin does, and their means are smaller than their
-spread. That does not mean those traits do not matter; it means twenty generations
-is not long enough to prove it either way. Longer runs -- bigger catalogues, more
-generations -- are where to look.
+    trait               selection runs            neutral runs
+    Search radius       -13.4 .. +22.4 %          + 4.1 .. +85.0 %
+    Child fuel share    - 6.4 ..  +4.9 %          + 2.6 .. +30.1 %
+    Replication limit   +18.8 .. +89.8 %          +11.4 .. +26.7 %
+    Harvest patience    -19.2 ..  +4.1 %          + 2.8 .. +26.1 %
 
-So read the debrief's EVOLUTION block as a measurement with error bars, not a
-result. A single run showing a trait up 40% is showing you one sample.
+Nothing separates. Every trait's selection range overlaps its control range, so at
+three runs each NONE of these movements is demonstrably selection. The nearest thing
+to a signal is the replication limit, where all three selection runs rose and the
+mean was two and a half times the control's -- worth more runs, not worth believing
+yet.
+
+Two things worth taking from that. Search radius rising in a run is not evidence
+that reaching further works: the control drifted UP more than selection did. And an
+earlier claim in this file, that child fuel share was under clear selection, came
+from five runs with no control and does not survive one -- under selection it barely
+moves while the control drifts upward, which if anything hints at the opposite.
+
+The lesson is the general one: with a founder population of one, mutation is the
+only source of variation, generations are few, and the effective population per
+generation is small. That combination makes drift enormous. Read the EVOLUTION block
+as one sample from a wide distribution, and use the neutral control before believing
+any of it.
 
 # Probe names
 

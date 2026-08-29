@@ -53,5 +53,6 @@
   "probeLabelSize": 15,
   "evolutionEnabled": true,
   "mutationStrength": 0.08,
-  "mutationSeed": 20260829
+  "mutationSeed": 20260829,
+  "neutralControl": false
 }

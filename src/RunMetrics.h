@@ -71,6 +71,7 @@ struct RunMetrics
 		Genome mean;
 	};
 	bool evolutionEnabled = false;
+	bool neutralControl = false;
 	float mutationStrength = 0.0f;
 	Genome founderGenome;
 	std::vector<GenerationTraits> generations; // index is the generation number

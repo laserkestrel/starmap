@@ -38,6 +38,12 @@ struct SimSettings
 	// mutationStrength either way, and nothing else selects: whichever values produce
 	// surviving descendants become common.
 	bool evolutionEnabled = true;
+	// The control condition. Traits still mutate and are still recorded, but every
+	// probe BEHAVES as the founder did, so the genome cannot affect who survives.
+	// Anything the trait report shows in this mode is drift, measured in the real
+	// branching structure of a real run rather than approximated outside it. It is
+	// the only way to know whether a move under selection means anything.
+	bool neutralControl = false;
 	float mutationStrength = 0.08f;
 	// What the first probe believes. The setup sliders write here, so they set the
 	// starting point rather than fleet-wide law.
